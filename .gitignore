@@ -1,0 +1,21 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Backend
+backend/vendor/
+backend/.env
+backend/storage/*.key
+backend/public/storage
+backend/public/hot
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# Deploy artifacts
+*.zip
