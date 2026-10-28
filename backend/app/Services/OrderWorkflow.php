@@ -25,6 +25,7 @@ class OrderWorkflow
         'deliver' => OrderStatus::Livree,
         'return' => OrderStatus::Retournee,
         'sell_in_store' => OrderStatus::VendueBoutique,
+        'reopen' => OrderStatus::EnAttente,
     ];
 
     public function __construct(private StockService $stock) {}
@@ -92,6 +93,16 @@ class OrderWorkflow
 
                 case 'sell_in_store':
                     $changes['completed_at'] = now();
+                    break;
+
+                case 'reopen':
+                    // Back to pending, as if never confirmed: the stock was already put back when it was
+                    // cancelled, and confirming it again takes the stock out again.
+                    $changes += ['cancelled_at' => null, 'cancel_reason' => null, 'confirmed_at' => null];
+                    $note ??= 'Commande rouverte';
+                    if ($order->customer_id) {
+                        Customer::query()->whereKey($order->customer_id)->where('cancelled_count', '>', 0)->decrement('cancelled_count');
+                    }
                     break;
             }
 

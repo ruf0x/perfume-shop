@@ -4746,11 +4746,15 @@
                             },
                             "name": {
                                 "type": "string"
+                            },
+                            "slug": {
+                                "type": "string"
                             }
                         },
                         "required": [
                             "id",
-                            "name"
+                            "name",
+                            "slug"
                         ]
                     },
                     "gender": {
@@ -5271,6 +5275,17 @@
                                 ],
                                 "minItems": 2,
                                 "maxItems": 2
+                            },
+                            {
+                                "type": "array",
+                                "prefixItems": [
+                                    {
+                                        "type": "string",
+                                        "const": "reopen"
+                                    }
+                                ],
+                                "minItems": 1,
+                                "maxItems": 1
                             },
                             {
                                 "type": "array",
@@ -6462,7 +6477,7 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "description": "`confirm` takes the stock out, `cancel` puts it back if it was taken,\n`no_answer` only counts a call attempt.",
+                        "description": "`confirm` takes the stock out, `cancel` puts it back if it was taken,\n`no_answer` only counts a call attempt, `reopen` brings a cancelled order back to pending.",
                         "enum": [
                             "confirm",
                             "cancel",
@@ -6470,7 +6485,8 @@
                             "ship",
                             "deliver",
                             "return",
-                            "sell_in_store"
+                            "sell_in_store",
+                            "reopen"
                         ]
                     },
                     "note": {

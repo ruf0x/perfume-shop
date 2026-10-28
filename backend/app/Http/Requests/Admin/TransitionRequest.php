@@ -12,9 +12,9 @@ class TransitionRequest extends FormRequest
         return [
             /**
              * `confirm` takes the stock out, `cancel` puts it back if it was taken,
-             * `no_answer` only counts a call attempt.
+             * `no_answer` only counts a call attempt, `reopen` brings a cancelled order back to pending.
              */
-            'action' => ['required', 'in:confirm,cancel,no_answer,ship,deliver,return,sell_in_store'],
+            'action' => ['required', 'in:confirm,cancel,no_answer,ship,deliver,return,sell_in_store,reopen'],
             'note' => ['nullable', 'string', 'max:255'],
             /** For `cancel`. */
             'reason' => ['nullable', 'string', 'max:255'],

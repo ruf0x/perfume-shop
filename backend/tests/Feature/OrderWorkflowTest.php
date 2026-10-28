@@ -203,7 +203,44 @@ it('rejects transitions the state machine does not allow', function (string $set
     'cancel a cancelled order' => ['cancelled', 'cancel'],
     'cancel a delivered order' => ['delivered', 'cancel'],
     'return a delivered order' => ['delivered', 'return'],
+    'reopen a pending order' => ['pending', 'reopen'],
+    'reopen a confirmed order' => ['confirmed', 'reopen'],
+    'reopen a delivered order' => ['delivered', 'reopen'],
 ]);
+
+it('reopens a cancelled order as pending and it can be confirmed again', function () {
+    $p = makePerfume(poolMl: 100);
+    $order = placeOnline([[variantOf($p, '30 ml'), 2]]);
+    $this->flow->transition($order, 'confirm');
+    $this->flow->transition($order, 'cancel', null, ['reason' => 'Client injoignable']);
+    expect(pooledMl($p))->toBe(100)->and(Customer::first()->cancelled_count)->toBe(1);
+
+    $order = $this->flow->transition($order, 'reopen', makeOwner());
+
+    expect($order->status)->toBe(OrderStatus::EnAttente)
+        ->and($order->cancelled_at)->toBeNull()
+        ->and($order->cancel_reason)->toBeNull()
+        ->and($order->confirmed_at)->toBeNull()
+        ->and($order->stock_deducted)->toBeFalse()
+        ->and(pooledMl($p))->toBe(100)                       // nothing taken while pending
+        ->and(Customer::first()->cancelled_count)->toBe(0)   // no longer counted as cancelled
+        ->and($order->history->last()->note)->toBe('Commande rouverte')
+        ->and($order->status->actions())->toBe(['confirm', 'no_answer', 'cancel']);
+
+    $order = $this->flow->transition($order, 'confirm');
+    expect($order->stock_deducted)->toBeTrue()->and(pooledMl($p))->toBe(40);
+});
+
+it('cannot confirm a reopened order when the stock is gone, and it stays pending', function () {
+    $p = makePerfume(poolMl: 60);
+    $order = placeOnline([[variantOf($p, '30 ml'), 2]]);
+    $this->flow->transition($order, 'cancel');
+    $this->flow->transition($order, 'reopen');
+    $p->update(['stock_ml' => 10]); // sold elsewhere in the meantime
+
+    expect(fn () => $this->flow->transition($order, 'confirm'))->toThrow(InsufficientStockException::class);
+    expect($order->fresh()->status)->toBe(OrderStatus::EnAttente);
+});
 
 it('rejects an unknown action', function () {
     $p = makePerfume(poolMl: 100);

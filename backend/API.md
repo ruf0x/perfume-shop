@@ -1,7 +1,7 @@
 # Perfume Shop API
 
 Laravel JSON API. Base URL in development: `http://localhost:8000/api`.
-Amounts are **integers in DZD**. Messages are in French. 54 operations; the complete, always-current list is generated from the code.
+Amounts are **integers in DZD**. Messages are in French. Timestamps are stored in Algeria time (`Africa/Algiers`, UTC+1) and returned as UTC ISO strings. 54 operations; the complete, always-current list is generated from the code.
 
 ## Testing it
 
@@ -126,6 +126,7 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | `deliver` | en_livraison → livree | | |
 | `return` | en_livraison → retournee | `restock` (bool) | put back only if `restock` is true |
 | `sell_in_store` | confirmee → vendue_boutique | | |
+| `reopen` | annulee → en_attente | | none (it was put back when cancelled; confirming again takes it out) |
 
 Anything else answers `422` (`Action « deliver » impossible pour une commande « En attente ».`). `allowed_actions` in the order tells the UI which buttons to show.
 

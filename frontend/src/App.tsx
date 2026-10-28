@@ -10,7 +10,7 @@ import Packs from '@/shop/pages/Packs'
 import ProductPage from '@/shop/pages/ProductPage'
 import ThankYou from '@/shop/pages/ThankYou'
 
-const AdminHome = lazy(() => import('@/admin/AdminHome'))
+const AdminApp = lazy(() => import('@/admin/AdminApp'))
 
 export default function App() {
   return (
@@ -30,7 +30,7 @@ export default function App() {
         path="/admin/*"
         element={
           <Suspense fallback={null}>
-            <AdminHome />
+            <AdminApp />
           </Suspense>
         }
       />

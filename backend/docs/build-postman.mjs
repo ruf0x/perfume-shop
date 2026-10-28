@@ -123,6 +123,7 @@ const collection = {
       transition('Deliver', { action: 'deliver' }),
       transition('Return (put back in stock)', { action: 'return', restock: true }),
       transition('Sell in the shop', { action: 'sell_in_store' }),
+      transition('Reopen a cancelled order', { action: 'reopen' }),
       request('Export CSV', 'GET', 'api/admin/orders/export', { query: { status: '~livree', from: '~2026-01-01' } }),
     ]),
 

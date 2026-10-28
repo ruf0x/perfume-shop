@@ -22,7 +22,7 @@ export function CartDrawer() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-md">
+      <SheetContent side="right" className="gap-0 p-0 data-[side=right]:w-full sm:data-[side=right]:max-w-md">
         <SheetHeader className="border-b border-border p-5">
           <SheetTitle className="font-display text-xl">{t('cart.title')}</SheetTitle>
           <SheetDescription className="sr-only">{t('cart.drawerDescription')}</SheetDescription>

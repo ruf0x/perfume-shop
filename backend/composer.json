@@ -3,7 +3,10 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -24,7 +27,9 @@
         "pestphp/pest-plugin-laravel": "^5.0"
     },
     "autoload": {
-        "files": ["app/helpers.php"],
+        "files": [
+            "app/helpers.php"
+        ],
         "psr-4": {
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
@@ -32,7 +37,9 @@
         }
     },
     "autoload-dev": {
-        "files": ["app/helpers.php"],
+        "files": [
+            "app/helpers.php"
+        ],
         "psr-4": {
             "Tests\\": "tests/"
         }
@@ -71,6 +78,10 @@
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ],
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php serve.php"
         ]
     },
     "extra": {

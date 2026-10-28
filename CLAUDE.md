@@ -70,6 +70,18 @@ Use `127.0.0.1` or `localhost` consistently in the browser — Sanctum cookies a
 - Mobile first. Checked for horizontal overflow at 320, 375, 600, 768, 1024 and 1280 px. The browser pane's screenshot tool crops emulated viewports that differ from the pane size; measure with JS (`scrollWidth` vs `innerWidth`) when in doubt.
 - Dev: `npm run dev` runs on port 3000 (see `vite.config.ts`) and opens a browser; use `npx vite --port 3000 --open false` to avoid that.
 
+## Admin frontend (Phase 5)
+- Routes under `/admin` (`frontend/src/admin/`, lazy-loaded; one chunk per page): `login`, `commandes` (list + drawer via `?order=ID`), `produits[/nouveau|/:id]`, `packs[/nouveau|/:id]`, `stock`, `types` (families), `marques`, `clients`, `parametres`. Dashboard and caisse come in Phase 6.
+- Auth: cookie session. `auth.tsx` has `useMe`, `RequireAuth`, `OwnerOnly`, `useIsOwner`. Staff see Commandes, Produits, Packs, Stock (read-only); everything else is owner-only (the API enforces it too).
+- Data: all hooks in `admin/queries.ts` (keys start with `['admin', ...]`; every write refreshes them). Shapes in `admin/types.ts`. API errors → `apiError()` / `fieldErrors()` in `admin/lib.ts`.
+- The admin UI text is **French only and written inline** (not in `fr.json`): it is for the owner, and only the shop is planned for Arabic/RTL.
+- Order actions live in `components/OrderDrawer.tsx` (confirm, no answer, cancel, ship, deliver, return, sell in store), editing in `OrderEdit.tsx`, printing in `print.ts` (opens a printable window).
+- Local API: run `composer serve` (= `php backend/serve.php`), not `php artisan serve`. On this Windows/Herd setup `artisan serve` starts PHP without a temp dir and every photo upload fails.
+- After adding npm packages while `vite` is running, restart it with `--force` (otherwise: "504 Outdated Optimize Dep" and a blank page).
+- Validation messages are French (`backend/lang/fr/validation.php`).
+- Timezone: app `Africa/Algiers` and DB session `+01:00` (`APP_TIMEZONE`, `DB_TIMEZONE`), so timestamps in the database read as local time. The API sends UTC ISO strings and the browser shows local time.
+- A cancelled order can be reopened (`reopen` action: annulee → en_attente); confirming it again deducts the stock again.
+
 ## Tests
 - Pest, run from `backend/`: `vendor/bin/pest`. They use the **`perfume_shop_test`** MariaDB database (see `phpunit.xml`); `Tests\TestCase` refuses to run on any database whose name does not end in `_test`, because `RefreshDatabase` wipes the schema.
 - Helpers (`makePerfume`, `makePack`, `placeOnline`, ...) are in `tests/Helpers.php`.

@@ -108,6 +108,19 @@ it('answers 422 with a French message for invalid transitions and short stock', 
     expect($order->fresh()->status->value)->toBe('en_attente');
 });
 
+it('lets the admin reopen a cancelled order through the API', function () {
+    $order = placeOnline([[variantOf($this->p, '10 ml'), 1]]);
+    $url = "/api/admin/orders/{$order->id}/transition";
+    admin()->postJson($url, ['action' => 'cancel', 'reason' => 'Test'])->assertOk()->assertJsonPath('data.allowed_actions', ['reopen']);
+
+    admin()->postJson($url, ['action' => 'reopen'])->assertOk()
+        ->assertJsonPath('data.status', 'en_attente')
+        ->assertJsonPath('data.cancel_reason', null)
+        ->assertJsonPath('data.allowed_actions', ['confirm', 'no_answer', 'cancel']);
+
+    admin()->postJson($url, ['action' => 'reopen'])->assertUnprocessable();   // pending orders cannot be "reopened"
+});
+
 it('lets staff confirm orders', function () {
     $staff = User::create(['name' => 'S', 'username' => 'staff', 'password' => 'secret-pass', 'role' => UserRole::Staff]);
     $order = placeOnline([[variantOf($this->p, '10 ml'), 1]]);

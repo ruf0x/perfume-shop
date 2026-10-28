@@ -65,7 +65,8 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Algeria is UTC+1 all year (no daylight saving): stored timestamps read as local time.
+    'timezone' => env('APP_TIMEZONE', 'Africa/Algiers'),
 
     /*
     |--------------------------------------------------------------------------

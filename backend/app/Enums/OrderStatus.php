@@ -32,7 +32,9 @@ enum OrderStatus: string
             self::EnAttente => [self::Confirmee, self::Annulee],
             self::Confirmee => [self::VendueBoutique, self::EnLivraison, self::Annulee],
             self::EnLivraison => [self::Livree, self::Retournee],
-            self::Annulee, self::Livree, self::Retournee, self::VendueBoutique => [],
+            // A cancelled order can be reopened (back to pending) if the client changes their mind.
+            self::Annulee => [self::EnAttente],
+            self::Livree, self::Retournee, self::VendueBoutique => [],
         };
     }
 
@@ -47,6 +49,7 @@ enum OrderStatus: string
             self::EnAttente => ['confirm', 'no_answer', 'cancel'],
             self::Confirmee => ['ship', 'sell_in_store', 'cancel'],
             self::EnLivraison => ['deliver', 'return'],
+            self::Annulee => ['reopen'],
             default => [],
         };
     }
