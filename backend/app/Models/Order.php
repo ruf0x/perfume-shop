@@ -16,6 +16,13 @@ class Order extends Model
 {
     protected $guarded = ['id'];
 
+    // Mirror the column defaults so a freshly created order is correct without a reload.
+    protected $attributes = [
+        'stock_deducted' => false,
+        'call_attempts' => 0,
+        'discount' => 0,
+    ];
+
     protected function casts(): array
     {
         return [

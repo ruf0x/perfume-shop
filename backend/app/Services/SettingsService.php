@@ -24,7 +24,9 @@ class SettingsService
     /** @return array<string, mixed> */
     public function all(): array
     {
+        // "counter.*" rows belong to OrderReference, not to the shop settings.
         $stored = Cache::rememberForever(self::CACHE_KEY, fn () => Setting::query()
+            ->where('key', 'not like', 'counter.%')
             ->pluck('value', 'key')
             ->map(fn (?string $value) => json_decode($value ?? 'null', true))
             ->all());

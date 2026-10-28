@@ -23,7 +23,7 @@ vendor/bin/pest
 cd frontend && npm run dev
 npm run build
 ```
-Env: copy `backend/.env.example` → `backend/.env` and set the DB password (`DB_PASSWORD`; local MariaDB root has one). `frontend/.env` needs `VITE_API_URL=http://localhost:8000`. Until Phase 1, `backend/.env` uses sqlite.
+Env: copy `backend/.env.example` → `backend/.env` and set the DB password (`DB_PASSWORD`; local MariaDB root has one). `frontend/.env` needs `VITE_API_URL=http://localhost:8000`. Create two databases: `perfume_shop` (dev) and `perfume_shop_test` (tests).
 Use `127.0.0.1` or `localhost` consistently in the browser — Sanctum cookies are host-specific.
 
 ## Conventions
@@ -43,6 +43,18 @@ Use `127.0.0.1` or `localhost` consistently in the browser — Sanctum cookies a
 - Settings live in the `settings` table: use `settings('key')` or `settings()->showUnavailable()` (`SettingsService`, cached, defaults in `SettingsService::DEFAULTS`).
 - Wilaya `id` is the official code. Seed data: `database/data/algeria_cities.json` (58 wilayas / 1541 communes, from othmanus/algeria-cities) plus wilayas 59-69 from the 2025 reform, hardcoded in `WilayaSeeder::NEW_WILAYAS`. The new ones only have their seat as a placeholder commune (the dataset predates the reform, so the old wilayas still hold the communes that moved).
 - Models use `$guarded = ['id']`: always build them from validated data, never from raw request input.
+
+## Services (Phase 2)
+- `StockService`: only writer of stock. `maxQty/availability` (pool, unit, pack), `addEntry`, `adjust`, `openBottle`, `deductForOrder`, `restoreForOrder` (reverses the order's own sale movements), `recalculate` (`php artisan stock:recalculate`).
+- `OrderWorkflow::transition($order, $action, $user, $data)`: actions `confirm|cancel|no_answer|ship|deliver|return|sell_in_store`. Stock is deducted on `confirm`, restored on `cancel` of a confirmed order and on `return` with `restock=true`.
+- `Pricing::quote()` re-prices a cart from the DB; `OrderPlacement::placeOnline()/placePos()` create orders; `OrderReference` gives `CMD-000001` / `POS-000001`.
+- Business failures throw `ShopException` subclasses (French messages) — Phase 3 renders them as 422.
+- Deactivating a perfume only hides it from new sales; existing orders containing it can still be confirmed.
+- Models define `$attributes` for DB defaults used right after `create()` (e.g. `is_active`, `stock_deducted`).
+
+## Tests
+- Pest, run from `backend/`: `vendor/bin/pest`. They use the **`perfume_shop_test`** MariaDB database (see `phpunit.xml`); `Tests\TestCase` refuses to run on any database whose name does not end in `_test`, because `RefreshDatabase` wipes the schema.
+- Helpers (`makePerfume`, `makePack`, `placeOnline`, ...) are in `tests/Helpers.php`.
 
 ## Notes
 - Laravel 13 / TypeScript 7 were the latest at setup time (PLAN.md says Laravel 12); TS 7 has no `baseUrl`, the `@/*` alias is set via `paths` only.

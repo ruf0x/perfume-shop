@@ -17,6 +17,11 @@ class Product extends Model
 
     protected $guarded = ['id'];
 
+    protected $attributes = [
+        'is_active' => true,
+        'stock_ml' => 0,
+    ];
+
     protected function casts(): array
     {
         return [

@@ -11,6 +11,11 @@ class ProductVariant extends Model
 {
     protected $guarded = ['id'];
 
+    protected $attributes = [
+        'is_active' => true,
+        'stock_qty' => 0,
+    ];
+
     protected function casts(): array
     {
         return [
