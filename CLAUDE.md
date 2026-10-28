@@ -38,6 +38,12 @@ Use `127.0.0.1` or `localhost` consistently in the browser — Sanctum cookies a
 - Admin credentials come from env (`ADMIN_USERNAME` / `ADMIN_PASSWORD`), never hardcoded.
 - Tests with Pest in `backend/tests/Feature`. Run them before finishing a phase.
 
+## Database
+- `php artisan migrate:fresh --seed` rebuilds everything (wilayas/communes, types, owner admin from `ADMIN_*` env via `config/shop.php`, and demo catalogue when `APP_ENV=local`).
+- Settings live in the `settings` table: use `settings('key')` or `settings()->showUnavailable()` (`SettingsService`, cached, defaults in `SettingsService::DEFAULTS`).
+- Wilaya `id` is the official code. Seed data: `database/data/algeria_cities.json` (58 wilayas / 1541 communes, from othmanus/algeria-cities) plus wilayas 59-69 from the 2025 reform, hardcoded in `WilayaSeeder::NEW_WILAYAS`. The new ones only have their seat as a placeholder commune (the dataset predates the reform, so the old wilayas still hold the communes that moved).
+- Models use `$guarded = ['id']`: always build them from validated data, never from raw request input.
+
 ## Notes
 - Laravel 13 / TypeScript 7 were the latest at setup time (PLAN.md says Laravel 12); TS 7 has no `baseUrl`, the `@/*` alias is set via `paths` only.
 - shadcn `form` component is not in the registry anymore; use react-hook-form directly with `Label`/`Input`.
