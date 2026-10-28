@@ -13,7 +13,7 @@ export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const next = params.get('next')
-  const target = next && next.startsWith('/admin') && !next.startsWith('/admin/login') ? next : '/admin/commandes'
+  const target = next && next.startsWith('/admin') && !next.startsWith('/admin/login') ? next : '/admin'
 
   if (user) return <Navigate to={target} replace />
 

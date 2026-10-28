@@ -82,6 +82,13 @@ Use `127.0.0.1` or `localhost` consistently in the browser — Sanctum cookies a
 - Timezone: app `Africa/Algiers` and DB session `+01:00` (`APP_TIMEZONE`, `DB_TIMEZONE`), so timestamps in the database read as local time. The API sends UTC ISO strings and the browser shows local time.
 - A cancelled order can be reopened (`reopen` action: annulee → en_attente); confirming it again deducts the stock again.
 
+## Caisse and dashboard (Phase 6)
+- `/admin/caisse` (`pages/Caisse.tsx`, owner + staff): product grid → size dialog → cart, discount (DA or %), payment, cash received/change, optional client, then `POST /admin/pos/sales`. The receipt is an 80 mm ticket (`printReceipt` in `print.ts`). Keys: `/` focuses the search, Ctrl+Enter validates.
+- `/admin` is the **dashboard** for the owner (staff are redirected to the orders): range presets, hero revenue, KPI tiles, sales chart, best sellers, low stock, pending orders with a quick "Confirmer".
+- `components/SalesChart.tsx` is a hand-written SVG chart that follows the dataviz guidance: colours `ONLINE #12805c` and `POS #c4850a` were checked with the palette validator (all checks pass), ≤ 24 px columns with a 4 px rounded data end, 2 px gap between stacked segments, hairline grid, a legend, selective labels, a hover tooltip and a table view. Ranges over 45 days are grouped by week. Reuse these two colours for "online" and "caisse" everywhere.
+- `GET /admin/dashboard` returns `sales_by_day` with `revenue_online` / `revenue_pos` per day.
+- Vite on Windows sometimes serves a stale module after several quick edits: if a change does not show, `touch` the file or restart Vite.
+
 ## Tests
 - Pest, run from `backend/`: `vendor/bin/pest`. They use the **`perfume_shop_test`** MariaDB database (see `phpunit.xml`); `Tests\TestCase` refuses to run on any database whose name does not end in `_test`, because `RefreshDatabase` wipes the schema.
 - Helpers (`makePerfume`, `makePack`, `placeOnline`, ...) are in `tests/Helpers.php`.

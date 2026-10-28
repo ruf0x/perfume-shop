@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { clean } from './lib'
-import type { AdminProduct, AdminUser, AdminWilaya, Customer, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
+import type { AdminProduct, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
 
 /** Everything the admin shows may have changed after a write; "me" is left alone. */
 const refresh = (qc: QueryClient) => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'admin' && q.queryKey[1] !== 'me' })
@@ -222,3 +222,29 @@ export function useDeleteUser() {
 
 export const useChangePassword = () =>
   useMutation({ mutationFn: (body: { current_password: string; password: string; password_confirmation: string }) => api.put('/admin/me/password', body) })
+
+// ── dashboard & caisse ───────────────────────────────────────────────────
+export const useDashboard = (from: string, to: string) =>
+  useQuery({
+    queryKey: ['admin', 'dashboard', from, to],
+    placeholderData: keepPreviousData,
+    queryFn: () => api.get<{ data: Dashboard }>('/admin/dashboard', { params: { from, to } }).then((r) => r.data.data),
+  })
+
+export interface PosSalePayload {
+  lines: { variant_id: number; quantity: number }[]
+  discount?: number
+  payment_method: 'especes' | 'carte' | 'ccp'
+  amount_received?: number
+  first_name?: string
+  last_name?: string
+  phone?: string
+}
+
+export function usePosSale() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: PosSalePayload) => api.post<{ data: Order }>('/admin/pos/sales', body).then((r) => r.data.data),
+    onSuccess: () => refresh(qc), // stock, products, orders and dashboard all changed
+  })
+}

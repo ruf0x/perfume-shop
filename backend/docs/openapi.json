@@ -1360,6 +1360,12 @@
                                                             "revenue": {
                                                                 "type": "integer"
                                                             },
+                                                            "revenue_online": {
+                                                                "type": "integer"
+                                                            },
+                                                            "revenue_pos": {
+                                                                "type": "integer"
+                                                            },
                                                             "orders": {
                                                                 "type": "integer"
                                                             }
@@ -1367,6 +1373,8 @@
                                                         "required": [
                                                             "date",
                                                             "revenue",
+                                                            "revenue_online",
+                                                            "revenue_pos",
                                                             "orders"
                                                         ]
                                                     }

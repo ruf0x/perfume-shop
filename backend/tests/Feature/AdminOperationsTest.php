@@ -269,7 +269,7 @@ it('computes the dashboard from completed sales, split by channel', function () 
         ->and($d['in_delivery_count'])->toBe(1)
         ->and($d['cancel_rate'])->toEqual(25)
         ->and($d['sales_by_day'])->toHaveCount(1)
-        ->and($d['sales_by_day'][0])->toMatchArray(['revenue' => 6600, 'orders' => 2])
+        ->and($d['sales_by_day'][0])->toMatchArray(['revenue' => 6600, 'revenue_online' => 5600, 'revenue_pos' => 1000, 'orders' => 2])
         ->and($d['top_products'][0])->toMatchArray(['product' => 'Sauvage', 'variant' => '30 ml', 'quantity' => 2]);
 
     $month = $this->getJson('/api/admin/dashboard?from='.now()->subDays(30)->toDateString().'&to='.now()->toDateString())->json('data');

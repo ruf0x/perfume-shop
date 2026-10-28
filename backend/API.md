@@ -99,7 +99,7 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | GET | `/products`, `/products/{id}` | ✅ | Catalogue with stock and hidden items. Filters: `q, kind, type_id, active, low_stock` |
 | GET | `/types`, `/brands` | ✅ | With product counts |
 | GET | `/stock`, `/stock/movements` | ✅ | Overview (`q, status ok/low/out`) and ledger (`product_id, variant_id, order_id, type, from, to`) |
-| GET | `/dashboard` | | KPIs for `from`/`to` (default today) |
+| GET | `/dashboard` | | KPIs for `from`/`to` (default today): revenue split online / caisse, order counts, cancel rate, `sales_by_day` (each day has `revenue_online` and `revenue_pos`), `top_products`, `low_stock` |
 | POST/PUT/DELETE | `/products`, `/products/{id}` | | Create / edit / hide perfumes and packs |
 | POST | `/products/{id}/images` | | Upload a photo (`image`, multipart) |
 | PUT | `/products/{id}/images/order` | | `{ "ids": [..] }`; the first becomes the main photo |

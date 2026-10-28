@@ -1,4 +1,4 @@
-import { Boxes, ClipboardList, Gift, LogOut, Menu, Package, Settings as SettingsIcon, Store, Tags, Users, Warehouse, Award, type LucideIcon } from 'lucide-react'
+import { Boxes, ClipboardList, Gift, LayoutDashboard, LogOut, Menu, Package, Receipt, Settings as SettingsIcon, Store, Tags, Users, Warehouse, Award, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { toast } from 'sonner'
@@ -11,10 +11,14 @@ interface NavItem {
   label: string
   icon: LucideIcon
   ownerOnly?: boolean
+  /** Match the exact path only (the dashboard lives at /admin itself). */
+  end?: boolean
 }
 
 const NAV: NavItem[] = [
+  { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, ownerOnly: true, end: true },
   { to: '/admin/commandes', label: 'Commandes', icon: ClipboardList },
+  { to: '/admin/caisse', label: 'Caisse', icon: Receipt },
   { to: '/admin/produits', label: 'Produits', icon: Package },
   { to: '/admin/packs', label: 'Packs', icon: Gift },
   { to: '/admin/stock', label: 'Stock', icon: Warehouse },
@@ -28,10 +32,11 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const user = useUser()
   return (
     <nav className="flex flex-col gap-1" aria-label="Administration">
-      {NAV.filter((n) => !n.ownerOnly || user.role === 'owner').map(({ to, label, icon: Icon }) => (
+      {NAV.filter((n) => !n.ownerOnly || user.role === 'owner').map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
+          end={end}
           onClick={onNavigate}
           className={({ isActive }) =>
             cn('flex items-center gap-3 rounded-md px-3 py-2.5 text-[0.95rem] transition-colors focus-visible:outline-2 focus-visible:outline-ring', isActive ? 'bg-accent font-medium text-accent-foreground' : 'text-foreground/80 hover:bg-secondary')
@@ -78,7 +83,7 @@ export default function AdminLayout() {
     <div className="min-h-svh md:grid md:grid-cols-[15rem_1fr]">
       <aside className="sticky top-0 hidden h-svh flex-col justify-between gap-6 border-r border-border bg-card p-4 md:flex">
         <div className="space-y-6">
-          <Link to="/admin/commandes" className="flex items-center gap-2 px-3 pt-1 font-display text-xl">
+          <Link to="/admin" className="flex items-center gap-2 px-3 pt-1 font-display text-xl">
             <Boxes className="size-5 text-primary" aria-hidden />
             Administration
           </Link>

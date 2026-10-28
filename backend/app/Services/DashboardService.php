@@ -50,18 +50,29 @@ class DashboardService
         ];
     }
 
-    /** @return list<array{date: string, revenue: int, orders: int}> */
+    /** @return list<array{date: string, revenue: int, revenue_online: int, revenue_pos: int, orders: int}> */
     private function salesByDay(Carbon $start, Carbon $end, array $statuses): array
     {
         $rows = Order::query()
             ->whereIn('status', $statuses)->whereBetween('completed_at', [$start, $end])
-            ->selectRaw('DATE(completed_at) as day, SUM(total) as revenue, COUNT(*) as orders')
+            ->selectRaw(
+                'DATE(completed_at) as day, SUM(total) as revenue, COUNT(*) as orders,'
+                .' SUM(CASE WHEN channel = ? THEN total ELSE 0 END) as revenue_online,'
+                .' SUM(CASE WHEN channel = ? THEN total ELSE 0 END) as revenue_pos',
+                [OrderChannel::Online->value, OrderChannel::Pos->value],
+            )
             ->groupBy('day')->get()->keyBy('day');
 
         $series = [];
         for ($day = $start->copy(); $day->lte($end); $day->addDay()) {
             $row = $rows->get($day->toDateString());
-            $series[] = ['date' => $day->toDateString(), 'revenue' => (int) ($row->revenue ?? 0), 'orders' => (int) ($row->orders ?? 0)];
+            $series[] = [
+                'date' => $day->toDateString(),
+                'revenue' => (int) ($row->revenue ?? 0),
+                'revenue_online' => (int) ($row->revenue_online ?? 0),
+                'revenue_pos' => (int) ($row->revenue_pos ?? 0),
+                'orders' => (int) ($row->orders ?? 0),
+            ];
         }
 
         return $series;

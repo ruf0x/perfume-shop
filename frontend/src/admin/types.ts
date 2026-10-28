@@ -213,3 +213,27 @@ export interface ShopSettings {
   store_pickup_enabled: boolean
   free_delivery_over: number | null
 }
+
+export interface DashboardDay {
+  date: string
+  revenue: number
+  revenue_online: number
+  revenue_pos: number
+  orders: number
+}
+
+export interface Dashboard {
+  range: { from: string; to: string }
+  orders_count: number
+  online_orders_count: number
+  pos_orders_count: number
+  revenue: number
+  revenue_online: number
+  revenue_pos: number
+  pending_count: number
+  in_delivery_count: number
+  cancel_rate: number
+  sales_by_day: DashboardDay[]
+  top_products: { product: string; variant: string; quantity: number; revenue: number }[]
+  low_stock: { id: number; name: string; stock_ml: number }[]
+}

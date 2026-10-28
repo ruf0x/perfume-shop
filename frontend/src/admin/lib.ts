@@ -37,3 +37,18 @@ export function downloadBlob(blob: Blob, filename: string) {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/** Local calendar date as YYYY-MM-DD (not UTC: the shop's day is the local day). */
+export const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+export const addDays = (d: Date, n: number) => {
+  const copy = new Date(d)
+  copy.setDate(copy.getDate() + n)
+  return copy
+}
+
+/** "2026-10-28" -> a Date at local midnight. */
+export const parseDay = (iso: string) => {
+  const [y, m, day] = iso.split('-').map(Number)
+  return new Date(y, m - 1, day)
+}
