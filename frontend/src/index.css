@@ -2,12 +2,19 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/fraunces/wght.css";
+@import "@fontsource-variable/fraunces/wght-italic.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-heading: var(--font-display);
+    --font-display: 'Fraunces Variable', Georgia, serif;
+    --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+    --color-oud: var(--oud);
+    --color-oud-foreground: var(--oud-foreground);
+    --color-saffron: var(--saffron);
+    --color-chalk: var(--chalk);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,30 +56,35 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    /* Shop palette: chalk paper, oud ink, cardamom green for actions, saffron only for liquid. */
+    --chalk: #f8f8f5;
+    --oud: #1f1813;
+    --oud-foreground: #f1ede4;
+    --saffron: #d19a2b;
+    --background: #f8f8f5;
+    --foreground: #1f1813;
+    --card: #ffffff;
+    --card-foreground: #1f1813;
+    --popover: #ffffff;
+    --popover-foreground: #1f1813;
+    --primary: #14463a;
+    --primary-foreground: #f8f8f5;
+    --secondary: #eceae3;
+    --secondary-foreground: #1f1813;
+    --muted: #eceae3;
+    --muted-foreground: #6b625a;
+    --accent: #e3efe9;
+    --accent-foreground: #14463a;
+    --destructive: #a3282a;
+    --border: #dedad0;
+    --input: #cfc9bc;
+    --ring: #14463a;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
+    --radius: 0.375rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);
@@ -126,5 +138,21 @@
     }
   html {
     @apply font-sans;
+    -webkit-text-size-adjust: 100%;
     }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    }
+  /* Prices and quantities line up in columns. */
+  .tnum { font-variant-numeric: tabular-nums; }
+}
+
+/* The vial fills once when the hero loads; user-triggered changes use the normal transition. */
+@keyframes vial-fill {
+  from { transform: scaleY(0.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

@@ -60,6 +60,16 @@ Use `127.0.0.1` or `localhost` consistently in the browser — Sanctum cookies a
 - Business failures are `ShopException`s => 422 `{message, shortages?}`.
 - Stock is never editable through the product endpoints; only through `/admin/stock/*`, order workflow and the caisse.
 
+## Shop frontend (Phase 4)
+- Routes: `/`, `/boutique` (filters live in the URL), `/parfum/:slug`, `/pack/:slug`, `/packs`, `/panier`, `/commande`, `/commande/merci/:reference`. Code in `frontend/src/shop/` (pages, components, `queries.ts`, `types.ts`, `useCartSync.ts`).
+- Design: chalk background, oud-brown ink, cardamom-green actions, saffron only in the liquid; Fraunces (display) + Geist (body), both self-hosted. Signature piece = `VolumeGauge` (the size picker as a vial). Products without photo get a drawn `Flacon` (shape and colour by perfume type, see `components/tones.ts`).
+- Sizes are **per perfume**: each product page lists that perfume's own variants and prices; the cart holds one line per variant, so sizes can be mixed across perfumes. The vial on the home page is only an illustration.
+- The cart (`stores/cart.ts`, localStorage) stores display data only. `useCartQuote` re-prices it through `POST /cart/validate`; `useCartSync` removes vanished lines and lowers quantities above the stock.
+- This shadcn is built on base-ui: there is no `asChild`. For a link that looks like a button use `linkButton()` from `shop/components/ui.ts`.
+- All UI text is in `src/i18n/fr.json`. Quick check that every `t('...')` key exists: see how `check-i18n` was done in the Phase 4 session (static keys + the dynamic groups sorts/genders/modes).
+- Mobile first. Checked for horizontal overflow at 320, 375, 600, 768, 1024 and 1280 px. The browser pane's screenshot tool crops emulated viewports that differ from the pane size; measure with JS (`scrollWidth` vs `innerWidth`) when in doubt.
+- Dev: `npm run dev` runs on port 3000 (see `vite.config.ts`) and opens a browser; use `npx vite --port 3000 --open false` to avoid that.
+
 ## Tests
 - Pest, run from `backend/`: `vendor/bin/pest`. They use the **`perfume_shop_test`** MariaDB database (see `phpunit.xml`); `Tests\TestCase` refuses to run on any database whose name does not end in `_test`, because `RefreshDatabase` wipes the schema.
 - Helpers (`makePerfume`, `makePack`, `placeOnline`, ...) are in `tests/Helpers.php`.
