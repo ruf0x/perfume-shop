@@ -56,13 +56,13 @@ class OrderWorkflow
 
             switch ($action) {
                 case 'confirm':
-                    $this->stock->deductForOrder($order);
+                    $this->stock->deductForOrder($order, $user);
                     $changes['confirmed_at'] = now();
                     break;
 
                 case 'cancel':
                     // Stock is only restored if it had been taken (i.e. the order was confirmed).
-                    $this->stock->restoreForOrder($order, StockMovementType::Annulation);
+                    $this->stock->restoreForOrder($order, StockMovementType::Annulation, $user);
                     $changes['cancelled_at'] = now();
                     $changes['cancel_reason'] = $data['reason'] ?? null;
                     $note ??= $data['reason'] ?? null;
@@ -82,7 +82,7 @@ class OrderWorkflow
                 case 'return':
                     $changes['returned_at'] = now();
                     if ($data['restock'] ?? false) {
-                        $this->stock->restoreForOrder($order, StockMovementType::Retour);
+                        $this->stock->restoreForOrder($order, StockMovementType::Retour, $user);
                         $note ??= 'Remis en stock';
                     } else {
                         // Poured decants usually can't be resold: the sale movements stay as the loss.

@@ -91,6 +91,29 @@ class Order extends Model
         return $query->where('channel', $channel);
     }
 
+    /**
+     * Admin list filters: status, channel, from, to, wilaya_id, customer_id, min_total, max_total, q.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function scopeFilter(Builder $query, array $filters): Builder
+    {
+        return $query
+            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->where('status', $status))
+            ->when($filters['channel'] ?? null, fn (Builder $q, string $channel) => $q->where('channel', $channel))
+            ->between($filters['from'] ?? null, $filters['to'] ?? null)
+            ->when($filters['wilaya_id'] ?? null, fn (Builder $q, int $id) => $q->where('wilaya_id', $id))
+            ->when($filters['customer_id'] ?? null, fn (Builder $q, int $id) => $q->where('customer_id', $id))
+            ->when(isset($filters['min_total']), fn (Builder $q) => $q->where('total', '>=', $filters['min_total']))
+            ->when(isset($filters['max_total']), fn (Builder $q) => $q->where('total', '<=', $filters['max_total']))
+            ->when($filters['q'] ?? null, fn (Builder $q, string $term) => $q->where(fn (Builder $w) => $w
+                ->where('reference', 'like', "%{$term}%")
+                ->orWhere('phone', 'like', "%{$term}%")
+                ->orWhere('first_name', 'like', "%{$term}%")
+                ->orWhere('last_name', 'like', "%{$term}%")
+                ->orWhereRaw("concat(first_name, ' ', last_name) like ?", ["%{$term}%"])));
+    }
+
     public function scopeBetween(Builder $query, Carbon|string|null $from, Carbon|string|null $to): Builder
     {
         return $query

@@ -52,6 +52,14 @@ Use `127.0.0.1` or `localhost` consistently in the browser — Sanctum cookies a
 - Deactivating a perfume only hides it from new sales; existing orders containing it can still be confirmed.
 - Models define `$attributes` for DB defaults used right after `create()` (e.g. `is_active`, `stock_deducted`).
 
+## API (Phase 3)
+- Full reference: `backend/API.md`. Live docs (local only): `http://localhost:8000/docs/api` (Scramble). Postman: `backend/docs/perfume-shop.postman_collection.json`. After changing the API regenerate: `php artisan scramble:export --path=docs/openapi.json` and `node docs/build-postman.mjs`.
+- Controllers: `app/Http/Controllers/Public/*` (storefront) and `Admin/*`. Output through `Http/Resources`, input through Form Requests (or inline `validate()` for the tiny CRUDs). Logic stays in services (`ProductService`, `OrderEditor`, `DashboardService`...).
+- Admin auth is a Sanctum **cookie session** (frontend). The SPA request needs an `Origin` in `SANCTUM_STATEFUL_DOMAINS`. For Postman/Swagger there is `POST /api/admin/token` (Bearer), enabled only when `config('shop.dev_tokens')` (local env).
+- Roles: `role:owner` middleware group = owner-only; everything else under `/admin` is owner + staff. `EnsureRole`/`EnsureActiveUser` run before route-model binding so forbidden users get 403, not 404.
+- Business failures are `ShopException`s => 422 `{message, shortages?}`.
+- Stock is never editable through the product endpoints; only through `/admin/stock/*`, order workflow and the caisse.
+
 ## Tests
 - Pest, run from `backend/`: `vendor/bin/pest`. They use the **`perfume_shop_test`** MariaDB database (see `phpunit.xml`); `Tests\TestCase` refuses to run on any database whose name does not end in `_test`, because `RefreshDatabase` wipes the schema.
 - Helpers (`makePerfume`, `makePack`, `placeOnline`, ...) are in `tests/Helpers.php`.

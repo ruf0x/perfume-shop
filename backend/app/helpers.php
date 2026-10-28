@@ -13,3 +13,11 @@ if (! function_exists('settings')) {
         return $key === null ? $service : $service->get($key, $default);
     }
 }
+
+if (! function_exists('media_url')) {
+    /** Public URL of a file stored on the "public" disk (null when there is none). */
+    function media_url(?string $path): ?string
+    {
+        return $path ? \Illuminate\Support\Facades\Storage::disk('public')->url($path) : null;
+    }
+}

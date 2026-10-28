@@ -36,6 +36,21 @@ enum OrderStatus: string
         };
     }
 
+    /**
+     * Workflow actions the admin can trigger from this status (see OrderWorkflow).
+     *
+     * @return list<string>
+     */
+    public function actions(): array
+    {
+        return match ($this) {
+            self::EnAttente => ['confirm', 'no_answer', 'cancel'],
+            self::Confirmee => ['ship', 'sell_in_store', 'cancel'],
+            self::EnLivraison => ['deliver', 'return'],
+            default => [],
+        };
+    }
+
     public function canTransitionTo(self $to): bool
     {
         return in_array($to, $this->allowedTransitions(), true);

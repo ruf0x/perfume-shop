@@ -55,6 +55,23 @@ class StockService
         return $limits === [] ? 0 : max(0, min($limits));
     }
 
+    /**
+     * Whether the shop should list a product as in stock. Perfumes: enough ml in the pool
+     * (the low-stock threshold) or a sealed bottle; packs: at least one can be assembled.
+     * Uses the loaded `variants` relation for perfumes (no extra queries).
+     */
+    public function productAvailable(Product $product): bool
+    {
+        if ($product->kind === ProductKind::Pack) {
+            $variant = $product->variants->first();
+
+            return $variant !== null && $this->maxQty($variant) >= 1;
+        }
+
+        return $product->stock_ml >= settings()->lowStockThresholdMl()
+            || $product->variants->contains(fn (ProductVariant $v) => $v->is_active && $v->stock_mode === StockMode::Unit && $v->stock_qty > 0);
+    }
+
     public function availability(ProductVariant $variant, int $qty): bool
     {
         return $qty >= 1 && $this->maxQty($variant) >= $qty;
@@ -135,13 +152,13 @@ class StockService
      *
      * @throws InsufficientStockException
      */
-    public function deductForOrder(Order $order): void
+    public function deductForOrder(Order $order, ?User $user = null): void
     {
         if ($order->stock_deducted) {
             return;
         }
 
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($order, $user) {
             $needs = ['ml' => [], 'units' => []];
             foreach ($order->items()->with('variant')->get() as $item) {
                 if (! $item->variant) {
@@ -172,11 +189,11 @@ class StockService
             $type = $order->channel === OrderChannel::Pos ? StockMovementType::VenteCaisse : StockMovementType::VenteEnLigne;
 
             foreach ($needs['ml'] as $productId => $ml) {
-                $this->record($products[$productId], null, $type, -$ml, 0, null, $order->id, $order->reference);
+                $this->record($products[$productId], null, $type, -$ml, 0, null, $order->id, $order->reference, $user);
                 $products[$productId]->decrement('stock_ml', $ml);
             }
             foreach ($needs['units'] as $variantId => $units) {
-                $this->record($variants[$variantId]->product, $variants[$variantId], $type, 0, -$units, null, $order->id, $order->reference);
+                $this->record($variants[$variantId]->product, $variants[$variantId], $type, 0, -$units, null, $order->id, $order->reference, $user);
                 $variants[$variantId]->decrement('stock_qty', $units);
             }
 
@@ -188,28 +205,37 @@ class StockService
      * Put an order's stock back (cancellation / return). Reverses exactly the movements
      * that deductForOrder wrote. Does nothing if the stock was not taken.
      */
-    public function restoreForOrder(Order $order, StockMovementType $type = StockMovementType::Annulation): void
+    public function restoreForOrder(Order $order, StockMovementType $type = StockMovementType::Annulation, ?User $user = null): void
     {
         if (! $order->stock_deducted) {
             return;
         }
 
-        DB::transaction(function () use ($order, $type) {
-            $sales = $order->stockMovements()
-                ->whereIn('type', [StockMovementType::VenteEnLigne, StockMovementType::VenteCaisse])
-                ->get();
+        DB::transaction(function () use ($order, $type, $user) {
+            // Reverse the NET effect of the order (an order edited after confirmation has
+            // been deducted, restored and deducted again: only the last deduction counts).
+            $net = $order->stockMovements()->get()
+                ->groupBy(fn (StockMovement $m) => $m->product_id.'|'.$m->variant_id)
+                ->map(fn ($group) => [
+                    'product_id' => $group->first()->product_id,
+                    'variant_id' => $group->first()->variant_id,
+                    'ml' => (int) $group->sum('ml_change'),
+                    'qty' => (int) $group->sum('qty_change'),
+                ])
+                ->filter(fn (array $n) => $n['ml'] !== 0 || $n['qty'] !== 0);
 
-            $products = $this->lockProducts($sales->pluck('product_id')->unique()->all());
-            $variants = $this->lockVariants($sales->pluck('variant_id')->filter()->unique()->all());
+            $products = $this->lockProducts($net->pluck('product_id')->unique()->all());
+            $variants = $this->lockVariants($net->pluck('variant_id')->filter()->unique()->all());
 
-            foreach ($sales as $sale) {
-                $this->record($products[$sale->product_id], $sale->variant_id ? $variants[$sale->variant_id] : null, $type, -$sale->ml_change, -$sale->qty_change, null, $order->id, $order->reference);
+            foreach ($net as $n) {
+                $variant = $n['variant_id'] ? $variants[$n['variant_id']] : null;
+                $this->record($products[$n['product_id']], $variant, $type, -$n['ml'], -$n['qty'], null, $order->id, $order->reference, $user);
 
-                if ($sale->ml_change !== 0) {
-                    $products[$sale->product_id]->increment('stock_ml', -$sale->ml_change);
+                if ($n['ml'] !== 0) {
+                    $products[$n['product_id']]->increment('stock_ml', -$n['ml']);
                 }
-                if ($sale->qty_change !== 0) {
-                    $variants[$sale->variant_id]->increment('stock_qty', -$sale->qty_change);
+                if ($n['qty'] !== 0) {
+                    $variant->increment('stock_qty', -$n['qty']);
                 }
             }
 

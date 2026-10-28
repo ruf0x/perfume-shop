@@ -139,7 +139,7 @@ class OrderPlacement
             ]);
 
             $this->createItems($order, $quote);
-            $this->stock->deductForOrder($order);
+            $this->stock->deductForOrder($order, $user);
             $this->logCreation($order, OrderStatus::VendueBoutique, $user, 'Vente en caisse');
 
             return $order->load('items');
