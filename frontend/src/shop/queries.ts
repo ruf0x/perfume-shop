@@ -37,6 +37,14 @@ export const useCommunes = (wilayaId: number | null) =>
     queryFn: () => api.get<{ data: Commune[] }>(`/wilayas/${wilayaId}/communes`).then((r) => r.data.data),
   })
 
+/** One numbered page of the catalogue (the page number lives in the URL). */
+export const usePagedProducts = (filters: ProductFilters, page: number, perPage = 12) =>
+  useQuery({
+    queryKey: ['products-page', filters, page, perPage],
+    placeholderData: keepPreviousData,
+    queryFn: () => api.get<Paginated<ProductCard>>('/products', { params: { ...filters, per_page: perPage, page } }).then((r) => r.data),
+  })
+
 /** Catalogue pages; call fetchNextPage() for "Voir plus". */
 export const useProducts = (filters: ProductFilters, perPage = 12) =>
   useInfiniteQuery({

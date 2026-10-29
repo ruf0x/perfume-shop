@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { FilterPanel } from '../components/FilterPanel'
+import { Pager } from '../components/Pager'
 import { ProductGrid } from '../components/ProductGrid'
 import { bigButton } from '../components/ui'
-import { useBrands, useProducts, useTypes } from '../queries'
+import { useBrands, usePagedProducts, useTypes } from '../queries'
+
 import type { Gender, ProductFilters } from '../types'
 import { useDocumentTitle } from '../useDocumentTitle'
 
@@ -40,6 +42,7 @@ export default function Boutique() {
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev)
+        next.delete('page') // a new search starts again on page 1
         for (const [key, value] of Object.entries(patch)) {
           if (value === undefined || value === '') next.delete(key)
           else next.set(key, String(value))
@@ -49,9 +52,11 @@ export default function Boutique() {
       { replace: true },
     )
 
-  const query = useProducts({ ...filters, kind: 'perfume' })
-  const items = query.data?.pages.flatMap((p) => p.data) ?? []
-  const total = query.data?.pages[0]?.meta.total ?? 0
+  const page = toInt(params.get('page')) ?? 1
+  const query = usePagedProducts({ ...filters, kind: 'perfume' }, page)
+  const items = query.data?.data ?? []
+  const total = query.data?.meta.total ?? 0
+  const goToPage = (n: number) => setParams((prev) => { const next = new URLSearchParams(prev); n > 1 ? next.set('page', String(n)) : next.delete('page'); return next }, { replace: true })
 
   const typeName = types.data?.find((x) => x.slug === filters.type)?.name
   useDocumentTitle(typeName ?? t('meta.shop'), t('meta.shopDescription'))
@@ -148,13 +153,7 @@ export default function Boutique() {
           ) : (
             <>
               <ProductGrid products={items} loading={query.isPending} skeletons={9} className="md:grid-cols-2 lg:grid-cols-3" />
-              {query.hasNextPage && (
-                <div className="mt-12 flex justify-center">
-                  <Button variant="outline" className={bigButton} onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-                    {query.isFetchingNextPage ? t('common.loading') : t('common.seeMore')}
-                  </Button>
-                </div>
-              )}
+              <Pager page={query.data?.meta.current_page ?? page} lastPage={query.data?.meta.last_page ?? 1} total={total} onPage={goToPage} />
             </>
           )}
         </div>

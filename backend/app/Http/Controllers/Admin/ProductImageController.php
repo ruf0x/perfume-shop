@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Format;
 use Intervention\Image\ImageManager;
+use Throwable;
 
 class ProductImageController extends Controller
 {
@@ -26,16 +27,28 @@ class ProductImageController extends Controller
      */
     public function store(Request $request, Product $product): JsonResponse
     {
-        $request->validate(['image' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120']]);
+        $request->validate(
+            ['image' => ['required', 'file', 'image', 'max:20480']],
+            [
+                'image.required' => "Aucune photo reçue. Choisissez une image, puis réessayez.",
+                'image.image' => "Ce fichier n'est pas une image (jpg, png, webp ou gif).",
+                'image.max' => 'Cette photo dépasse 20 Mo. Réduisez-la puis réessayez.',
+            ],
+        );
 
         if ($product->images()->count() >= self::MAX_IMAGES) {
             throw new ShopException('Maximum '.self::MAX_IMAGES.' photos par produit.');
         }
 
-        $webp = ImageManager::usingDriver(Driver::class)
-            ->decodePath($request->file('image')->getRealPath())
-            ->scaleDown(1200, 1200)
-            ->encodeUsingFormat(Format::WEBP, quality: 82);
+        try {
+            $webp = ImageManager::usingDriver(Driver::class)
+                ->decodePath($request->file('image')->getRealPath())
+                ->scaleDown(1200, 1200)
+                ->encodeUsingFormat(Format::WEBP, quality: 82);
+        } catch (Throwable $e) {
+            report($e);
+            throw new ShopException("Impossible de lire cette photo. Essayez de l'enregistrer en jpg ou png, puis réessayez.");
+        }
 
         $path = "products/{$product->id}/".Str::uuid().'.webp';
         Storage::disk('public')->put($path, (string) $webp);

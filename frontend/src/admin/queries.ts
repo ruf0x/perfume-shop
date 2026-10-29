@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { clean } from './lib'
+import { prepareImage } from './imagePrep'
 import type { AdminProduct, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
 
 /** Everything the admin shows may have changed after a write; "me" is left alone. */
@@ -99,9 +100,9 @@ export function useProductImages(productId: number) {
   const done = () => refresh(qc)
   return {
     upload: useMutation({
-      mutationFn: (file: File) => {
+      mutationFn: async (file: File) => {
         const form = new FormData()
-        form.append('image', file)
+        form.append('image', await prepareImage(file))
         return api.post(`/admin/products/${productId}/images`, form)
       },
       onSuccess: done,

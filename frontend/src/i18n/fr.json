@@ -1,5 +1,7 @@
 {
-  "brand": { "name": "Boutique de parfums" },
+  "brand": {
+    "name": "Boutique de parfums"
+  },
   "meta": {
     "homeDescription": "Parfums au millilitre ou en flacon complet : designer, niche, arabes et créations maison. Commandez en ligne, payez à la livraison.",
     "shop": "La boutique",
@@ -56,9 +58,18 @@
     "packsLead": "Plusieurs parfums réunis, à un prix unique.",
     "howTitle": "Commander est simple",
     "steps": [
-      { "title": "Vous choisissez", "text": "Un parfum, une taille : 10, 20, 30 ml ou le flacon complet." },
-      { "title": "Vous commandez", "text": "Quelques informations suffisent. Pas de compte, vous payez à la livraison." },
-      { "title": "Nous vous appelons", "text": "Nous confirmons par téléphone, puis nous livrons dans votre wilaya." }
+      {
+        "title": "Vous choisissez",
+        "text": "Un parfum, une taille : 10, 20, 30 ml ou le flacon complet."
+      },
+      {
+        "title": "Vous commandez",
+        "text": "Quelques informations suffisent. Pas de compte, vous payez à la livraison."
+      },
+      {
+        "title": "Nous vous appelons",
+        "text": "Nous confirmons par téléphone, puis nous livrons dans votre wilaya."
+      }
     ]
   },
   "shopPage": {
@@ -71,7 +82,11 @@
     "allTypes": "Toutes les familles",
     "gender": "Pour qui",
     "anyGender": "Tous",
-    "genders": { "homme": "Homme", "femme": "Femme", "mixte": "Mixte" },
+    "genders": {
+      "homme": "Homme",
+      "femme": "Femme",
+      "mixte": "Mixte"
+    },
     "brand": "Marque",
     "allBrands": "Toutes les marques",
     "price": "Prix",
@@ -80,7 +95,12 @@
     "priceHint": "En dinars, par taille.",
     "priceChip": "{{min}} à {{max}} DA",
     "sort": "Trier par",
-    "sorts": { "newest": "Nouveautés", "price_asc": "Prix croissant", "price_desc": "Prix décroissant", "name": "Nom, de A à Z" },
+    "sorts": {
+      "newest": "Nouveautés",
+      "price_asc": "Prix croissant",
+      "price_desc": "Prix décroissant",
+      "name": "Nom, de A à Z"
+    },
     "removeFilter": "Retirer le filtre {{label}}",
     "reset": "Effacer les filtres",
     "empty": "Aucun parfum ne correspond.",
@@ -201,5 +221,11 @@
     "contact": "Nous joindre",
     "shop": "La boutique",
     "payment": "Livraison dans toute l'Algérie. Paiement à la réception."
+  },
+  "pager": {
+    "label": "Pages de résultats",
+    "previous": "Page précédente",
+    "next": "Page suivante",
+    "summary": "Page {{page}} sur {{lastPage}}, {{count}} parfum(s)"
   }
 }

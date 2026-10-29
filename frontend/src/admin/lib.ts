@@ -3,6 +3,7 @@ import type { ApiError } from '@/shop/types'
 
 /** The most useful sentence from a failed API call, in French. */
 export function apiError(err: unknown, fallback = 'Une erreur est survenue. Réessayez.'): string {
+  if (err instanceof Error && !isAxiosError(err)) return err.message // e.g. a photo the browser cannot read
   if (!isAxiosError<ApiError>(err)) return fallback
   if (!err.response) return 'Connexion impossible. Vérifiez votre réseau.'
   const { message, errors } = err.response.data ?? {}

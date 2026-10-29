@@ -152,10 +152,15 @@ function Overview() {
   const [status, setStatus] = useState<'' | 'ok' | 'low' | 'out'>('')
   const query = useStock({ q: q || undefined, status: status || undefined })
   const { openBottle } = useStockWrite()
+  const [page, setPage] = useState(1)
   const [entry, setEntry] = useState<StockRow | null>(null)
   const [adjust, setAdjust] = useState<StockRow | null>(null)
   const [open, setOpen] = useState<{ row: StockRow; variantId: number; label: string; ml: number | null } | null>(null)
   const rows = query.data?.data ?? []
+  const PER_PAGE = 15
+  const lastPage = Math.max(1, Math.ceil(rows.length / PER_PAGE))
+  const safePage = Math.min(page, lastPage)
+  const pageRows = rows.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE)
 
   return (
     <>
@@ -169,7 +174,7 @@ function Overview() {
 
       {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun parfum" hint="Créez un parfum pour gérer son stock." /> : (
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-          {rows.map((r) => (
+          {pageRows.map((r) => (
             <li key={r.product_id} className="space-y-3 p-4 md:flex md:items-center md:gap-6 md:space-y-0">
               <div className="min-w-0 md:w-1/4">
                 <p className="truncate font-display text-lg leading-tight">{r.name}</p>
@@ -193,6 +198,8 @@ function Overview() {
           ))}
         </ul>
       )}
+
+      <Pagination meta={{ current_page: safePage, last_page: lastPage, per_page: PER_PAGE, total: rows.length }} onPage={setPage} />
 
       {entry && <EntryDialog row={entry} onClose={() => setEntry(null)} />}
       {adjust && <AdjustDialog row={adjust} onClose={() => setAdjust(null)} />}

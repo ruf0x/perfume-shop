@@ -202,7 +202,7 @@ it('rejects files that are not images or are too large', function () {
     $p = makePerfume('Photo');
 
     $this->postJson("/api/admin/products/{$p->id}/images", ['image' => UploadedFile::fake()->create('virus.pdf', 10, 'application/pdf')])->assertUnprocessable();
-    $this->postJson("/api/admin/products/{$p->id}/images", ['image' => UploadedFile::fake()->image('big.jpg')->size(6000)])->assertUnprocessable();
+    $this->postJson("/api/admin/products/{$p->id}/images", ['image' => UploadedFile::fake()->image('big.jpg')->size(21000)])->assertUnprocessable();
     $this->postJson("/api/admin/products/{$p->id}/images", [])->assertUnprocessable();
 });
 

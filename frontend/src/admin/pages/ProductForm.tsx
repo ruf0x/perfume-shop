@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { QtyStepper } from '@/shop/components/QtyStepper'
 import { api } from '@/lib/api'
+import { prepareImage } from '../imagePrep'
 import { useIsOwner } from '../auth'
 import { ConfirmDialog, ErrorState, Loading, PageHeader, inputClass } from '../components/common'
 import { VariantPicker } from '../components/VariantPicker'
@@ -283,8 +284,8 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
           let failed = 0
           for (const file of pendingFiles) {
             const form = new FormData()
-            form.append('image', file)
             try {
+              form.append('image', await prepareImage(file))
               await api.post(`/admin/products/${saved.id}/images`, form)
             } catch (e) {
               failed++

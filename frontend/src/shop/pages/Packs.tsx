@@ -1,16 +1,20 @@
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import { Pager } from '../components/Pager'
 import { ProductGrid } from '../components/ProductGrid'
 import { bigButton, linkButton } from '../components/ui'
-import { useProducts } from '../queries'
+import { usePagedProducts } from '../queries'
 import { useDocumentTitle } from '../useDocumentTitle'
 
 export default function Packs() {
   const { t } = useTranslation()
   useDocumentTitle(t('meta.packs'), t('packs.lead'))
-  const query = useProducts({ kind: 'pack' }, 12)
-  const items = query.data?.pages.flatMap((p) => p.data) ?? []
+  const [params, setParams] = useSearchParams()
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  const query = usePagedProducts({ kind: 'pack' }, page)
+  const items = query.data?.data ?? []
+  const goToPage = (n: number) => setParams((prev) => { const next = new URLSearchParams(prev); n > 1 ? next.set('page', String(n)) : next.delete('page'); return next }, { replace: true })
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
@@ -35,13 +39,7 @@ export default function Packs() {
         ) : (
           <>
             <ProductGrid products={items} loading={query.isPending} skeletons={6} className="md:grid-cols-3 lg:grid-cols-3" />
-            {query.hasNextPage && (
-              <div className="mt-12 flex justify-center">
-                <Button variant="outline" className={bigButton} onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-                  {t('common.seeMore')}
-                </Button>
-              </div>
-            )}
+            <Pager page={query.data?.meta.current_page ?? page} lastPage={query.data?.meta.last_page ?? 1} total={query.data?.meta.total ?? 0} onPage={goToPage} />
           </>
         )}
       </div>
