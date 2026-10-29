@@ -10,7 +10,7 @@ import { useSettings } from '../queries'
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn('rounded-sm px-1 py-2 text-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-ring', isActive ? 'font-medium text-primary' : 'text-foreground/80')
 
-function SearchForm({ className, onDone }: { className?: string; onDone?: () => void }) {
+function SearchForm({ className }: { className?: string }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [term, setTerm] = useState('')
@@ -19,7 +19,6 @@ function SearchForm({ className, onDone }: { className?: string; onDone?: () => 
     e.preventDefault()
     navigate(term.trim() ? `/boutique?q=${encodeURIComponent(term.trim())}` : '/boutique')
     setTerm('')
-    onDone?.()
   }
 
   return (
@@ -94,7 +93,6 @@ export function Header() {
             <SheetDescription className="sr-only">{t('nav.menu')}</SheetDescription>
           </SheetHeader>
           <div className="space-y-6 p-5">
-            <SearchForm onDone={() => setMenu(false)} />
             <nav className="flex flex-col" aria-label={t('nav.main')}>
               {[
                 ['/', t('nav.home')],

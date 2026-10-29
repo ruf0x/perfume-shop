@@ -10,6 +10,7 @@ interface FilterPanelProps {
   brands: Brand[]
   onChange: (patch: Partial<ProductFilters>) => void
   idPrefix: string
+  hideSearch?: boolean
 }
 
 function Choice({ name, checked, label, onSelect }: { name: string; checked: boolean; label: string; onSelect: () => void }) {
@@ -22,7 +23,7 @@ function Choice({ name, checked, label, onSelect }: { name: string; checked: boo
 }
 
 /** Filters shared by the desktop sidebar and the mobile sheet. Every change is written to the URL by the parent. */
-export function FilterPanel({ filters, types, brands, onChange, idPrefix }: FilterPanelProps) {
+export function FilterPanel({ filters, types, brands, onChange, idPrefix, hideSearch }: FilterPanelProps) {
   const { t } = useTranslation()
   const [q, setQ] = useState(filters.q ?? '')
   const [min, setMin] = useState(filters.min_price?.toString() ?? '')
@@ -44,7 +45,7 @@ export function FilterPanel({ filters, types, brands, onChange, idPrefix }: Filt
 
   return (
     <div className="space-y-8">
-      <form onSubmit={submitSearch} role="search">
+      <form onSubmit={submitSearch} role="search" className={hideSearch ? 'hidden' : undefined}>
         <label htmlFor={`${idPrefix}-q`} className="mb-2 block font-display text-lg">
           {t('shopPage.search')}
         </label>

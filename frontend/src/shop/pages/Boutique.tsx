@@ -1,5 +1,5 @@
-import { SlidersHorizontal, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -58,6 +58,13 @@ export default function Boutique() {
   const total = query.data?.meta.total ?? 0
   const goToPage = (n: number) => setParams((prev) => { const next = new URLSearchParams(prev); n > 1 ? next.set('page', String(n)) : next.delete('page'); return next }, { replace: true })
 
+  const [term, setTerm] = useState(filters.q ?? '')
+  useEffect(() => setTerm(filters.q ?? ''), [filters.q])
+  const submitSearch = (e: FormEvent) => {
+    e.preventDefault()
+    setFilters({ q: term.trim() || undefined })
+  }
+
   const typeName = types.data?.find((x) => x.slug === filters.type)?.name
   useDocumentTitle(typeName ?? t('meta.shop'), t('meta.shopDescription'))
 
@@ -74,7 +81,7 @@ export default function Boutique() {
   const clearChip = (key: keyof ProductFilters) => setFilters(key === 'min_price' ? { min_price: undefined, max_price: undefined } : { [key]: undefined })
   const reset = () => setParams({}, { replace: true })
 
-  const panel = (id: string) => <FilterPanel idPrefix={id} filters={filters} types={types.data ?? []} brands={brands.data ?? []} onChange={setFilters} />
+  const panel = (id: string) => <FilterPanel hideSearch={id === 'sheet'} idPrefix={id} filters={filters} types={types.data ?? []} brands={brands.data ?? []} onChange={setFilters} />
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
@@ -87,6 +94,13 @@ export default function Boutique() {
         </div>
 
         <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
+          <form onSubmit={submitSearch} role="search" className="w-full md:hidden">
+            <label className="relative block">
+              <span className="sr-only">{t('nav.search')}</span>
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder={t('nav.searchPlaceholder')} className="h-11 w-full rounded-md border border-input bg-card pr-3 pl-9 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30" />
+            </label>
+          </form>
           <Button variant="outline" className={`${bigButton} md:hidden`} onClick={() => setSheet(true)}>
             <SlidersHorizontal className="size-4" aria-hidden />
             {t('shopPage.filters')}
