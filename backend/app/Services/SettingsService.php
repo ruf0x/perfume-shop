@@ -11,10 +11,13 @@ class SettingsService
 
     /** Defaults used until the owner saves a value. */
     public const DEFAULTS = [
-        'shop_name' => 'Boutique de parfums',
+        'shop_name' => 'Arena Cosmétique',
         'shop_phone' => null,
-        'shop_address' => null,
-        'socials' => [],
+        'shop_address' => 'MCR6+39H LPP Hayet Regency, Oran',
+        'socials' => [
+            'instagram' => 'https://www.instagram.com/arenecosmetique/',
+            'facebook' => 'https://web.facebook.com/people/Arena-cosm%C3%A9tique-Oran-hayate-regenci-lpp-Oran/61581182056275/',
+        ],
         'show_unavailable' => false,
         'low_stock_threshold_ml' => 10,
         'store_pickup_enabled' => true,
