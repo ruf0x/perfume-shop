@@ -14,7 +14,7 @@ export function Footer() {
     <footer className="mt-24 bg-oud text-oud-foreground">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div className="space-y-3">
-          <p className="font-display text-2xl">{s?.shop_name ?? t('brand.name')}</p>
+          <img src="/brand/logo-light.webp" alt={s?.shop_name ?? t('brand.name')} width={900} height={797} className="h-32 w-auto" />
           <p className="max-w-sm text-sm leading-relaxed text-oud-foreground/75">{t('footer.about')}</p>
         </div>
 

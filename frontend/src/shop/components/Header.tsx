@@ -57,8 +57,9 @@ export function Header() {
           <Menu className="size-5" />
         </button>
 
-        <Link to="/" className="font-display text-xl font-medium tracking-tight focus-visible:outline-2 focus-visible:outline-ring">
-          {settings?.shop_name ?? t('brand.name')}
+        <Link to="/" className="flex items-center gap-2.5 font-display text-lg font-medium tracking-tight focus-visible:outline-2 focus-visible:outline-ring sm:text-xl">
+          <img src="/brand/logo-mark.webp" alt="" width={256} height={179} className="h-9 w-auto" />
+          <span className="leading-tight">{settings?.shop_name ?? t('brand.name')}</span>
         </Link>
 
         <nav className="ml-6 hidden items-center gap-5 md:flex" aria-label={t('nav.main')}>
