@@ -18,6 +18,13 @@ return [
     */
     'dev_tokens' => env('DEV_API_TOKENS', env('APP_ENV') === 'local'),
 
+    /*
+    | Database backups (php artisan db:backup, run weekly by the scheduler). Keep the folder OUTSIDE
+    | the web root. On cPanel: BACKUP_PATH=/home/USER/backups
+    */
+    'backup_path' => env('BACKUP_PATH', storage_path('app/backups')),
+    'dump_binary' => env('DB_DUMP_BINARY', 'mysqldump'),
+
     // Default delivery fees (DZD) seeded for every wilaya; editable in the admin.
     'default_home_fee' => 600,
     'default_desk_fee' => 400,

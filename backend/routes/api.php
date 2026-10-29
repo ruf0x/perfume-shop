@@ -23,12 +23,15 @@ Route::get('/ping', fn () => response()->json(['pong' => true]));
 | Public storefront (no authentication).
 */
 Route::get('/settings/public', [ShopController::class, 'settings']);
-Route::get('/types', [CatalogController::class, 'types']);
-Route::get('/brands', [CatalogController::class, 'brands']);
+// Lists that almost never change are cached by the browser for a few minutes (fewer requests to the host).
+Route::middleware('cache.headers:public;max_age=300;etag')->group(function () {
+    Route::get('/types', [CatalogController::class, 'types']);
+    Route::get('/brands', [CatalogController::class, 'brands']);
+    Route::get('/wilayas', [GeoController::class, 'wilayas']);
+    Route::get('/wilayas/{wilaya}/communes', [GeoController::class, 'communes']);
+});
 Route::get('/products', [CatalogController::class, 'index']);
 Route::get('/products/{slug}', [CatalogController::class, 'show']);
-Route::get('/wilayas', [GeoController::class, 'wilayas']);
-Route::get('/wilayas/{wilaya}/communes', [GeoController::class, 'communes']);
 Route::post('/cart/validate', [ShopController::class, 'validateCart']);
 Route::post('/orders', [ShopController::class, 'placeOrder'])->middleware('throttle:orders');
 

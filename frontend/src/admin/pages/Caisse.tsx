@@ -131,7 +131,8 @@ export default function Caisse() {
   const rawDiscount = Number(discountValue) || 0
   const discount = Math.min(subtotal, Math.max(0, discountMode === 'pct' ? Math.round((subtotal * Math.min(rawDiscount, 100)) / 100) : Math.round(rawDiscount)))
   const total = subtotal - discount
-  const cash = Number(received) || 0
+  // Empty means "exact amount": the cashier only types when the client pays with something else.
+  const cash = received === '' ? total : Number(received) || 0
   const change = cash - total
   const count = lines.reduce((n, l) => n + l.qty, 0)
   const canSell = lines.length > 0 && (payment !== 'especes' || cash >= total) && !sale.isPending
@@ -274,7 +275,7 @@ export default function Caisse() {
             {payment === 'especes' && (
               <div>
                 <label htmlFor="received" className="mb-1 block text-sm text-muted-foreground">Montant reçu (DA)</label>
-                <input id="received" type="number" min={0} inputMode="numeric" value={received} onChange={(e) => setReceived(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} className={inputClass} />
+                <input id="received" type="number" min={0} inputMode="numeric" value={received === '' ? String(total) : received} onChange={(e) => setReceived(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} className={inputClass} />
                 <div className="mt-2 flex flex-wrap gap-2">
                   {quick.map((n) => <button key={n} type="button" onClick={() => setReceived(String(n))} className="tnum rounded-md border border-input px-2.5 py-1.5 text-sm hover:bg-secondary">{n === total ? 'Exact' : formatPrice(n)}</button>)}
                 </div>

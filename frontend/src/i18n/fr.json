@@ -160,7 +160,7 @@
     "commune": "Commune",
     "wilayaFirst": "Choisissez d'abord la wilaya",
     "address": "Adresse",
-    "addressDesk": "Adresse ou nom du bureau de livraison",
+    "deskHint": "Le bureau de livraison (ZR Express) est choisi par la boutique.",
     "noteTitle": "Un mot pour nous ?",
     "note": "Précisions pour la livraison ou la commande",
     "total": "Total",

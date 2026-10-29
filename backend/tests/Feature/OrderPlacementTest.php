@@ -104,6 +104,10 @@ it('requires an address for delivery but not for store pickup', function () {
 
     $pickup = placeOnline([[$v, 1]], ['address' => null, 'delivery_mode' => 'boutique']);
     expect($pickup->delivery_fee)->toBe(0)->and($pickup->total)->toBe(1000);
+
+    // A delivery office needs no address: the shop picks the office (e.g. ZR Express).
+    $desk = placeOnline([[$v, 1]], ['address' => null, 'delivery_mode' => 'stop_desk']);
+    expect($desk->address)->toBeNull()->and($desk->delivery_fee)->toBe(400);
 });
 
 it('prices delivery from the wilaya and mode, with a free-delivery threshold', function () {

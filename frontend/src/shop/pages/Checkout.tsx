@@ -68,7 +68,7 @@ export default function Checkout() {
           const need = (path: keyof FormValues, empty: boolean) => empty && ctx.addIssue({ code: 'custom', path: [path], message: t('checkout.errors.required') })
           need('wilaya_id', !v.wilaya_id)
           need('commune_id', !v.commune_id)
-          need('address', !v.address)
+          if (v.delivery_mode === 'domicile') need('address', !v.address)
         }),
     [t],
   )
@@ -99,7 +99,7 @@ export default function Checkout() {
           delivery_mode: v.delivery_mode,
           wilaya_id: pickup ? undefined : Number(v.wilaya_id),
           commune_id: pickup ? undefined : Number(v.commune_id),
-          address: pickup ? undefined : v.address.trim(),
+          address: v.delivery_mode === 'domicile' ? v.address.trim() : undefined,
           customer_note: v.customer_note.trim() || undefined,
           website: v.website,
           lines: lines.map((l) => ({ variant_id: l.variantId, quantity: l.qty })),
@@ -210,7 +210,7 @@ export default function Checkout() {
                     <option value="">{wilayas.isPending ? t('common.loading') : t('checkout.choose')}</option>
                     {wilayas.data?.map((w) => (
                       <option key={w.id} value={w.id}>
-                        {w.code} – {w.name}
+                        {w.name} {w.code}
                       </option>
                     ))}
                   </NativeSelect>
@@ -225,9 +225,13 @@ export default function Checkout() {
                     ))}
                   </NativeSelect>
                 </Field>
-                <Field id="address" label={mode === 'stop_desk' ? t('checkout.addressDesk') : t('checkout.address')} error={err('address')} className="sm:col-span-2">
-                  <input id="address" autoComplete="street-address" aria-invalid={!!errors.address} aria-describedby={describe('address')} className={fieldClass} {...register('address')} />
-                </Field>
+                {mode === 'stop_desk' ? (
+                  <p className="rounded-md bg-secondary/60 p-3 text-sm text-muted-foreground sm:col-span-2">{t('checkout.deskHint')}</p>
+                ) : (
+                  <Field id="address" label={t('checkout.address')} error={err('address')} className="sm:col-span-2">
+                    <input id="address" autoComplete="street-address" aria-invalid={!!errors.address} aria-describedby={describe('address')} className={fieldClass} {...register('address')} />
+                  </Field>
+                )}
               </div>
             )}
           </section>

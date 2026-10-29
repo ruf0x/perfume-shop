@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useCart, useCartUi } from '@/stores/cart'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useCart } from '@/stores/cart'
 import { ProductVisual } from '../components/ProductVisual'
 import { QtyStepper } from '../components/QtyStepper'
 import { bigButton, linkButton } from '../components/ui'
@@ -18,7 +19,7 @@ export default function ProductPage() {
   const { slug } = useParams()
   const { data: product, isPending, isError } = useProduct(slug)
   const add = useCart((s) => s.add)
-  const setCartOpen = useCartUi((s) => s.setOpen)
+  const [added, setAdded] = useState<string | null>(null)
 
   const variants = useMemo(() => [...(product?.variants ?? [])].sort((a, b) => (a.ml ?? 1e9) - (b.ml ?? 1e9) || a.price - b.price), [product])
   const [variantId, setVariantId] = useState<number | null>(null)
@@ -86,12 +87,24 @@ export default function ProductPage() {
       },
       quantity,
     )
-    // The cart drawer opening is the confirmation: no extra toast covering its buttons.
-    setCartOpen(true)
+    setAdded(`${product.name}, ${variant.label}`)
   }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-14">
+      <Dialog open={added !== null} onOpenChange={(open) => !open && setAdded(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Ajouté au panier</DialogTitle>
+            <DialogDescription>{added}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:flex-col sm:gap-2">
+            <Link to="/panier" onClick={() => setAdded(null)} className={linkButton()}>Voir le panier et commander</Link>
+            <Button variant="outline" className={bigButton} onClick={() => setAdded(null)}>Continuer mes achats</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <nav aria-label={t('product.breadcrumb')} className="mb-6 text-sm text-muted-foreground">
         <Link to={isPack ? '/packs' : '/boutique'} className="underline-offset-4 hover:underline">
           {isPack ? t('nav.packs') : t('nav.shop')}

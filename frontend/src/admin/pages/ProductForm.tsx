@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2 } from 'lucide-react'
-import { useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { QtyStepper } from '@/shop/components/QtyStepper'
+import { api } from '@/lib/api'
 import { useIsOwner } from '../auth'
 import { ConfirmDialog, ErrorState, Loading, PageHeader, inputClass } from '../components/common'
 import { VariantPicker } from '../components/VariantPicker'
@@ -161,6 +162,43 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
   )
 }
 
+/** Photos chosen before the perfume exists: they are uploaded right after it is saved. */
+function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (files: File[]) => void; disabled: boolean }) {
+  const input = useRef<HTMLInputElement>(null)
+  const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files])
+  useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews])
+
+  return (
+    <Section title="Photos" hint="Choisissez les photos maintenant : elles seront envoyées dès l'enregistrement. La première est la photo principale.">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        {files.map((file, i) => (
+          <li key={`${file.name}-${i}`} className="space-y-1.5">
+            <div className="relative aspect-square overflow-hidden rounded-md bg-secondary">
+              <img src={previews[i]} alt={file.name} className="size-full object-cover" />
+              {i === 0 && <span className="absolute top-2 left-2 rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground">Principale</span>}
+            </div>
+            {!disabled && (
+              <button type="button" onClick={() => onChange(files.filter((_, j) => j !== i))} className="flex h-9 w-full items-center justify-center gap-1.5 rounded text-sm text-muted-foreground hover:text-destructive">
+                <Trash2 className="size-4" aria-hidden />
+                Retirer
+              </button>
+            )}
+          </li>
+        ))}
+        {!disabled && (
+          <li>
+            <button type="button" onClick={() => input.current?.click()} className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-input text-sm text-muted-foreground hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-ring">
+              <ImagePlus className="size-6" aria-hidden />
+              Ajouter
+            </button>
+          </li>
+        )}
+      </ul>
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { onChange([...files, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+    </Section>
+  )
+}
+
 function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: AdminProduct }) {
   const isPack = kind === 'pack'
   const owner = useIsOwner()
@@ -173,6 +211,7 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [picker, setPicker] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const base = isPack ? '/admin/packs' : '/admin/produits'
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((s) => ({ ...s, [k]: v }))
   const err = (k: string) => errors[k]
@@ -237,9 +276,23 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
     save.mutate(
       { id: product?.id, ...payload() },
       {
-        onSuccess: (saved) => {
-          toast.success(product ? 'Modifications enregistrées.' : `${isPack ? 'Pack' : 'Parfum'} créé. Ajoutez maintenant ses photos.`)
-          if (!product) navigate(`${base}/${saved.id}`, { replace: true })
+        onSuccess: async (saved) => {
+          if (product) return toast.success('Modifications enregistrées.')
+
+          // New perfume: send the photos chosen in the form, then open its page.
+          let failed = 0
+          for (const file of pendingFiles) {
+            const form = new FormData()
+            form.append('image', file)
+            try {
+              await api.post(`/admin/products/${saved.id}/images`, form)
+            } catch (e) {
+              failed++
+              toast.error(`${file.name} : ${apiError(e)}`)
+            }
+          }
+          toast.success(failed ? `${isPack ? 'Pack' : 'Parfum'} créé, mais ${failed} photo(s) non envoyée(s).` : `${isPack ? 'Pack' : 'Parfum'} créé.`)
+          navigate(`${base}/${saved.id}`, { replace: true })
         },
         onError: (e) => {
           setErrors(fieldErrors(e))
@@ -359,7 +412,7 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
             </Section>
           )}
 
-          {product ? <Photos product={product} disabled={!owner} /> : <Section title="Photos"><p className="text-sm text-muted-foreground">Enregistrez d'abord : vous pourrez ensuite ajouter les photos.</p></Section>}
+          {product ? <Photos product={product} disabled={!owner} /> : <NewPhotos files={pendingFiles} onChange={setPendingFiles} disabled={!owner} />}
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start">

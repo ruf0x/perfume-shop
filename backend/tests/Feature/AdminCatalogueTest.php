@@ -240,3 +240,12 @@ it('lets staff read the catalogue but not change it', function () {
     $this->postJson('/api/admin/brands', ['name' => 'x'])->assertForbidden();
     expect(Product::count())->toBe(1);
 });
+
+it('lets a perfume be deleted once the only pack that used it has been deleted', function () {
+    $a = makePerfume('Seul dans un pack', poolMl: 100);
+    $pack = makePack([[variantOf($a, '10 ml'), 1]]);
+
+    $this->deleteJson("/api/admin/products/{$a->id}")->assertUnprocessable();   // still in a pack on sale
+    $this->deleteJson("/api/admin/products/{$pack->product->id}")->assertNoContent();
+    $this->deleteJson("/api/admin/products/{$a->id}")->assertNoContent();
+});

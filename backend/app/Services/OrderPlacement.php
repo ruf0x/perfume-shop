@@ -38,7 +38,8 @@ class OrderPlacement
             : null;
         $mode = DeliveryMode::tryFrom($data['delivery_mode'] ?? '') ?? throw new ShopException('Mode de livraison invalide.');
 
-        if ($mode !== DeliveryMode::Boutique && blank($data['address'] ?? null)) {
+        // Only home delivery needs an address. For a delivery office the shop chooses the office.
+        if ($mode === DeliveryMode::Domicile && blank($data['address'] ?? null)) {
             throw new ShopException("L'adresse est obligatoire pour une livraison.");
         }
 

@@ -59,9 +59,11 @@ class ProductService
     /** Soft delete: old orders keep pointing at the product. */
     public function delete(Product $product): void
     {
+        // Only packs still on sale block the deletion: a deleted pack no longer uses this perfume.
         $packs = PackItem::query()
             ->whereIn('component_variant_id', $product->variants()->select('id'))
-            ->with('pack.product')->get()
+            ->with(['pack.product' => fn ($q) => $q->withTrashed()])->get()
+            ->filter(fn (PackItem $item) => $item->pack?->product && $item->pack->product->deleted_at === null)
             ->map(fn (PackItem $item) => $item->pack->product->name)->unique();
 
         if ($packs->isNotEmpty()) {

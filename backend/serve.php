@@ -16,10 +16,15 @@ echo "Perfume Shop API on http://{$host}:{$port} (Ctrl+C to stop)\n";
 // Laravel's router script looks for index.php in the working directory.
 chdir(__DIR__.'/public');
 
+// Uploads are written to a folder inside the project. The Windows user temp folder is not
+// reliable here (PHP reported "unable to create a temporary file" for every photo).
+$uploads = __DIR__.'/storage/app/tmp';
+@mkdir($uploads, 0777, true);
+
 passthru(sprintf(
     '"%s" -d upload_tmp_dir=%s -d upload_max_filesize=16M -d post_max_size=32M -S %s:%s -t %s %s',
     PHP_BINARY,
-    escapeshellarg(sys_get_temp_dir()),
+    escapeshellarg($uploads),
     $host,
     $port,
     escapeshellarg(__DIR__.'/public'),
