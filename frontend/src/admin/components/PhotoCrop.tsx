@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Cropper, { type Area } from 'react-easy-crop'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -28,15 +28,19 @@ interface PhotoCropProps {
 }
 
 export function PhotoCrop({ file, onDone, onCancel }: PhotoCropProps) {
-  const src = useMemo(() => URL.createObjectURL(file), [file])
-  useEffect(() => () => URL.revokeObjectURL(src), [src])
+  const [src, setSrc] = useState<string | null>(null)
+  useEffect(() => {
+    const url = URL.createObjectURL(file)
+    setSrc(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [area, setArea] = useState<Area | null>(null)
   const [busy, setBusy] = useState(false)
 
   const confirm = async () => {
-    if (!area) return
+    if (!area || !src) return
     setBusy(true)
     try {
       onDone(await cropToFile(src, area, file.name))
@@ -54,7 +58,7 @@ export function PhotoCrop({ file, onDone, onCancel }: PhotoCropProps) {
         </DialogHeader>
 
         <div className="relative h-96 overflow-hidden rounded-md bg-secondary">
-          <Cropper
+          {src && <Cropper
             image={src}
             crop={crop}
             zoom={zoom}
@@ -62,7 +66,7 @@ export function PhotoCrop({ file, onDone, onCancel }: PhotoCropProps) {
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={(_, pixels) => setArea(pixels)}
-          />
+          />}
         </div>
 
         <label className="flex items-center gap-3 text-sm">

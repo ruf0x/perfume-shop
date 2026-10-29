@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -164,8 +164,12 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
 function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (files: File[]) => void; disabled: boolean }) {
   const input = useRef<HTMLInputElement>(null)
   const [queue, setQueue] = useState<File[]>([])
-  const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files])
-  useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews])
+  const [previews, setPreviews] = useState<string[]>([])
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f))
+    setPreviews(urls)
+    return () => urls.forEach((url) => URL.revokeObjectURL(url))
+  }, [files])
 
   return (
     <Section title="Photos" hint="Choisissez les photos maintenant : elles seront envoyées dès l'enregistrement. La première est la photo principale.">
