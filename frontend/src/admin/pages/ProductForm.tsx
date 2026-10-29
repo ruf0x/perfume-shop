@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { QtyStepper } from '@/shop/components/QtyStepper'
 import { api } from '@/lib/api'
 import { prepareImage } from '../imagePrep'
+import { PhotoCrop } from '../components/PhotoCrop'
 import { useIsOwner } from '../auth'
 import { ConfirmDialog, ErrorState, Loading, PageHeader, inputClass } from '../components/common'
 import { VariantPicker } from '../components/VariantPicker'
@@ -118,15 +119,10 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
     reorder.mutate(ids, { onError: (e) => toast.error(apiError(e)) })
   }
 
-  const send = async (files: FileList | null) => {
-    for (const file of Array.from(files ?? [])) {
-      try {
-        await upload.mutateAsync(file)
-      } catch (e) {
-        toast.error(`${file.name} : ${apiError(e)}`)
-      }
-    }
-    if (input.current) input.current.value = ''
+  const [queue, setQueue] = useState<File[]>([])
+  const sendCropped = (cropped: File) => {
+    setQueue((q) => q.slice(1))
+    upload.mutate(cropped, { onError: (e) => toast.error(`${cropped.name} : ${apiError(e)}`) })
   }
 
   return (
@@ -158,7 +154,8 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
           </li>
         )}
       </ul>
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => send(e.target.files)} />
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { setQueue((q) => [...q, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+      {queue[0] && <PhotoCrop key={queue.length + queue[0].name} file={queue[0]} onDone={sendCropped} onCancel={() => setQueue((q) => q.slice(1))} />}
     </Section>
   )
 }
@@ -166,6 +163,7 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
 /** Photos chosen before the perfume exists: they are uploaded right after it is saved. */
 function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (files: File[]) => void; disabled: boolean }) {
   const input = useRef<HTMLInputElement>(null)
+  const [queue, setQueue] = useState<File[]>([])
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files])
   useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews])
 
@@ -195,7 +193,15 @@ function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (fi
           </li>
         )}
       </ul>
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { onChange([...files, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { setQueue((q) => [...q, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+      {queue[0] && (
+        <PhotoCrop
+          key={queue.length + queue[0].name}
+          file={queue[0]}
+          onDone={(cropped) => { onChange([...files, cropped]); setQueue((q) => q.slice(1)) }}
+          onCancel={() => setQueue((q) => q.slice(1))}
+        />
+      )}
     </Section>
   )
 }
