@@ -247,7 +247,7 @@ class StockService
     public function recalculate(Product $product): bool
     {
         return DB::transaction(function () use ($product) {
-            $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
+            $locked = Product::withTrashed()->lockForUpdate()->findOrFail($product->id);
             $changed = false;
 
             $ml = (int) $locked->stockMovements()->sum('ml_change');
