@@ -17,6 +17,7 @@ class SettingsService
         'socials' => [
             'instagram' => 'https://www.instagram.com/arenecosmetique/',
             'facebook' => 'https://web.facebook.com/people/Arena-cosm%C3%A9tique-Oran-hayate-regenci-lpp-Oran/61581182056275/',
+            'tiktok' => 'https://www.tiktok.com/@arenacosmetiq',
         ],
         'show_unavailable' => false,
         'low_stock_threshold_ml' => 10,
