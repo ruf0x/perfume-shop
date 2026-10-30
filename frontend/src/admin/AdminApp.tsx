@@ -39,9 +39,10 @@ export default function AdminApp() {
           <Route index element={<Home />} />
           <Route path="caisse" element={<Caisse />} />
           <Route path="commandes" element={<Orders />} />
-          <Route path="produits" element={<Products kind="perfume" />} />
+          <Route path="produits" element={<Products kind="goods" />} />
           <Route path="produits/nouveau" element={owner(<ProductForm kind="perfume" />)} />
-          <Route path="produits/:id" element={<ProductForm kind="perfume" />} />
+          <Route path="produits/nouveau-cosmetique" element={owner(<ProductForm kind="cosmetic" />)} />
+          <Route path="produits/:id" element={<ProductForm />} />
           <Route path="packs" element={<Products kind="pack" />} />
           <Route path="packs/nouveau" element={owner(<ProductForm kind="pack" />)} />
           <Route path="packs/:id" element={<ProductForm kind="pack" />} />

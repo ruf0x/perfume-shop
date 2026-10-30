@@ -10,8 +10,8 @@ import { useDeleteTaxon, useSaveTaxon, useTaxa, type TaxonKind } from '../querie
 import type { Taxon } from '../types'
 
 const TEXT = {
-  types: { title: 'Familles', description: 'Designer, niche, arabe, dupe, création maison… Ajoutez les vôtres.', one: 'famille', add: 'Nouvelle famille', placeholder: 'Oud prestige' },
-  brands: { title: 'Marques', description: 'Les marques affichées sur les fiches parfum.', one: 'marque', add: 'Nouvelle marque', placeholder: 'Rasasi' },
+  types: { title: 'Familles et catégories', description: 'Les familles classent les parfums (designer, niche, arabe…), les catégories classent les cosmétiques (maquillage, ongles, soins…). Ajoutez les vôtres.', one: 'famille ou catégorie', add: 'Nouvelle famille ou catégorie', placeholder: 'Oud prestige' },
+  brands: { title: 'Marques', description: 'Les marques affichées sur les fiches produit.', one: 'marque', add: 'Nouvelle marque', placeholder: 'Rasasi' },
 }
 
 /** One screen for both lists: they only differ by wording (and families can be hidden). */
@@ -22,17 +22,19 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
   const remove = useDeleteTaxon(kind)
   const [editing, setEditing] = useState<Taxon | 'new' | null>(null)
   const [name, setName] = useState('')
+  const [typeKind, setTypeKind] = useState<'perfume' | 'cosmetic'>('perfume')
   const [deleting, setDeleting] = useState<Taxon | null>(null)
 
   const open = (item: Taxon | 'new') => {
     setEditing(item)
     setName(item === 'new' ? '' : item.name)
+    setTypeKind(item === 'new' ? 'perfume' : (item.kind ?? 'perfume'))
   }
 
   const submit = () => {
     if (!name.trim()) return toast.error('Donnez un nom.')
     save.mutate(
-      { id: editing !== 'new' && editing ? editing.id : undefined, name: name.trim() },
+      { id: editing !== 'new' && editing ? editing.id : undefined, name: name.trim(), ...(kind === 'types' && editing === 'new' ? { kind: typeKind } : {}) },
       { onSuccess: () => { toast.success('Enregistré.'); setEditing(null) }, onError: (e) => toast.error(apiError(e)) },
     )
   }
@@ -49,7 +51,7 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
             <li key={it.id} className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{it.name}</p>
-                <p className="tnum text-sm text-muted-foreground">{it.products_count} parfum{it.products_count > 1 ? 's' : ''}</p>
+                <p className="tnum text-sm text-muted-foreground">{kind === 'types' && <span className="mr-2 rounded-full bg-accent px-2 py-0.5 text-xs text-accent-foreground">{it.kind === 'cosmetic' ? 'Cosmétiques' : 'Parfums'}</span>}{it.products_count} produit{it.products_count > 1 ? 's' : ''}</p>
               </div>
               {kind === 'types' && (
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -70,6 +72,15 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
             <DialogTitle className="font-display text-xl">{editing === 'new' ? t.add : `Renommer « ${editing?.name} »`}</DialogTitle>
             <DialogDescription className="sr-only">Nom de la {t.one}</DialogDescription>
           </DialogHeader>
+          {kind === 'types' && editing === 'new' && (
+            <label className="block space-y-1 text-sm">
+              <span className="text-muted-foreground">Pour</span>
+              <select className={inputClass} value={typeKind} onChange={(e) => setTypeKind(e.target.value as 'perfume' | 'cosmetic')}>
+                <option value="perfume">Des parfums (famille)</option>
+                <option value="cosmetic">Des cosmétiques (catégorie)</option>
+              </select>
+            </label>
+          )}
           <label className="block space-y-1 text-sm">
             <span className="text-muted-foreground">Nom</span>
             <input autoFocus className={inputClass} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder={t.placeholder} />
@@ -85,7 +96,7 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
         open={!!deleting}
         onOpenChange={(o) => !o && setDeleting(null)}
         title={`Supprimer « ${deleting?.name} » ?`}
-        description={deleting && deleting.products_count > 0 ? `${deleting.products_count} parfum(s) l'utilisent : la suppression sera refusée.${kind === 'types' ? ' Masquez-la plutôt.' : ''}` : undefined}
+        description={deleting && deleting.products_count > 0 ? `${deleting.products_count} produit(s) l'utilisent : la suppression sera refusée.${kind === 'types' ? ' Masquez-la plutôt.' : ''}` : undefined}
         confirmLabel="Supprimer"
         destructive
         loading={remove.isPending}

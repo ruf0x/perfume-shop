@@ -7,7 +7,7 @@ import { formatPrice } from '@/shop/format'
 import { useIsOwner } from '../auth'
 import { ConfirmDialog, EmptyState, ErrorState, Loading, PageHeader, Pagination, inputClass } from '../components/common'
 import { apiError, formatDateTime } from '../lib'
-import { useMovements, useStock, useStockWrite } from '../queries'
+import { useMovements, useStock, useStockWrite, useTaxa } from '../queries'
 import type { StockRow } from '../types'
 
 const TYPE_LABEL: Record<string, string> = {
@@ -31,7 +31,11 @@ const sign = (n: number, unit: string) => (n === 0 ? null : <span className={cn(
 
 function EntryDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
   const { entry } = useStockWrite()
-  const [mode, setMode] = useState<'ml' | 'unit'>('ml')
+  const cosmetic = row.kind === 'cosmetic'
+  // A perfume is received in ml (for decanting) or as sealed bottles; a cosmetic in pieces, or in ml if sold by volume.
+  const canMl = !cosmetic || row.has_pool || row.sealed.length === 0
+  const canUnit = row.sealed.length > 0
+  const [mode, setMode] = useState<'ml' | 'unit'>(canMl && !(cosmetic && canUnit) ? 'ml' : 'unit')
   const [bottles, setBottles] = useState('1')
   const [size, setSize] = useState('100')
   const [variant, setVariant] = useState(row.sealed[0]?.variant_id ?? 0)
@@ -55,9 +59,9 @@ function EntryDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
           <DialogDescription>Vous avez reçu de la marchandise.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 text-sm">
-          {row.sealed.length > 0 && (
+          {canMl && canUnit && (
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Type d'entrée">
-              {([['ml', 'À décanter (en ml)'], ['unit', 'Flacons scellés']] as const).map(([v, l]) => (
+              {([['ml', cosmetic ? 'Au millilitre' : 'À décanter (en ml)'], ['unit', cosmetic ? 'À l\'unité' : 'Flacons scellés']] as const).map(([v, l]) => (
                 <button key={v} type="button" role="radio" aria-checked={mode === v} onClick={() => setMode(v)} className={cn('rounded-md border px-3 py-2.5 text-left', mode === v ? 'border-primary bg-accent font-medium' : 'border-input')}>{l}</button>
               ))}
             </div>
@@ -65,15 +69,15 @@ function EntryDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
           {mode === 'ml' ? (
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-3">
-                <label className="space-y-1"><span className="text-muted-foreground">Nombre de flacons</span><input type="number" min={1} className={inputClass} value={bottles} onChange={(e) => setBottles(e.target.value)} /></label>
+                <label className="space-y-1"><span className="text-muted-foreground">{cosmetic ? 'Nombre de contenants' : 'Nombre de flacons'}</span><input type="number" min={1} className={inputClass} value={bottles} onChange={(e) => setBottles(e.target.value)} /></label>
                 <label className="space-y-1"><span className="text-muted-foreground">Contenance (ml)</span><input type="number" min={1} className={inputClass} value={size} onChange={(e) => setSize(e.target.value)} /></label>
               </div>
-              <p className="tnum">Total ajouté au stock à décanter : <strong>{total} ml</strong></p>
+              <p className="tnum">Total ajouté au stock {cosmetic ? 'en ml' : 'à décanter'} : <strong>{total} ml</strong></p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              <label className="space-y-1"><span className="text-muted-foreground">Taille</span><select className={inputClass} value={variant} onChange={(e) => setVariant(Number(e.target.value))}>{row.sealed.map((s) => <option key={s.variant_id} value={s.variant_id}>{s.label}</option>)}</select></label>
-              <label className="space-y-1"><span className="text-muted-foreground">Nombre de flacons</span><input type="number" min={1} className={inputClass} value={qty} onChange={(e) => setQty(e.target.value)} /></label>
+              <label className="space-y-1"><span className="text-muted-foreground">{cosmetic ? 'Option' : 'Taille'}</span><select className={inputClass} value={variant} onChange={(e) => setVariant(Number(e.target.value))}>{row.sealed.map((s) => <option key={s.variant_id} value={s.variant_id}>{s.label}</option>)}</select></label>
+              <label className="space-y-1"><span className="text-muted-foreground">{cosmetic ? 'Quantité reçue' : 'Nombre de flacons'}</span><input type="number" min={1} className={inputClass} value={qty} onChange={(e) => setQty(e.target.value)} /></label>
             </div>
           )}
           <label className="block space-y-1"><span className="text-muted-foreground">Coût d'achat total en DA (facultatif)</span><input type="number" min={0} className={inputClass} value={cost} onChange={(e) => setCost(e.target.value)} /></label>
@@ -92,11 +96,13 @@ function AdjustDialog({ row, onClose }: { row: StockRow; onClose: () => void }) 
   const { adjust } = useStockWrite()
   const [type, setType] = useState<'perte' | 'ajustement'>('perte')
   const [direction, setDirection] = useState<1 | -1>(-1)
-  const [target, setTarget] = useState<number>(0) // 0 = ml pool, else a sealed variant id
+  const cosmetic = row.kind === 'cosmetic'
+  const unitsOnly = cosmetic && !row.has_pool && row.sealed.length > 0
+  const [target, setTarget] = useState<number>(unitsOnly ? row.sealed[0].variant_id : 0) // 0 = ml pool, else a counted variant id
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const sign = type === 'perte' ? -1 : direction
-  const unit = target === 0 ? 'ml' : 'flacon(s)'
+  const unit = target === 0 ? 'ml' : cosmetic ? 'article(s)' : 'flacon(s)'
 
   const submit = () => {
     const n = Number(amount)
@@ -124,8 +130,8 @@ function AdjustDialog({ row, onClose }: { row: StockRow; onClose: () => void }) 
           {row.sealed.length > 0 && (
             <label className="block space-y-1"><span className="text-muted-foreground">Sur quoi ?</span>
               <select className={inputClass} value={target} onChange={(e) => setTarget(Number(e.target.value))}>
-                <option value={0}>Stock à décanter (ml)</option>
-                {row.sealed.map((s) => <option key={s.variant_id} value={s.variant_id}>{s.label} (flacons)</option>)}
+                {!unitsOnly && <option value={0}>{cosmetic ? 'Stock en ml' : 'Stock à décanter (ml)'}</option>}
+                {row.sealed.map((s) => <option key={s.variant_id} value={s.variant_id}>{s.label} ({cosmetic ? 'articles' : 'flacons'})</option>)}
               </select>
             </label>
           )}
@@ -150,7 +156,11 @@ function Overview() {
   const owner = useIsOwner()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState<'' | 'ok' | 'low' | 'out'>('')
-  const query = useStock({ q: q || undefined, status: status || undefined })
+  const [kind, setKind] = useState<'' | 'perfume' | 'cosmetic'>('')
+  const [typeId, setTypeId] = useState('')
+  const types = useTaxa('types')
+  const query = useStock({ q: q || undefined, status: status || undefined, kind: kind || undefined, type_id: typeId ? Number(typeId) : undefined })
+  const shownTypes = (types.data ?? []).filter((t) => !kind || (t.kind ?? 'perfume') === kind)
   const { openBottle } = useStockWrite()
   const [page, setPage] = useState(1)
   const [entry, setEntry] = useState<StockRow | null>(null)
@@ -164,32 +174,44 @@ function Overview() {
 
   return (
     <>
-      <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <label className="col-span-2 space-y-1 text-sm"><span className="text-muted-foreground">Rechercher</span><input type="search" className={inputClass} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom du parfum" /></label>
-        <label className="col-span-2 space-y-1 text-sm md:col-span-1"><span className="text-muted-foreground">État</span>
-          <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as typeof status)}><option value="">Tous</option><option value="ok">En stock</option><option value="low">Stock faible</option><option value="out">Épuisés</option></select>
+      <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+        <label className="col-span-2 space-y-1 text-sm md:col-span-1"><span className="text-muted-foreground">Rechercher</span><input type="search" className={inputClass} value={q} onChange={(e) => { setQ(e.target.value); setPage(1) }} placeholder="Nom du produit" /></label>
+        <label className="space-y-1 text-sm"><span className="text-muted-foreground">Type de produit</span>
+          <select className={inputClass} value={kind} onChange={(e) => { setKind(e.target.value as typeof kind); setTypeId(''); setPage(1) }}><option value="">Tous</option><option value="perfume">Parfums</option><option value="cosmetic">Cosmétiques</option></select>
         </label>
-        {query.data && <p className="col-span-2 self-end pb-2 text-sm text-muted-foreground md:col-span-1">Seuil : en dessous de {query.data.low_stock_threshold_ml} ml, un parfum n'est plus proposé.</p>}
+        <label className="space-y-1 text-sm"><span className="text-muted-foreground">Famille ou catégorie</span>
+          <select className={inputClass} value={typeId} onChange={(e) => { setTypeId(e.target.value); setPage(1) }}><option value="">Toutes</option>{shownTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
+        </label>
+        <label className="space-y-1 text-sm"><span className="text-muted-foreground">État</span>
+          <select className={inputClass} value={status} onChange={(e) => { setStatus(e.target.value as typeof status); setPage(1) }}><option value="">Tous</option><option value="ok">En stock</option><option value="low">Stock faible</option><option value="out">Épuisés</option></select>
+        </label>
+        {query.data && <p className="col-span-2 text-sm text-muted-foreground md:col-span-5">Seuils : un parfum n'est plus proposé sous {query.data.low_stock_threshold_ml} ml ; un cosmétique est signalé « stock faible » à {query.data.low_stock_threshold_qty} article(s) ou moins.</p>}
       </section>
 
-      {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun parfum" hint="Créez un parfum pour gérer son stock." /> : (
+      {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun produit" hint={q || kind || typeId || status ? 'Aucun résultat avec ces filtres.' : 'Créez un produit pour gérer son stock.'} /> : (
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {pageRows.map((r) => (
             <li key={r.product_id} className="space-y-3 p-4 md:flex md:items-center md:gap-6 md:space-y-0">
               <div className="min-w-0 md:w-1/4">
-                <p className="truncate font-display text-lg leading-tight">{r.name}</p>
+                <p className="truncate font-display text-lg leading-tight">{r.name}{r.kind === 'cosmetic' && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">Cosmétique</span>}</p>
                 <p className="truncate text-sm text-muted-foreground">{r.brand ?? '—'}{!r.is_active && ', masqué'}</p>
               </div>
               <div className="tnum flex-1 text-sm">
-                <p><strong className="text-base">{r.stock_ml} ml</strong> à décanter</p>
-                {r.sealed.length > 0 && <p className="text-muted-foreground">{r.sealed.map((s) => `${s.stock_qty} × ${s.label}`).join(', ')}</p>}
+                {(r.kind === 'perfume' || r.has_pool || r.sealed.length === 0) && <p><strong className="text-base">{r.stock_ml} ml</strong> {r.kind === 'perfume' ? 'à décanter' : 'en stock'}</p>}
+                {r.sealed.length > 0 && (
+                  <p className={r.kind === 'perfume' ? 'text-muted-foreground' : undefined}>
+                    {r.kind === 'cosmetic' && <strong className="text-base">{r.sealed.reduce((n, s) => n + s.stock_qty, 0)} en stock</strong>}
+                    {r.kind === 'cosmetic' && <span className="text-muted-foreground"> : </span>}
+                    <span className="text-muted-foreground">{r.sealed.map((s) => `${s.stock_qty} × ${s.label}`).join(', ')}</span>
+                  </p>
+                )}
               </div>
               <span className={cn('inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-medium', STATUS[r.status].cls)}>{STATUS[r.status].label}</span>
               {owner && (
                 <div className="flex flex-wrap gap-2">
                   <Button className="h-9" onClick={() => setEntry(r)}>Entrée</Button>
                   <Button variant="outline" className="h-9" onClick={() => setAdjust(r)}>Perte / correction</Button>
-                  {r.sealed.filter((s) => s.stock_qty > 0 && s.ml).map((s) => (
+                  {r.kind === 'perfume' && r.sealed.filter((s) => s.stock_qty > 0 && s.ml).map((s) => (
                     <Button key={s.variant_id} variant="outline" className="h-9" onClick={() => setOpen({ row: r, variantId: s.variant_id, label: s.label, ml: s.ml })}>Ouvrir un {s.ml} ml</Button>
                   ))}
                 </div>
@@ -226,7 +248,7 @@ function Movements() {
   return (
     <>
       <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <label className="col-span-2 space-y-1 text-sm md:col-span-1"><span className="text-muted-foreground">Parfum</span>
+        <label className="col-span-2 space-y-1 text-sm md:col-span-1"><span className="text-muted-foreground">Produit</span>
           <select className={inputClass} value={filters.product_id ?? ''} onChange={(e) => set({ product_id: e.target.value ? Number(e.target.value) : undefined })}><option value="">Tous</option>{products.data?.data.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}</select>
         </label>
         <label className="col-span-2 space-y-1 text-sm md:col-span-1"><span className="text-muted-foreground">Type</span>
@@ -245,7 +267,7 @@ function Movements() {
                   <p className="font-medium">{TYPE_LABEL[m.type] ?? m.type}, {m.product.name}{m.variant ? ` (${m.variant.label})` : ''}</p>
                   <p className="text-xs text-muted-foreground">{formatDateTime(m.created_at)}{m.user ? `, ${m.user}` : ''}{m.order ? `, ${m.order.reference}` : ''}{m.note ? `, ${m.note}` : ''}</p>
                 </div>
-                <div className="flex gap-4">{sign(m.ml_change, 'ml')}{sign(m.qty_change, 'flacon(s)')}{m.unit_cost ? <span className="tnum text-muted-foreground">{formatPrice(m.unit_cost)}</span> : null}</div>
+                <div className="flex gap-4">{sign(m.ml_change, 'ml')}{sign(m.qty_change, 'unité(s)')}{m.unit_cost ? <span className="tnum text-muted-foreground">{formatPrice(m.unit_cost)}</span> : null}</div>
               </li>
             ))}
           </ul>
@@ -261,7 +283,7 @@ export default function Stock() {
 
   return (
     <>
-      <PageHeader title="Stock" description="Combien il vous reste de chaque parfum, et tout ce qui a bougé." />
+      <PageHeader title="Stock" description="Combien il vous reste de chaque produit (parfums et cosmétiques), et tout ce qui a bougé." />
       <div role="tablist" aria-label="Vue" className="mb-6 flex gap-1">
         {([['overview', 'Stock actuel'], ['movements', 'Historique des mouvements']] as const).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn('rounded-md px-4 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring', tab === k ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/70')}>{l}</button>

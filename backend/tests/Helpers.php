@@ -40,6 +40,29 @@ function makePerfume(string $name = 'Parfum Test', int $poolMl = 0, int $sealed 
     return $product->fresh('variants');
 }
 
+/**
+ * A cosmetic counted in units: one variant per option, each with its own price and stock.
+ *
+ * @param  array<string, array{0: int, 1: int}>  $options  label => [price, units in stock]
+ */
+function makeCosmetic(string $name = 'Gel douche Test', array $options = ['250 ml' => [900, 10], '500 ml' => [1500, 5]]): Product
+{
+    $product = Product::create([
+        'kind' => ProductKind::Cosmetic,
+        'name' => $name,
+        'slug' => Str::slug($name).'-'.Str::random(5),
+    ]);
+
+    foreach ($options as $label => [$price, $units]) {
+        $variant = $product->variants()->create(['label' => $label, 'price' => $price, 'stock_mode' => StockMode::Unit]);
+        if ($units > 0) {
+            app(StockService::class)->addEntry($product, $variant, qty: $units);
+        }
+    }
+
+    return $product->fresh('variants');
+}
+
 function variantOf(Product $product, string $label): ProductVariant
 {
     return $product->variants->firstWhere('label', $label) ?? throw new RuntimeException("No variant {$label}");

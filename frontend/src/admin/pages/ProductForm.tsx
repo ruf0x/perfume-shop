@@ -15,7 +15,7 @@ import { ConfirmDialog, ErrorState, Loading, PageHeader, inputClass } from '../c
 import { VariantPicker } from '../components/VariantPicker'
 import { apiError, fieldErrors } from '../lib'
 import { useAdminProduct, useDeleteProduct, useProductImages, useSaveProduct, useTaxa } from '../queries'
-import type { AdminProduct, StockMode } from '../types'
+import type { AdminKind, AdminProduct, StockMode } from '../types'
 
 interface Row {
   key: string
@@ -81,7 +81,7 @@ function fromProduct(p?: AdminProduct): FormState {
     notes_base: p?.notes_base ?? '',
     is_active: p?.is_active ?? true,
     is_featured: p?.is_featured ?? false,
-    variants: p?.kind === 'perfume' ? (p.variants ?? []).map((v) => ({ key: newKey(), id: v.id, label: v.label, ml: String(v.ml ?? ''), price: String(v.price), compare: v.compare_at_price ? String(v.compare_at_price) : '', mode: v.stock_mode === 'unit' ? 'unit' : 'pool', active: v.is_active, stock_qty: v.stock_qty })) : [],
+    variants: p && p.kind !== 'pack' ? (p.variants ?? []).map((v) => ({ key: newKey(), id: v.id, label: v.label, ml: String(v.ml ?? ''), price: String(v.price), compare: v.compare_at_price ? String(v.compare_at_price) : '', mode: v.stock_mode === 'unit' ? 'unit' : 'pool', active: v.is_active, stock_qty: v.stock_qty })) : [],
     packPrice: pack ? String(pack.price) : '',
     packCompare: pack?.compare_at_price ? String(pack.compare_at_price) : '',
     components: pack?.components?.map((c) => ({ variant_id: c.variant_id, product: c.product, label: c.label, quantity: c.quantity })) ?? [],
@@ -210,8 +210,10 @@ function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (fi
   )
 }
 
-function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: AdminProduct }) {
+function FormBody({ kind, product }: { kind: AdminKind; product?: AdminProduct }) {
   const isPack = kind === 'pack'
+  const isCosmetic = kind === 'cosmetic'
+  const noun = isPack ? 'Pack' : isCosmetic ? 'Cosmétique' : 'Parfum'
   const owner = useIsOwner()
   const navigate = useNavigate()
   const save = useSaveProduct()
@@ -228,7 +230,7 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
   const err = (k: string) => errors[k]
 
   const setRow = (i: number, patch: Partial<Row>) => set('variants', f.variants.map((r, j) => (j === i ? { ...r, ...patch } : r)))
-  const addRow = (p?: (typeof PRESETS)[number]) => set('variants', [...f.variants, { key: newKey(), label: p?.label ?? '', ml: p ? String(p.ml) : '', price: '', compare: '', mode: p?.mode ?? 'pool', active: true, stock_qty: 0 }])
+  const addRow = (p?: (typeof PRESETS)[number]) => set('variants', [...f.variants, { key: newKey(), label: p?.label ?? '', ml: p ? String(p.ml) : '', price: '', compare: '', mode: p?.mode ?? (isCosmetic ? 'unit' : 'pool'), active: true, stock_qty: 0 }])
   const moveRow = (i: number, d: number) => {
     const rows = [...f.variants]
     ;[rows[i], rows[i + d]] = [rows[i + d], rows[i]]
@@ -241,13 +243,13 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
       name: f.name.trim(),
       brand_id: isPack ? null : n(f.brand_id),
       perfume_type_id: isPack ? null : n(f.type_id),
-      gender: f.gender || null,
-      inspired_by: f.inspired_by.trim() || null,
+      gender: isCosmetic ? null : f.gender || null,
+      inspired_by: isCosmetic ? null : f.inspired_by.trim() || null,
       short_description: f.short_description.trim() || null,
       description: f.description.trim() || null,
-      notes_top: f.notes_top.trim() || null,
-      notes_heart: f.notes_heart.trim() || null,
-      notes_base: f.notes_base.trim() || null,
+      notes_top: isCosmetic ? null : f.notes_top.trim() || null,
+      notes_heart: isCosmetic ? null : f.notes_heart.trim() || null,
+      notes_base: isCosmetic ? null : f.notes_base.trim() || null,
       is_active: f.is_active,
       is_featured: f.is_featured,
     }
@@ -266,12 +268,13 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
     if (!f.name.trim()) e.name = 'Le nom est obligatoire.'
     if (isPack) {
       if (f.packPrice === '' || Number(f.packPrice) < 0) e['pack.price'] = 'Indiquez le prix du pack.'
-      if (f.components.length === 0) e['pack.components'] = 'Ajoutez au moins un parfum au pack.'
+      if (f.components.length === 0) e['pack.components'] = 'Ajoutez au moins un produit au pack.'
     } else {
-      if (f.variants.length === 0) e.variants = 'Ajoutez au moins une taille.'
+      if (f.variants.length === 0) e.variants = isCosmetic ? 'Ajoutez au moins une option.' : 'Ajoutez au moins une taille.'
       f.variants.forEach((r, i) => {
-        if (!r.label.trim()) e[`variants.${i}.label`] = 'Nom de la taille ?'
-        if (!(Number(r.ml) > 0)) e[`variants.${i}.ml`] = 'Contenance en ml ?'
+        if (!r.label.trim()) e[`variants.${i}.label`] = isCosmetic ? "Nom de l'option ?" : 'Nom de la taille ?'
+        // A perfume always has a volume; a cosmetic only when it is sold by the millilitre.
+        if ((!isCosmetic || r.mode === 'pool') && !(Number(r.ml) > 0)) e[`variants.${i}.ml`] = 'Contenance en ml ?'
         if (r.price === '' || Number(r.price) < 0) e[`variants.${i}.price`] = 'Prix ?'
       })
     }
@@ -302,7 +305,7 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
               toast.error(`${file.name} : ${apiError(e)}`)
             }
           }
-          toast.success(failed ? `${isPack ? 'Pack' : 'Parfum'} créé, mais ${failed} photo(s) non envoyée(s).` : `${isPack ? 'Pack' : 'Parfum'} créé.`)
+          toast.success(failed ? `${noun} créé, mais ${failed} photo(s) non envoyée(s).` : `${noun} créé.`)
           navigate(`${base}/${saved.id}`, { replace: true })
         },
         onError: (e) => {
@@ -316,7 +319,7 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
   return (
     <form onSubmit={submit} noValidate>
       <PageHeader
-        title={product ? product.name : isPack ? 'Nouveau pack' : 'Nouveau parfum'}
+        title={product ? product.name : isPack ? 'Nouveau pack' : isCosmetic ? 'Nouveau cosmétique' : 'Nouveau parfum'}
         description={owner ? undefined : 'Lecture seule : seul le propriétaire peut modifier le catalogue.'}
         actions={<Link to={base} className="text-sm underline underline-offset-4">Retour à la liste</Link>}
       />
@@ -328,10 +331,10 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
               <Field label="Nom" error={err('name')} className="sm:col-span-2"><input className={inputClass} value={f.name} onChange={(e) => set('name', e.target.value)} aria-invalid={!!err('name')} /></Field>
               {!isPack && (
                 <>
-                  <Field label="Famille">
+                  <Field label={isCosmetic ? 'Catégorie' : 'Famille'}>
                     <select className={inputClass} value={f.type_id} onChange={(e) => set('type_id', e.target.value)}>
                       <option value="">Aucune</option>
-                      {types.data?.filter((t) => t.is_active !== false || String(t.id) === f.type_id).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      {types.data?.filter((t) => (t.kind ?? 'perfume') === kind && (t.is_active !== false || String(t.id) === f.type_id)).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                   </Field>
                   <Field label="Marque">
@@ -340,20 +343,20 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
                       {brands.data?.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                   </Field>
-                  <Field label="Pour qui">
+                  {!isCosmetic && <Field label="Pour qui">
                     <select className={inputClass} value={f.gender} onChange={(e) => set('gender', e.target.value)}>
                       <option value="">Non précisé</option>
                       <option value="homme">Homme</option>
                       <option value="femme">Femme</option>
                       <option value="mixte">Mixte</option>
                     </select>
-                  </Field>
-                  <Field label="Inspiré de (pour un dupe)"><input className={inputClass} value={f.inspired_by} onChange={(e) => set('inspired_by', e.target.value)} placeholder="Dior Sauvage" /></Field>
+                  </Field>}
+                  {!isCosmetic && <Field label="Inspiré de (pour un dupe)"><input className={inputClass} value={f.inspired_by} onChange={(e) => set('inspired_by', e.target.value)} placeholder="Dior Sauvage" /></Field>}
                 </>
               )}
               <Field label="Phrase d'accroche" className="sm:col-span-2"><input className={inputClass} value={f.short_description} onChange={(e) => set('short_description', e.target.value)} maxLength={255} /></Field>
               <Field label="Description" className="sm:col-span-2"><Textarea rows={4} value={f.description} onChange={(e) => set('description', e.target.value)} className="text-sm" /></Field>
-              {!isPack && (
+              {kind === 'perfume' && (
                 <>
                   <Field label="Notes de tête"><input className={inputClass} value={f.notes_top} onChange={(e) => set('notes_top', e.target.value)} /></Field>
                   <Field label="Notes de cœur"><input className={inputClass} value={f.notes_heart} onChange={(e) => set('notes_heart', e.target.value)} /></Field>
@@ -364,20 +367,32 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
           </Section>
 
           {!isPack ? (
-            <Section title="Tailles et prix" hint="Chaque taille a son prix. « À décanter » est versé depuis le stock en ml du parfum ; « Flacon scellé » se compte en flacons.">
+            <Section
+              title={isCosmetic ? 'Options et prix' : 'Tailles et prix'}
+              hint={isCosmetic ? "Chaque option (une taille, une teinte, un lot...) a son prix et son stock. « À l'unité » se compte en pièces ; « Au millilitre » est versé depuis le stock en ml du produit." : 'Chaque taille a son prix. « À décanter » est versé depuis le stock en ml du parfum ; « Flacon scellé » se compte en flacons.'}
+            >
               {err('variants') && <p role="alert" className="text-sm text-destructive">{err('variants')}</p>}
               <ul className="space-y-3">
                 {f.variants.map((r, i) => (
                   <li key={r.key} className="rounded-md border border-border p-3">
                     <div className="grid grid-cols-6 gap-3">
-                      <Field label="Nom" error={err(`variants.${i}.label`)} className="col-span-6 sm:col-span-2"><input className={inputClass} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} placeholder="20 ml" /></Field>
-                      <Field label="Contenance (ml)" error={err(`variants.${i}.ml`)} className="col-span-2 sm:col-span-1"><input type="number" min={1} inputMode="numeric" className={inputClass} value={r.ml} onChange={(e) => setRow(i, { ml: e.target.value })} /></Field>
+                      <Field label="Nom" error={err(`variants.${i}.label`)} className="col-span-6 sm:col-span-2"><input className={inputClass} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} placeholder={isCosmetic ? '250 ml, Rose nude, Boîte de 24' : '20 ml'} /></Field>
+                      <Field label={isCosmetic && r.mode === 'unit' ? 'Contenance (ml), facultatif' : 'Contenance (ml)'} error={err(`variants.${i}.ml`)} className="col-span-2 sm:col-span-1"><input type="number" min={1} inputMode="numeric" className={inputClass} value={r.ml} onChange={(e) => setRow(i, { ml: e.target.value })} /></Field>
                       <Field label="Prix (DA)" error={err(`variants.${i}.price`)} className="col-span-2 sm:col-span-1"><input type="number" min={0} inputMode="numeric" className={inputClass} value={r.price} onChange={(e) => setRow(i, { price: e.target.value })} /></Field>
                       <Field label="Ancien prix" className="col-span-2 sm:col-span-1"><input type="number" min={0} inputMode="numeric" className={inputClass} value={r.compare} onChange={(e) => setRow(i, { compare: e.target.value })} placeholder="barré" /></Field>
                       <Field label="Type de stock" className="col-span-6 sm:col-span-3">
                         <select className={inputClass} value={r.mode} onChange={(e) => setRow(i, { mode: e.target.value as Row['mode'] })} disabled={r.stock_qty > 0}>
-                          <option value="pool">À décanter (stock en ml)</option>
-                          <option value="unit">Flacon scellé (compté en flacons)</option>
+                          {isCosmetic ? (
+                            <>
+                              <option value="unit">À l'unité (compté en pièces)</option>
+                              <option value="pool">Au millilitre (stock en ml)</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="pool">À décanter (stock en ml)</option>
+                              <option value="unit">Flacon scellé (compté en flacons)</option>
+                            </>
+                          )}
                         </select>
                       </Field>
                       <div className="col-span-6 flex items-end justify-between gap-2 sm:col-span-3">
@@ -385,23 +400,23 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
                         <span className="flex">
                           <button type="button" disabled={i === 0} onClick={() => moveRow(i, -1)} className="flex size-10 items-center justify-center rounded hover:bg-secondary disabled:opacity-30" aria-label="Monter"><ArrowUp className="size-4" /></button>
                           <button type="button" disabled={i === f.variants.length - 1} onClick={() => moveRow(i, 1)} className="flex size-10 items-center justify-center rounded hover:bg-secondary disabled:opacity-30" aria-label="Descendre"><ArrowDown className="size-4" /></button>
-                          <button type="button" onClick={() => set('variants', f.variants.filter((_, j) => j !== i))} className="flex size-10 items-center justify-center rounded text-muted-foreground hover:text-destructive" aria-label="Supprimer cette taille"><Trash2 className="size-4" /></button>
+                          <button type="button" onClick={() => set('variants', f.variants.filter((_, j) => j !== i))} className="flex size-10 items-center justify-center rounded text-muted-foreground hover:text-destructive" aria-label={isCosmetic ? 'Supprimer cette option' : 'Supprimer cette taille'}><Trash2 className="size-4" /></button>
                         </span>
                       </div>
                     </div>
-                    {r.id && r.mode === 'unit' && <p className="tnum mt-2 text-xs text-muted-foreground">{r.stock_qty} flacon(s) en stock. Le stock se gère dans « Stock ».</p>}
+                    {r.id && r.mode === 'unit' && <p className="tnum mt-2 text-xs text-muted-foreground">{r.stock_qty} {isCosmetic ? 'article(s)' : 'flacon(s)'} en stock. Le stock se gère dans « Stock ».</p>}
                   </li>
                 ))}
               </ul>
               <div className="flex flex-wrap gap-2">
-                {PRESETS.filter((p) => !f.variants.some((r) => r.label === p.label)).map((p) => (
+                {!isCosmetic && PRESETS.filter((p) => !f.variants.some((r) => r.label === p.label)).map((p) => (
                   <Button key={p.label} type="button" variant="outline" className="h-9" onClick={() => addRow(p)}><Plus className="size-4" aria-hidden />{p.label}</Button>
                 ))}
-                <Button type="button" variant="outline" className="h-9" onClick={() => addRow()}><Plus className="size-4" aria-hidden />Autre taille</Button>
+                <Button type="button" variant="outline" className="h-9" onClick={() => addRow()}><Plus className="size-4" aria-hidden />{isCosmetic ? 'Ajouter une option' : 'Autre taille'}</Button>
               </div>
             </Section>
           ) : (
-            <Section title="Contenu et prix du pack" hint="Choisissez les parfums et les tailles qui composent le pack.">
+            <Section title="Contenu et prix du pack" hint="Choisissez les produits (parfums, cosmétiques) et leurs tailles ou options qui composent le pack.">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Prix du pack (DA)" error={err('pack.price')}><input type="number" min={0} inputMode="numeric" className={inputClass} value={f.packPrice} onChange={(e) => set('packPrice', e.target.value)} /></Field>
                 <Field label="Ancien prix (barré)"><input type="number" min={0} inputMode="numeric" className={inputClass} value={f.packCompare} onChange={(e) => set('packCompare', e.target.value)} /></Field>
@@ -418,7 +433,7 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
                   </li>
                 ))}
               </ul>
-              <Button type="button" variant="outline" className="h-10" onClick={() => setPicker(true)}><Plus className="size-4" aria-hidden />Ajouter un parfum</Button>
+              <Button type="button" variant="outline" className="h-10" onClick={() => setPicker(true)}><Plus className="size-4" aria-hidden />Ajouter un produit</Button>
               <VariantPicker open={picker} onOpenChange={setPicker} title="Ajouter au pack" onPick={(v, p) => set('components', f.components.some((c) => c.variant_id === v.id) ? f.components.map((c) => (c.variant_id === v.id ? { ...c, quantity: c.quantity + 1 } : c)) : [...f.components, { variant_id: v.id, product: p.name, label: v.label, quantity: 1 }])} />
             </Section>
           )}
@@ -432,7 +447,7 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
             <label className="flex items-center justify-between gap-3 text-sm"><span>Mis en avant<span className="block text-muted-foreground">Affiché en premier.</span></span><Switch checked={f.is_featured} onCheckedChange={(v) => set('is_featured', v)} /></label>
             {product && product.is_active && !product.available && (
               <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-                {isPack ? "Un parfum du pack est épuisé : le pack n'est pas proposé pour le moment." : <>Pas encore proposé aux clients : <Link to="/admin/stock" className="underline underline-offset-4">ajoutez du stock</Link>. Vous pouvez aussi montrer les parfums épuisés dans les paramètres.</>}
+                {isPack ? "Un produit du pack est épuisé : le pack n'est pas proposé pour le moment." : <>Pas encore proposé aux clients : <Link to="/admin/stock" className="underline underline-offset-4">ajoutez du stock</Link>. Vous pouvez aussi montrer les produits épuisés dans les paramètres.</>}
               </p>
             )}
           </Section>
@@ -461,7 +476,8 @@ function FormBody({ kind, product }: { kind: 'perfume' | 'pack'; product?: Admin
   )
 }
 
-export default function ProductForm({ kind }: { kind: 'perfume' | 'pack' }) {
+/** New product: `kind` comes from the route. Existing product: its own kind is used. */
+export default function ProductForm({ kind }: { kind?: AdminKind }) {
   const { id } = useParams()
   const productId = id ? Number(id) : null
   const q = useAdminProduct(productId)
@@ -471,5 +487,5 @@ export default function ProductForm({ kind }: { kind: 'perfume' | 'pack' }) {
     if (q.isError || !q.data) return <ErrorState onRetry={() => q.refetch()} message="Produit introuvable." />
   }
 
-  return <FormBody key={productId ?? 'new'} kind={kind} product={q.data} />
+  return <FormBody key={productId ?? 'new'} kind={q.data?.kind ?? kind ?? 'perfume'} product={q.data} />
 }

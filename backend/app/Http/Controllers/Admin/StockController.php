@@ -18,16 +18,19 @@ class StockController extends Controller
     public function __construct(private StockService $stock) {}
 
     /**
-     * Stock per perfume: millilitres in the decant pool and sealed bottles.
+     * Stock per perfume or cosmetic: millilitres in the pool and units (sealed bottles, pieces).
      *
      * `status` is `ok` (sold in the shop), `low` (below the low-stock threshold) or `out`.
-     * Filters: `q`, `status`.
+     * Filters: `q`, `status`, `kind` (`perfume` or `cosmetic`), `type_id` (a family or category).
      */
     public function index(Request $request): JsonResponse
     {
-        $v = $request->validate(['q' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', 'in:ok,low,out']]);
+        $v = $request->validate(['q' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', 'in:ok,low,out'], 'kind' => ['nullable', 'in:perfume,cosmetic'], 'type_id' => ['nullable', 'integer']]);
 
-        $rows = Product::query()->perfumes()
+        $rows = Product::query()->stocked()
+            ->withExists(['variants as has_pool' => fn ($q) => $q->where('stock_mode', StockMode::Pool)->where('is_active', true)])
+            ->when($v['kind'] ?? null, fn ($q, $kind) => $q->where('kind', $kind))
+            ->when($v['type_id'] ?? null, fn ($q, $id) => $q->where('perfume_type_id', $id))
             ->with(['brand:id,name', 'variants' => fn ($q) => $q->where('stock_mode', StockMode::Unit)->where('is_active', true)])
             ->when($v['q'] ?? null, fn ($q, $term) => $q->where('name', 'like', "%{$term}%"))
             ->orderBy('name')->get()
@@ -35,7 +38,7 @@ class StockController extends Controller
             ->when($v['status'] ?? null, fn ($rows, $status) => $rows->where('status', $status))
             ->values();
 
-        return response()->json(['data' => $rows, 'low_stock_threshold_ml' => settings()->lowStockThresholdMl()]);
+        return response()->json(['data' => $rows, 'low_stock_threshold_ml' => settings()->lowStockThresholdMl(), 'low_stock_threshold_qty' => settings()->lowStockThresholdQty()]);
     }
 
     /** The movement ledger (entries, sales, cancellations, losses...), newest first. */
@@ -81,7 +84,7 @@ class StockController extends Controller
 
     /**
      * Receive stock. Send `ml` to add to the decant pool (2 bottles of 100 ml = `ml: 200`),
-     * and/or `qty` with a sealed-bottle `variant_id` to add sealed bottles.
+     * and/or `qty` with a `variant_id` of a counted (`unit`) variant: sealed bottles, a cosmetic's pieces.
      */
     public function entry(Request $request): JsonResponse
     {
@@ -140,24 +143,27 @@ class StockController extends Controller
 
     private function reload(Product $product): Product
     {
-        return $product->fresh(['brand:id,name', 'variants' => fn ($q) => $q->where('stock_mode', StockMode::Unit)->where('is_active', true)]);
+        return $product->fresh(['brand:id,name', 'variants' => fn ($q) => $q->where('stock_mode', StockMode::Unit)->where('is_active', true)])
+            ->loadExists(['variants as has_pool' => fn ($q) => $q->where('stock_mode', StockMode::Pool)->where('is_active', true)]);
     }
 
     /** @return array<string, mixed> */
     private function row(Product $p): array
     {
         $sealed = $p->variants->map(fn (ProductVariant $v) => ['variant_id' => $v->id, 'label' => $v->label, 'ml' => $v->ml, 'stock_qty' => $v->stock_qty])->values();
-        $hasSealed = $sealed->sum('stock_qty') > 0;
 
         return [
             'product_id' => $p->id,
+            'kind' => $p->kind,
             'name' => $p->name,
             'brand' => $p->brand?->name,
             'image' => media_url($p->main_image),
             'is_active' => $p->is_active,
             'stock_ml' => $p->stock_ml,
+            /** Whether some option is sold by the millilitre (so the ml stock means something). */
+            'has_pool' => (bool) $p->has_pool,
             'sealed' => $sealed,
-            'status' => $this->stock->productAvailable($p) ? 'ok' : ($p->stock_ml === 0 && ! $hasSealed ? 'out' : 'low'),
+            'status' => $this->stock->stockStatus($p),
         ];
     }
 }

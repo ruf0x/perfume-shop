@@ -43,6 +43,13 @@ export function FilterPanel({ filters, types, brands, onChange, idPrefix, hideSe
 
   const genders: (Gender | undefined)[] = [undefined, 'homme', 'femme', 'mixte']
 
+  // Families belong to perfumes, categories to cosmetics. With no kind chosen both lists are shown, under their own heading.
+  const isKind = (type: TypeRef, kind: 'perfume' | 'cosmetic') => (type.kind ?? 'perfume') === kind
+  const groups = [
+    { key: 'perfume' as const, title: t('shopPage.families'), items: types.filter((x) => isKind(x, 'perfume')) },
+    { key: 'cosmetic' as const, title: t('shopPage.categories'), items: types.filter((x) => isKind(x, 'cosmetic')) },
+  ].filter((g) => g.items.length > 0 && (!filters.kind || filters.kind === g.key))
+
   return (
     <div className="space-y-8">
       <form onSubmit={submitSearch} role="search" className={hideSearch ? 'hidden' : undefined}>
@@ -53,14 +60,19 @@ export function FilterPanel({ filters, types, brands, onChange, idPrefix, hideSe
       </form>
 
       <fieldset>
-        <legend className="mb-2 font-display text-lg">{t('shopPage.type')}</legend>
+        <legend className="mb-2 font-display text-lg">{filters.kind === 'cosmetic' ? t('shopPage.categories') : filters.kind === 'perfume' ? t('shopPage.families') : t('shopPage.type')}</legend>
         <Choice name={`${idPrefix}-type`} checked={!filters.type} label={t('shopPage.allTypes')} onSelect={() => onChange({ type: undefined })} />
-        {types.map((type) => (
-          <Choice key={type.id} name={`${idPrefix}-type`} checked={filters.type === type.slug} label={type.name} onSelect={() => onChange({ type: type.slug })} />
+        {groups.map((group) => (
+          <div key={group.key} className={groups.length > 1 ? 'mt-2' : undefined}>
+            {groups.length > 1 && <p className="px-2 pt-2 pb-1 text-xs tracking-wide text-muted-foreground uppercase">{group.title}</p>}
+            {group.items.map((type) => (
+              <Choice key={type.id} name={`${idPrefix}-type`} checked={filters.type === type.slug} label={type.name} onSelect={() => onChange({ type: type.slug })} />
+            ))}
+          </div>
         ))}
       </fieldset>
 
-      <fieldset>
+      <fieldset className={filters.kind === 'cosmetic' ? 'hidden' : undefined}>
         <legend className="mb-2 font-display text-lg">{t('shopPage.gender')}</legend>
         {genders.map((g) => (
           <Choice key={g ?? 'all'} name={`${idPrefix}-gender`} checked={filters.gender === g} label={g ? t(`shopPage.genders.${g}`) : t('shopPage.anyGender')} onSelect={() => onChange({ gender: g })} />

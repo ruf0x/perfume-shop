@@ -22,7 +22,7 @@ const NAV: NavItem[] = [
   { to: '/admin/produits', label: 'Produits', icon: Package },
   { to: '/admin/packs', label: 'Packs', icon: Gift },
   { to: '/admin/stock', label: 'Stock', icon: Warehouse },
-  { to: '/admin/types', label: 'Familles', icon: Tags, ownerOnly: true },
+  { to: '/admin/types', label: 'Familles et catégories', icon: Tags, ownerOnly: true },
   { to: '/admin/marques', label: 'Marques', icon: Award, ownerOnly: true },
   { to: '/admin/clients', label: 'Clients', icon: Users, ownerOnly: true },
   { to: '/admin/parametres', label: 'Paramètres', icon: SettingsIcon, ownerOnly: true },

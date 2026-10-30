@@ -23,7 +23,7 @@ class ProductCardResource extends JsonResource
             'kind' => $this->kind,
             'name' => $this->name,
             'brand' => $this->brand?->name,
-            'type' => $this->type ? ['id' => $this->type->id, 'name' => $this->type->name, 'slug' => $this->type->slug] : null,
+            'type' => $this->type ? ['id' => $this->type->id, 'name' => $this->type->name, 'slug' => $this->type->slug, 'kind' => $this->type->kind] : null,
             'gender' => $this->gender,
             'inspired_by' => $this->inspired_by,
             'short_description' => $this->short_description,

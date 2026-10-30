@@ -8,13 +8,13 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('stock:recalculate {product? : Product id (all perfumes when omitted)}')]
+#[Signature('stock:recalculate {product? : Product id (all perfumes and cosmetics when omitted)}')]
 #[Description('Rebuild the cached stock totals from the stock_movements ledger')]
 class RecalculateStock extends Command
 {
     public function handle(StockService $stock): int
     {
-        $products = Product::query()->perfumes()->withTrashed()
+        $products = Product::query()->stocked()->withTrashed()
             ->when($this->argument('product'), fn ($q, $id) => $q->whereKey($id))
             ->get();
 
@@ -26,7 +26,7 @@ class RecalculateStock extends Command
             }
         }
 
-        $this->info("{$products->count()} parfum(s) vérifié(s), {$fixed} corrigé(s).");
+        $this->info("{$products->count()} produit(s) vérifié(s), {$fixed} corrigé(s).");
 
         return self::SUCCESS;
     }

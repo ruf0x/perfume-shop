@@ -5,7 +5,7 @@ import { formatPrice } from '../format'
 import type { ProductCard as ProductCardData } from '../types'
 import { ProductVisual } from './ProductVisual'
 
-export const productPath = (p: Pick<ProductCardData, 'kind' | 'slug'>) => (p.kind === 'pack' ? `/pack/${p.slug}` : `/parfum/${p.slug}`)
+export const productPath = (p: Pick<ProductCardData, 'kind' | 'slug'>) => (p.kind === 'pack' ? `/pack/${p.slug}` : p.kind === 'cosmetic' ? `/produit/${p.slug}` : `/parfum/${p.slug}`)
 
 export function ProductCard({ product, className }: { product: ProductCardData; className?: string }) {
   const { t } = useTranslation()

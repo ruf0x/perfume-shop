@@ -19,6 +19,7 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="boutique" element={<Boutique />} />
         <Route path="parfum/:slug" element={<ProductPage />} />
+        <Route path="produit/:slug" element={<ProductPage />} />
         <Route path="pack/:slug" element={<ProductPage />} />
         <Route path="packs" element={<Packs />} />
         <Route path="panier" element={<CartPage />} />

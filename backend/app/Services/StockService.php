@@ -56,9 +56,9 @@ class StockService
     }
 
     /**
-     * Whether the shop should list a product as in stock. Perfumes: enough ml in the pool
-     * (the low-stock threshold) or a sealed bottle; packs: at least one can be assembled.
-     * Uses the loaded `variants` relation for perfumes (no extra queries).
+     * Whether the shop should list a product as in stock. Perfumes and cosmetics: enough ml in the pool
+     * (the low-stock threshold) or a unit in stock; packs: at least one can be assembled.
+     * Uses the loaded `variants` relation (no extra queries).
      */
     public function productAvailable(Product $product): bool
     {
@@ -70,6 +70,30 @@ class StockService
 
         return $product->stock_ml >= settings()->lowStockThresholdMl()
             || $product->variants->contains(fn (ProductVariant $v) => $v->is_active && $v->stock_mode === StockMode::Unit && $v->stock_qty > 0);
+    }
+
+    /**
+     * Stock level of a perfume or cosmetic for the admin: `out`, `low` or `ok`.
+     * Expects `variants` loaded with the active unit variants only.
+     */
+    public function stockStatus(Product $product): string
+    {
+        $units = (int) $product->variants
+            ->filter(fn (ProductVariant $v) => $v->is_active && $v->stock_mode === StockMode::Unit)
+            ->sum('stock_qty');
+
+        if ($product->stock_ml === 0 && $units === 0) {
+            return 'out';
+        }
+        if (! $this->productAvailable($product)) {
+            return 'low';
+        }
+
+        $lowUnits = $product->kind === ProductKind::Cosmetic
+            && $product->stock_ml < settings()->lowStockThresholdMl()
+            && $units <= settings()->lowStockThresholdQty();
+
+        return $lowUnits ? 'low' : 'ok';
     }
 
     public function availability(ProductVariant $variant, int $qty): bool
@@ -126,7 +150,7 @@ class StockService
     /** Open a sealed bottle: -1 sealed unit, +ml in the decant pool (one transaction, two movements). */
     public function openBottle(ProductVariant $unitVariant, ?User $user = null): void
     {
-        if ($unitVariant->stock_mode !== StockMode::Unit || ! $unitVariant->ml) {
+        if ($unitVariant->stock_mode !== StockMode::Unit || ! $unitVariant->ml || $unitVariant->product?->kind !== ProductKind::Perfume) {
             throw new ShopException('Seul un flacon scellé (avec contenance) peut être ouvert.');
         }
 
@@ -179,7 +203,8 @@ class StockService
             foreach ($needs['units'] as $variantId => $units) {
                 if ($variants[$variantId]->stock_qty < $units) {
                     $v = $variants[$variantId];
-                    $shortages[] = ['name' => "{$v->product->name} ({$v->label})", 'unit' => 'flacon(s)', 'requested' => $units, 'available' => $v->stock_qty];
+                    $unit = $v->product->kind === ProductKind::Cosmetic ? 'article(s)' : 'flacon(s)';
+                    $shortages[] = ['name' => "{$v->product->name} ({$v->label})", 'unit' => $unit, 'requested' => $units, 'available' => $v->stock_qty];
                 }
             }
             if ($shortages !== []) {
@@ -279,12 +304,14 @@ class StockService
         ?string $note,
         ?User $user,
     ): StockMovement {
-        if ($product->kind !== ProductKind::Perfume) {
-            throw new ShopException('Le stock se gère par parfum, pas par pack.');
+        if (! $product->kind->hasOwnStock()) {
+            throw new ShopException('Le stock se gère par produit, pas par pack.');
         }
         if ($qty !== 0) {
             if (! $variant || $variant->product_id !== $product->id || $variant->stock_mode !== StockMode::Unit) {
-                throw new ShopException('Les flacons scellés se gèrent sur une variante « flacon complet » de ce parfum.');
+                throw new ShopException($product->kind === ProductKind::Cosmetic
+                    ? 'Les articles en stock se gèrent sur une variante « à l\'unité » de ce produit.'
+                    : 'Les flacons scellés se gèrent sur une variante « flacon complet » de ce parfum.');
             }
         }
 
@@ -296,7 +323,8 @@ class StockService
                 throw new ShopException("Stock insuffisant : {$lockedProduct->stock_ml} ml disponibles pour « {$lockedProduct->name} ».");
             }
             if ($qty !== 0 && $lockedVariant->stock_qty + $qty < 0) {
-                throw new ShopException("Stock insuffisant : {$lockedVariant->stock_qty} flacon(s) disponibles pour « {$lockedProduct->name} ».");
+                $thing = $lockedProduct->kind === ProductKind::Cosmetic ? 'article(s)' : 'flacon(s)';
+                throw new ShopException("Stock insuffisant : {$lockedVariant->stock_qty} {$thing} disponibles pour « {$lockedProduct->name} ».");
             }
 
             $movement = $this->record($lockedProduct, $qty !== 0 ? $lockedVariant : null, $type, $ml, $qty, $unitCost, null, $note, $user);

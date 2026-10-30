@@ -426,7 +426,7 @@
         "/types": {
             "get": {
                 "operationId": "catalog.types",
-                "summary": "Active perfume types, in display order",
+                "summary": "Active perfume families and cosmetic categories, in display order. `kind` tells them apart",
                 "tags": [
                     "Catalog"
                 ],
@@ -492,7 +492,7 @@
             "get": {
                 "operationId": "catalog.index",
                 "description": "When the owner turned \"show unavailable\" off, out-of-stock items are left out.",
-                "summary": "Catalogue listing (perfumes and packs), paginated",
+                "summary": "Catalogue listing (perfumes, cosmetics and packs), paginated",
                 "tags": [
                     "Catalog"
                 ],
@@ -512,7 +512,7 @@
                     {
                         "name": "type",
                         "in": "query",
-                        "description": "Perfume type slug, e.g. `arabe`.",
+                        "description": "Family or category slug, e.g. `arabe` or `soin-du-corps`.",
                         "schema": {
                             "type": [
                                 "string",
@@ -552,16 +552,13 @@
                     {
                         "name": "kind",
                         "in": "query",
+                        "description": "One or several of `perfume`, `cosmetic`, `pack`, comma-separated: `perfume,cosmetic`.",
                         "schema": {
                             "type": [
                                 "string",
                                 "null"
                             ],
-                            "enum": [
-                                "perfume",
-                                "pack",
-                                null
-                            ]
+                            "pattern": "^(perfume|cosmetic|pack)(,(perfume|cosmetic|pack))*$"
                         }
                     },
                     {
@@ -1416,14 +1413,22 @@
                                                             "name": {
                                                                 "type": "string"
                                                             },
+                                                            "kind": {
+                                                                "$ref": "#/components/schemas/ProductKind"
+                                                            },
                                                             "stock_ml": {
+                                                                "type": "integer"
+                                                            },
+                                                            "units": {
                                                                 "type": "integer"
                                                             }
                                                         },
                                                         "required": [
                                                             "id",
                                                             "name",
-                                                            "stock_ml"
+                                                            "kind",
+                                                            "stock_ml",
+                                                            "units"
                                                         ]
                                                     }
                                                 }
@@ -2296,7 +2301,7 @@
             "get": {
                 "operationId": "product.index",
                 "description": "Filters: `q` (name / brand), `kind`, `type_id`, `active`, `low_stock=1`.",
-                "summary": "Perfumes and packs, including hidden ones and stock quantities",
+                "summary": "Perfumes, cosmetics and packs, including hidden ones and stock quantities",
                 "tags": [
                     "Product"
                 ],
@@ -2315,16 +2320,13 @@
                     {
                         "name": "kind",
                         "in": "query",
+                        "description": "One or several of `perfume`, `cosmetic`, `pack`, comma-separated.",
                         "schema": {
                             "type": [
                                 "string",
                                 "null"
                             ],
-                            "enum": [
-                                "perfume",
-                                "pack",
-                                null
-                            ]
+                            "pattern": "^(perfume|cosmetic|pack)(,(perfume|cosmetic|pack))*$"
                         }
                     },
                     {
@@ -2532,8 +2534,8 @@
             },
             "post": {
                 "operationId": "product.store",
-                "description": "A perfume may have several sizes, each with its own price: e.g. 10 ml, 20 ml (poured from the\nml stock) and \"Flacon complet 100 ml\" (a sealed bottle counted separately).",
-                "summary": "Create a perfume (with `variants`) or a pack (with `pack`)",
+                "description": "A perfume may have several sizes, each with its own price: e.g. 10 ml, 20 ml (poured from the\nml stock) and \"Flacon complet 100 ml\" (a sealed bottle counted separately). A cosmetic has\nfree-form options (\"250 ml\", \"Rose nude\", \"Bo\u00eete de 24\") counted in units, or sold by ml.",
+                "summary": "Create a perfume or a cosmetic (with `variants`) or a pack (with `pack`)",
                 "tags": [
                     "Product"
                 ],
@@ -2747,7 +2749,7 @@
                                         "type": "string",
                                         "format": "binary",
                                         "contentMediaType": "application/octet-stream",
-                                        "description": "Maximum file size: 5120 kilobytes."
+                                        "description": "Maximum file size: 20480 kilobytes."
                                     }
                                 },
                                 "required": [
@@ -2926,7 +2928,7 @@
             },
             "put": {
                 "operationId": "settings.update",
-                "description": "`show_unavailable`: show out-of-stock items greyed out (true) or hide them (false).\n`low_stock_threshold_ml`: below this many ml a perfume counts as unavailable (default 10).",
+                "description": "`show_unavailable`: show out-of-stock items greyed out (true) or hide them (false).\n`low_stock_threshold_ml`: below this many ml a perfume counts as unavailable (default 10).\n`low_stock_threshold_qty`: at or below this many units a cosmetic shows as low in stock (default 3).",
                 "summary": "Save settings. Send only the keys to change",
                 "tags": [
                     "Settings"
@@ -2970,6 +2972,11 @@
                                         "type": "boolean"
                                     },
                                     "low_stock_threshold_ml": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 10000
+                                    },
+                                    "low_stock_threshold_qty": {
                                         "type": "integer",
                                         "minimum": 0,
                                         "maximum": 10000
@@ -3465,8 +3472,8 @@
         "/admin/stock": {
             "get": {
                 "operationId": "stock.index",
-                "description": "`status` is `ok` (sold in the shop), `low` (below the low-stock threshold) or `out`.\nFilters: `q`, `status`.",
-                "summary": "Stock per perfume: millilitres in the decant pool and sealed bottles",
+                "description": "`status` is `ok` (sold in the shop), `low` (below the low-stock threshold) or `out`.\nFilters: `q`, `status`, `kind` (`perfume` or `cosmetic`), `type_id` (a family or category).",
+                "summary": "Stock per perfume or cosmetic: millilitres in the pool and units (sealed bottles, pieces)",
                 "tags": [
                     "Stock"
                 ],
@@ -3497,6 +3504,31 @@
                                 null
                             ]
                         }
+                    },
+                    {
+                        "name": "kind",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "perfume",
+                                "cosmetic",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "type_id",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        }
                     }
                 ],
                 "responses": {
@@ -3514,6 +3546,9 @@
                                                 "properties": {
                                                     "product_id": {
                                                         "type": "integer"
+                                                    },
+                                                    "kind": {
+                                                        "$ref": "#/components/schemas/ProductKind"
                                                     },
                                                     "name": {
                                                         "type": "string"
@@ -3535,6 +3570,10 @@
                                                     },
                                                     "stock_ml": {
                                                         "type": "integer"
+                                                    },
+                                                    "has_pool": {
+                                                        "type": "boolean",
+                                                        "description": "Whether some option is sold by the millilitre (so the ml stock means something)."
                                                     },
                                                     "sealed": {
                                                         "type": "array",
@@ -3568,19 +3607,21 @@
                                                     "status": {
                                                         "type": "string",
                                                         "enum": [
+                                                            "low",
                                                             "ok",
-                                                            "out",
-                                                            "low"
+                                                            "out"
                                                         ]
                                                     }
                                                 },
                                                 "required": [
                                                     "product_id",
+                                                    "kind",
                                                     "name",
                                                     "brand",
                                                     "image",
                                                     "is_active",
                                                     "stock_ml",
+                                                    "has_pool",
                                                     "sealed",
                                                     "status"
                                                 ]
@@ -3588,11 +3629,15 @@
                                         },
                                         "low_stock_threshold_ml": {
                                             "type": "string"
+                                        },
+                                        "low_stock_threshold_qty": {
+                                            "type": "string"
                                         }
                                     },
                                     "required": [
                                         "data",
-                                        "low_stock_threshold_ml"
+                                        "low_stock_threshold_ml",
+                                        "low_stock_threshold_qty"
                                     ]
                                 }
                             }
@@ -3852,7 +3897,7 @@
         "/admin/stock/entries": {
             "post": {
                 "operationId": "stock.entry",
-                "summary": "Receive stock. Send `ml` to add to the decant pool (2 bottles of 100 ml = `ml: 200`),\nand/or `qty` with a sealed-bottle `variant_id` to add sealed bottles",
+                "summary": "Receive stock. Send `ml` to add to the decant pool (2 bottles of 100 ml = `ml: 200`),\nand/or `qty` with a `variant_id` of a counted (`unit`) variant: sealed bottles, a cosmetic's pieces",
                 "tags": [
                     "Stock"
                 ],
@@ -3925,6 +3970,9 @@
                                                 "product_id": {
                                                     "type": "integer"
                                                 },
+                                                "kind": {
+                                                    "$ref": "#/components/schemas/ProductKind"
+                                                },
                                                 "name": {
                                                     "type": "string"
                                                 },
@@ -3945,6 +3993,10 @@
                                                 },
                                                 "stock_ml": {
                                                     "type": "integer"
+                                                },
+                                                "has_pool": {
+                                                    "type": "boolean",
+                                                    "description": "Whether some option is sold by the millilitre (so the ml stock means something)."
                                                 },
                                                 "sealed": {
                                                     "type": "array",
@@ -3978,19 +4030,21 @@
                                                 "status": {
                                                     "type": "string",
                                                     "enum": [
+                                                        "low",
                                                         "ok",
-                                                        "out",
-                                                        "low"
+                                                        "out"
                                                     ]
                                                 }
                                             },
                                             "required": [
                                                 "product_id",
+                                                "kind",
                                                 "name",
                                                 "brand",
                                                 "image",
                                                 "is_active",
                                                 "stock_ml",
+                                                "has_pool",
                                                 "sealed",
                                                 "status"
                                             ]
@@ -4082,6 +4136,9 @@
                                                 "product_id": {
                                                     "type": "integer"
                                                 },
+                                                "kind": {
+                                                    "$ref": "#/components/schemas/ProductKind"
+                                                },
                                                 "name": {
                                                     "type": "string"
                                                 },
@@ -4102,6 +4159,10 @@
                                                 },
                                                 "stock_ml": {
                                                     "type": "integer"
+                                                },
+                                                "has_pool": {
+                                                    "type": "boolean",
+                                                    "description": "Whether some option is sold by the millilitre (so the ml stock means something)."
                                                 },
                                                 "sealed": {
                                                     "type": "array",
@@ -4135,19 +4196,21 @@
                                                 "status": {
                                                     "type": "string",
                                                     "enum": [
+                                                        "low",
                                                         "ok",
-                                                        "out",
-                                                        "low"
+                                                        "out"
                                                     ]
                                                 }
                                             },
                                             "required": [
                                                 "product_id",
+                                                "kind",
                                                 "name",
                                                 "brand",
                                                 "image",
                                                 "is_active",
                                                 "stock_ml",
+                                                "has_pool",
                                                 "sealed",
                                                 "status"
                                             ]
@@ -4208,6 +4271,9 @@
                                                 "product_id": {
                                                     "type": "integer"
                                                 },
+                                                "kind": {
+                                                    "$ref": "#/components/schemas/ProductKind"
+                                                },
                                                 "name": {
                                                     "type": "string"
                                                 },
@@ -4228,6 +4294,10 @@
                                                 },
                                                 "stock_ml": {
                                                     "type": "integer"
+                                                },
+                                                "has_pool": {
+                                                    "type": "boolean",
+                                                    "description": "Whether some option is sold by the millilitre (so the ml stock means something)."
                                                 },
                                                 "sealed": {
                                                     "type": "array",
@@ -4261,19 +4331,21 @@
                                                 "status": {
                                                     "type": "string",
                                                     "enum": [
+                                                        "low",
                                                         "ok",
-                                                        "out",
-                                                        "low"
+                                                        "out"
                                                     ]
                                                 }
                                             },
                                             "required": [
                                                 "product_id",
+                                                "kind",
                                                 "name",
                                                 "brand",
                                                 "image",
                                                 "is_active",
                                                 "stock_ml",
+                                                "has_pool",
                                                 "sealed",
                                                 "status"
                                             ]
@@ -4298,7 +4370,7 @@
         "/admin/types": {
             "get": {
                 "operationId": "type.index",
-                "summary": "All perfume types (Designer, Niche, Arabe...), including hidden ones",
+                "summary": "All perfume families (Designer, Niche...) and cosmetic categories (Maquillage, Ongles...), including hidden ones. `kind` tells them apart",
                 "tags": [
                     "Type"
                 ],
@@ -4344,6 +4416,18 @@
                                     "name": {
                                         "type": "string",
                                         "maxLength": 60
+                                    },
+                                    "kind": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "`perfume` (a famille) or `cosmetic` (a category). Defaults to `perfume`.",
+                                        "enum": [
+                                            "perfume",
+                                            "cosmetic",
+                                            null
+                                        ]
                                     },
                                     "sort_order": {
                                         "type": [
@@ -4416,6 +4500,13 @@
                                     "name": {
                                         "type": "string",
                                         "maxLength": 60
+                                    },
+                                    "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                            "perfume",
+                                            "cosmetic"
+                                        ]
                                     },
                                     "sort_order": {
                                         "type": "integer"
@@ -4757,12 +4848,16 @@
                             },
                             "slug": {
                                 "type": "string"
+                            },
+                            "kind": {
+                                "$ref": "#/components/schemas/ProductKind"
                             }
                         },
                         "required": [
                             "id",
                             "name",
-                            "slug"
+                            "slug",
+                            "kind"
                         ]
                     },
                     "gender": {
@@ -4844,7 +4939,7 @@
                     },
                     "stock_ml": {
                         "type": "integer",
-                        "description": "Millilitres in the decant pool (perfumes)."
+                        "description": "Millilitres in the decant pool (perfumes, and cosmetics sold by volume)."
                     },
                     "is_active": {
                         "type": "boolean"
@@ -4889,7 +4984,7 @@
                                 },
                                 "stock_qty": {
                                     "type": "integer",
-                                    "description": "Sealed bottles in stock (`unit` variants only)."
+                                    "description": "Units in stock (`unit` variants only): sealed bottles, nail kits, shades..."
                                 },
                                 "sku": {
                                     "type": [
@@ -5495,6 +5590,13 @@
                                 "unit_price": {
                                     "type": "integer"
                                 },
+                                "list_price": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Catalogue price when the sale was made (null on old orders); differs from unit_price for a negotiated price."
+                                },
                                 "quantity": {
                                     "type": "integer"
                                 },
@@ -5509,6 +5611,7 @@
                                 "variant_label",
                                 "ml",
                                 "unit_price",
+                                "list_price",
                                 "quantity",
                                 "line_total"
                             ]
@@ -5683,6 +5786,9 @@
                     "slug": {
                         "type": "string"
                     },
+                    "kind": {
+                        "$ref": "#/components/schemas/ProductKind"
+                    },
                     "sort_order": {
                         "type": "integer"
                     },
@@ -5715,6 +5821,7 @@
                     "id",
                     "name",
                     "slug",
+                    "kind",
                     "sort_order",
                     "is_active",
                     "created_at",
@@ -5738,6 +5845,14 @@
                                     "type": "integer",
                                     "minimum": 1,
                                     "maximum": 50
+                                },
+                                "unit_price": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Price per unit for this sale, when different from the catalogue price (negotiated price).",
+                                    "minimum": 0
                                 }
                             },
                             "required": [
@@ -5835,12 +5950,16 @@
                             },
                             "slug": {
                                 "type": "string"
+                            },
+                            "kind": {
+                                "$ref": "#/components/schemas/ProductKind"
                             }
                         },
                         "required": [
                             "id",
                             "name",
-                            "slug"
+                            "slug",
+                            "kind"
                         ]
                     },
                     "gender": {
@@ -5925,6 +6044,7 @@
                 "type": "string",
                 "enum": [
                     "perfume",
+                    "cosmetic",
                     "pack"
                 ],
                 "title": "ProductKind"
@@ -5964,12 +6084,16 @@
                             },
                             "slug": {
                                 "type": "string"
+                            },
+                            "kind": {
+                                "$ref": "#/components/schemas/ProductKind"
                             }
                         },
                         "required": [
                             "id",
                             "name",
-                            "slug"
+                            "slug",
+                            "kind"
                         ]
                     },
                     "gender": {
@@ -6151,12 +6275,13 @@
             },
             "SaveProductRequest": {
                 "type": "object",
-                "description": "Create / update a perfume or a pack. Stock is NOT editable here (see the stock endpoints).",
+                "description": "Create / update a perfume, a cosmetic or a pack. Stock is NOT editable here (see the stock endpoints).",
                 "properties": {
                     "kind": {
                         "type": "string",
                         "enum": [
                             "perfume",
+                            "cosmetic",
                             "pack"
                         ]
                     },
@@ -6251,7 +6376,7 @@
                     },
                     "variants": {
                         "type": "array",
-                        "description": "Perfumes: sizes and prices. Send the full list; variants left out are removed (or deactivated if already used).",
+                        "description": "Perfumes and cosmetics: sizes / options and prices. Send the full list; variants left out are removed (or deactivated if already used).",
                         "items": {
                             "type": "object",
                             "properties": {
@@ -6270,7 +6395,7 @@
                                         "integer",
                                         "null"
                                     ],
-                                    "description": "Millilitres: consumed per unit for `pool` variants, bottle size for `unit` variants.",
+                                    "description": "Millilitres: consumed per unit for `pool` variants, bottle size for `unit` variants. Optional for cosmetics sold by the piece.",
                                     "minimum": 1,
                                     "maximum": 10000
                                 },
@@ -6287,7 +6412,7 @@
                                 },
                                 "stock_mode": {
                                     "type": "string",
-                                    "description": "`pool` = poured from the perfume's ml stock, `unit` = a sealed bottle counted on its own.",
+                                    "description": "`pool` = poured from the product's ml stock, `unit` = an item counted on its own (sealed bottle, nail kit, shade...).",
                                     "enum": [
                                         "pool",
                                         "unit"
@@ -6727,6 +6852,25 @@
             }
         },
         "responses": {
+            "ModelNotFoundException": {
+                "description": "Not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            },
             "ValidationException": {
                 "description": "Validation error",
                 "content": {
@@ -6752,25 +6896,6 @@
                             "required": [
                                 "message",
                                 "errors"
-                            ]
-                        }
-                    }
-                }
-            },
-            "ModelNotFoundException": {
-                "description": "Not found",
-                "content": {
-                    "application/json": {
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string",
-                                    "description": "Error overview."
-                                }
-                            },
-                            "required": [
-                                "message"
                             ]
                         }
                     }

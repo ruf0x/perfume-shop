@@ -17,7 +17,7 @@ class ProductController extends Controller
     public function __construct(private ProductService $products) {}
 
     /**
-     * Perfumes and packs, including hidden ones and stock quantities.
+     * Perfumes, cosmetics and packs, including hidden ones and stock quantities.
      *
      * Filters: `q` (name / brand), `kind`, `type_id`, `active`, `low_stock=1`.
      */
@@ -25,7 +25,8 @@ class ProductController extends Controller
     {
         $v = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
-            'kind' => ['nullable', 'in:perfume,pack'],
+            /** One or several of `perfume`, `cosmetic`, `pack`, comma-separated. */
+            'kind' => ['nullable', 'regex:/^(perfume|cosmetic|pack)(,(perfume|cosmetic|pack))*$/'],
             'type_id' => ['nullable', 'integer'],
             'active' => ['nullable', 'boolean'],
             'low_stock' => ['nullable', 'boolean'],
@@ -38,10 +39,10 @@ class ProductController extends Controller
                 ->where('name', 'like', "%{$term}%")
                 ->orWhere('inspired_by', 'like', "%{$term}%")
                 ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', "%{$term}%"))))
-            ->when($v['kind'] ?? null, fn ($q, $kind) => $q->where('kind', $kind))
+            ->when($v['kind'] ?? null, fn ($q, $kinds) => $q->whereIn('kind', explode(',', $kinds)))
             ->when($v['type_id'] ?? null, fn ($q, $id) => $q->where('perfume_type_id', $id))
             ->when(isset($v['active']), fn ($q) => $q->where('is_active', (bool) $v['active']))
-            ->when($v['low_stock'] ?? false, fn ($q) => $q->perfumes()->where('stock_ml', '<', settings()->lowStockThresholdMl()))
+            ->when($v['low_stock'] ?? false, fn ($q) => $q->lowStock(settings()->lowStockThresholdMl(), settings()->lowStockThresholdQty()))
             ->orderBy('sort_order')->orderByDesc('id')
             ->paginate($v['per_page'] ?? 30)->withQueryString();
 
@@ -54,10 +55,11 @@ class ProductController extends Controller
     }
 
     /**
-     * Create a perfume (with `variants`) or a pack (with `pack`).
+     * Create a perfume or a cosmetic (with `variants`) or a pack (with `pack`).
      *
      * A perfume may have several sizes, each with its own price: e.g. 10 ml, 20 ml (poured from the
-     * ml stock) and "Flacon complet 100 ml" (a sealed bottle counted separately).
+     * ml stock) and "Flacon complet 100 ml" (a sealed bottle counted separately). A cosmetic has
+     * free-form options ("250 ml", "Rose nude", "Boîte de 24") counted in units, or sold by ml.
      */
     public function store(SaveProductRequest $request): JsonResponse
     {

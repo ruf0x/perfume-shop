@@ -57,7 +57,8 @@ export async function exportOrders(filters: OrderFilters): Promise<Blob> {
 // ── products & packs ────────────────────────────────────────────────────
 export interface ProductParams {
   q?: string
-  kind?: 'perfume' | 'pack'
+  /** One or several kinds, comma-separated: `perfume,cosmetic`. */
+  kind?: string
   type_id?: number
   active?: boolean
   low_stock?: boolean
@@ -132,11 +133,11 @@ export function useDeleteTaxon(kind: TaxonKind) {
 }
 
 // ── stock ───────────────────────────────────────────────────────────────
-export const useStock = (params: { q?: string; status?: 'ok' | 'low' | 'out' }) =>
+export const useStock = (params: { q?: string; status?: 'ok' | 'low' | 'out'; kind?: 'perfume' | 'cosmetic'; type_id?: number }) =>
   useQuery({
     queryKey: ['admin', 'stock', params],
     placeholderData: keepPreviousData,
-    queryFn: () => api.get<{ data: StockRow[]; low_stock_threshold_ml: number }>('/admin/stock', { params: clean(params) }).then((r) => r.data),
+    queryFn: () => api.get<{ data: StockRow[]; low_stock_threshold_ml: number; low_stock_threshold_qty: number }>('/admin/stock', { params: clean(params) }).then((r) => r.data),
   })
 
 export interface MovementParams {
@@ -233,7 +234,8 @@ export const useDashboard = (from: string, to: string) =>
   })
 
 export interface PosSalePayload {
-  lines: { variant_id: number; quantity: number }[]
+  /** `unit_price` only when the cashier sells at another price than the catalogue's. */
+  lines: { variant_id: number; quantity: number; unit_price?: number }[]
   discount?: number
   payment_method: 'especes' | 'carte' | 'ccp'
   amount_received?: number

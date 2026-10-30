@@ -21,6 +21,7 @@ class SettingsService
         ],
         'show_unavailable' => false,
         'low_stock_threshold_ml' => 10,
+        'low_stock_threshold_qty' => 3,
         'store_pickup_enabled' => true,
         'free_delivery_over' => null,
     ];
@@ -65,6 +66,12 @@ class SettingsService
     public function lowStockThresholdMl(): int
     {
         return (int) $this->get('low_stock_threshold_ml');
+    }
+
+    /** Cosmetics are counted in units: at or below this many left, they show as low in stock. */
+    public function lowStockThresholdQty(): int
+    {
+        return (int) $this->get('low_stock_threshold_qty');
     }
 
     public function storePickupEnabled(): bool

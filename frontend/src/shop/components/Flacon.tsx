@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { toneFor } from './tones'
 
 interface FlaconProps {
-  /** Perfume type slug: picks the silhouette and the colour of the liquid. */
+  /** Family or category slug: picks the silhouette (flacon, or pot for cosmetics) and the colour. */
   type?: string | null
   /** How full the flacon is, 0 to 1. */
   level?: number
@@ -15,6 +15,7 @@ const SHAPES = {
   rect: { top: 60, bottom: 144 },
   round: { top: 58, bottom: 148 },
   attar: { top: 62, bottom: 150 },
+  jar: { top: 76, bottom: 144 },
 } as const
 
 /** A drawn flacon, used while a product has no photo. Decorative: the name is next to it. */
@@ -30,6 +31,7 @@ export function Flacon({ type, level = 0.7, className }: FlaconProps) {
           {tone.shape === 'rect' && <rect x="27" y="59" width="66" height="86" rx="7" />}
           {tone.shape === 'round' && <circle cx="60" cy="102" r="43" />}
           {tone.shape === 'attar' && <path d="M60 62C60 62 26 102 26 124C26 139 40 148 60 148C80 148 94 139 94 124C94 102 60 62 60 62Z" />}
+          {tone.shape === 'jar' && <rect x="29" y="75" width="62" height="69" rx="9" />}
         </clipPath>
       </defs>
 
@@ -37,6 +39,7 @@ export function Flacon({ type, level = 0.7, className }: FlaconProps) {
       {tone.shape === 'rect' && <rect x="22" y="54" width="76" height="96" rx="10" fill="#fff" fillOpacity=".55" />}
       {tone.shape === 'round' && <circle cx="60" cy="102" r="48" fill="#fff" fillOpacity=".55" />}
       {tone.shape === 'attar' && <path d="M60 56C60 56 20 100 20 124C20 142 38 152 60 152C82 152 100 142 100 124C100 100 60 56 60 56Z" fill="#fff" fillOpacity=".55" />}
+      {tone.shape === 'jar' && <rect x="24" y="70" width="72" height="80" rx="13" fill="#fff" fillOpacity=".55" />}
 
       {/* liquid: scales from the bottom of the flacon */}
       <g clipPath={`url(#${clip})`}>
@@ -56,6 +59,7 @@ export function Flacon({ type, level = 0.7, className }: FlaconProps) {
         {tone.shape === 'rect' && <rect x="22" y="54" width="76" height="96" rx="10" />}
         {tone.shape === 'round' && <circle cx="60" cy="102" r="48" />}
         {tone.shape === 'attar' && <path d="M60 56C60 56 20 100 20 124C20 142 38 152 60 152C82 152 100 142 100 124C100 100 60 56 60 56Z" />}
+        {tone.shape === 'jar' && <rect x="24" y="70" width="72" height="80" rx="13" />}
       </g>
 
       {/* neck and cap */}
@@ -72,6 +76,7 @@ export function Flacon({ type, level = 0.7, className }: FlaconProps) {
             <rect x="46" y="12" width="28" height="27" rx="13" />
           </>
         )}
+        {tone.shape === 'jar' && <rect x="19" y="42" width="82" height="30" rx="6" />}
         {tone.shape === 'attar' && (
           <>
             <rect x="55" y="30" width="10" height="28" />

@@ -12,12 +12,13 @@ class ProductIndexRequest extends FormRequest
         return [
             /** Search in name, brand and "inspired by". */
             'q' => ['nullable', 'string', 'max:100'],
-            /** Perfume type slug, e.g. `arabe`. */
+            /** Family or category slug, e.g. `arabe` or `soin-du-corps`. */
             'type' => ['nullable', 'string', 'max:80'],
             /** Brand slug. */
             'brand' => ['nullable', 'string', 'max:120'],
             'gender' => ['nullable', 'in:homme,femme,mixte'],
-            'kind' => ['nullable', 'in:perfume,pack'],
+            /** One or several of `perfume`, `cosmetic`, `pack`, comma-separated: `perfume,cosmetic`. */
+            'kind' => ['nullable', 'regex:/^(perfume|cosmetic|pack)(,(perfume|cosmetic|pack))*$/'],
             'min_price' => ['nullable', 'integer', 'min:0'],
             'max_price' => ['nullable', 'integer', 'min:0'],
             'featured' => ['nullable', 'boolean'],

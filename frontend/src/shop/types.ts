@@ -8,10 +8,14 @@ export interface Paginated<T> {
   meta: { current_page: number; last_page: number; per_page: number; total: number }
 }
 
+export type ProductKind = 'perfume' | 'cosmetic' | 'pack'
+
+/** A perfume family (Designer, Niche...) or a cosmetic category (Maquillage, Ongles...). */
 export interface TypeRef {
   id: number
   name: string
   slug: string
+  kind?: 'perfume' | 'cosmetic'
 }
 
 export interface Brand {
@@ -23,7 +27,7 @@ export interface Brand {
 export interface ProductCard {
   id: number
   slug: string
-  kind: 'perfume' | 'pack'
+  kind: ProductKind
   name: string
   brand: string | null
   type: TypeRef | null
@@ -108,7 +112,8 @@ export interface ProductFilters {
   type?: string
   brand?: string
   gender?: Gender
-  kind?: 'perfume' | 'pack'
+  /** One or several kinds, comma-separated: `perfume,cosmetic`. */
+  kind?: string
   min_price?: number
   max_price?: number
   featured?: boolean

@@ -15,10 +15,19 @@ import { useDebounced } from '../useDebounced'
 
 function Stock({ p }: { p: AdminProduct }) {
   if (p.kind === 'pack') return <span className="text-muted-foreground">{p.available ? 'Disponible' : 'Indisponible'}</span>
-  const sealed = p.variants?.filter((v) => v.stock_mode === 'unit').reduce((n, v) => n + v.stock_qty, 0) ?? 0
+  const units = p.variants?.filter((v) => v.stock_mode === 'unit').reduce((n, v) => n + v.stock_qty, 0) ?? 0
+
+  // A cosmetic is counted in pieces (and in ml only if it is sold by volume); a perfume in ml plus sealed bottles.
+  if (p.kind === 'cosmetic') {
+    return (
+      <span className="tnum">
+        {units} en stock{p.stock_ml > 0 && <span className="text-muted-foreground">, {p.stock_ml} ml</span>}
+      </span>
+    )
+  }
   return (
     <span className="tnum">
-      {p.stock_ml} ml{sealed > 0 && <span className="text-muted-foreground">, {sealed} flacon{sealed > 1 ? 's' : ''}</span>}
+      {p.stock_ml} ml{units > 0 && <span className="text-muted-foreground">, {units} flacon{units > 1 ? 's' : ''}</span>}
     </span>
   )
 }
@@ -29,7 +38,8 @@ const sizes = (p: AdminProduct) =>
     .map((v) => `${v.label} ${formatPrice(v.price)}`)
     .join(', ')
 
-export default function Products({ kind }: { kind: 'perfume' | 'pack' }) {
+/** `goods` = perfumes and cosmetics together (one catalogue); `pack` = packs. */
+export default function Products({ kind }: { kind: 'goods' | 'pack' }) {
   const isPack = kind === 'pack'
   const owner = useIsOwner()
   const navigate = useNavigate()
@@ -40,6 +50,7 @@ export default function Products({ kind }: { kind: 'perfume' | 'pack' }) {
   const [search, setSearch] = useState(params.get('q') ?? '')
   const q = useDebounced(search)
   const typeId = Number(params.get('type')) || undefined
+  const genre = (['perfume', 'cosmetic'] as const).find((k) => k === params.get('genre'))
   const active = params.get('active') === '1' ? true : params.get('active') === '0' ? false : undefined
   const lowStock = params.get('low') === '1'
   const page = Number(params.get('page')) || 1
@@ -55,10 +66,11 @@ export default function Products({ kind }: { kind: 'perfume' | 'pack' }) {
     if ((q || undefined) !== (params.get('q') || undefined)) set({ q: q || undefined })
   }, [q]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const query = useAdminProducts({ q: params.get('q') || undefined, kind, type_id: typeId, active, low_stock: lowStock, page })
+  const query = useAdminProducts({ q: params.get('q') || undefined, kind: isPack ? 'pack' : (genre ?? 'perfume,cosmetic'), type_id: typeId, active, low_stock: lowStock, page })
   const items = query.data?.data ?? []
   const base = isPack ? '/admin/packs' : '/admin/produits'
-  const noun = isPack ? 'pack' : 'parfum'
+  const noun = isPack ? 'pack' : 'produit'
+  const visibleTypes = (types.data ?? []).filter((t) => !genre || (t.kind ?? 'perfume') === genre)
 
   const toggle = (p: AdminProduct, value: boolean) =>
     save.mutate({ id: p.id, is_active: value }, { onSuccess: () => toast.success(value ? `${p.name} est visible dans la boutique.` : `${p.name} est masqué.`), onError: (e) => toast.error(apiError(e)) })
@@ -67,21 +79,38 @@ export default function Products({ kind }: { kind: 'perfume' | 'pack' }) {
     <>
       <PageHeader
         title={isPack ? 'Packs' : 'Produits'}
-        description={isPack ? 'Plusieurs parfums vendus ensemble à un prix unique.' : 'Vos parfums, leurs tailles et leurs prix.'}
-        actions={owner && <Link to={`${base}/nouveau`} className={linkButton('default', 'h-10')}><Plus className="size-4" aria-hidden />{isPack ? 'Nouveau pack' : 'Nouveau parfum'}</Link>}
+        description={isPack ? 'Plusieurs produits (parfums, cosmétiques) vendus ensemble à un prix unique.' : 'Vos parfums et vos cosmétiques, leurs options et leurs prix.'}
+        actions={owner && (isPack ? (
+          <Link to={`${base}/nouveau`} className={linkButton('default', 'h-10')}><Plus className="size-4" aria-hidden />Nouveau pack</Link>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Link to={`${base}/nouveau`} className={linkButton('default', 'h-10')}><Plus className="size-4" aria-hidden />Nouveau parfum</Link>
+            <Link to={`${base}/nouveau-cosmetique`} className={linkButton('outline', 'h-10')}><Plus className="size-4" aria-hidden />Nouveau cosmétique</Link>
+          </div>
+        ))}
       />
 
-      <section aria-label="Filtres" className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <section aria-label="Filtres" className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
         <label className="col-span-2 space-y-1 text-sm">
           <span className="text-muted-foreground">Rechercher</span>
           <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nom ou marque" className={inputClass} />
         </label>
         {!isPack && (
           <label className="space-y-1 text-sm">
-            <span className="text-muted-foreground">Famille</span>
+            <span className="text-muted-foreground">Type de produit</span>
+            <select className={inputClass} value={genre ?? ''} onChange={(e) => set({ genre: e.target.value, type: undefined })}>
+              <option value="">Tous</option>
+              <option value="perfume">Parfums</option>
+              <option value="cosmetic">Cosmétiques</option>
+            </select>
+          </label>
+        )}
+        {!isPack && (
+          <label className="space-y-1 text-sm">
+            <span className="text-muted-foreground">Famille ou catégorie</span>
             <select className={inputClass} value={typeId ?? ''} onChange={(e) => set({ type: e.target.value })}>
               <option value="">Toutes</option>
-              {types.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {visibleTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </label>
         )}
@@ -116,8 +145,8 @@ export default function Products({ kind }: { kind: 'perfume' | 'pack' }) {
                   <ProductVisual image={p.image} name="" type={p.type?.slug} level={0.7} />
                 </button>
                 <Link to={`${base}/${p.id}`} className="min-w-0 flex-1 focus-visible:outline-2 focus-visible:outline-ring">
-                  <p className="truncate font-display text-lg leading-tight">{p.name}</p>
-                  <p className="truncate text-sm text-muted-foreground">{[p.brand?.name, p.type?.name].filter(Boolean).join(', ') || (isPack ? 'Pack' : 'Sans famille')}</p>
+                  <p className="truncate font-display text-lg leading-tight">{p.name}{p.kind === 'cosmetic' && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">Cosmétique</span>}</p>
+                  <p className="truncate text-sm text-muted-foreground">{[p.brand?.name, p.type?.name].filter(Boolean).join(', ') || (isPack ? 'Pack' : 'Sans classement')}</p>
                   <p className="tnum mt-0.5 hidden truncate text-sm sm:block">{sizes(p)}</p>
                 </Link>
                 <div className="hidden w-36 text-right text-sm md:block"><Stock p={p} /></div>

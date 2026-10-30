@@ -19,10 +19,10 @@ class CatalogController extends Controller
 {
     public function __construct(private StockService $stock) {}
 
-    /** Active perfume types, in display order. */
+    /** Active perfume families and cosmetic categories, in display order. `kind` tells them apart. */
     public function types(): JsonResponse
     {
-        return response()->json(['data' => PerfumeType::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'slug'])]);
+        return response()->json(['data' => PerfumeType::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'slug', 'kind'])]);
     }
 
     public function brands(): JsonResponse
@@ -31,7 +31,7 @@ class CatalogController extends Controller
     }
 
     /**
-     * Catalogue listing (perfumes and packs), paginated.
+     * Catalogue listing (perfumes, cosmetics and packs), paginated.
      *
      * When the owner turned "show unavailable" off, out-of-stock items are left out.
      */
@@ -49,7 +49,7 @@ class CatalogController extends Controller
         }
 
         $query
-            ->when($v['kind'] ?? null, fn (Builder $q, string $kind) => $q->where('kind', $kind))
+            ->when($v['kind'] ?? null, fn (Builder $q, string $kinds) => $q->whereIn('kind', explode(',', $kinds)))
             ->when($v['gender'] ?? null, fn (Builder $q, string $gender) => $q->where('gender', $gender))
             ->when($v['featured'] ?? null, fn (Builder $q) => $q->where('is_featured', true))
             ->when($v['type'] ?? null, fn (Builder $q, string $slug) => $q->whereHas('type', fn ($t) => $t->where('slug', $slug)))

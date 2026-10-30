@@ -25,10 +25,14 @@ class ProductService
         'notes_top', 'notes_heart', 'notes_base', 'is_active', 'is_featured', 'sort_order',
     ];
 
+    /** Only perfumes have a gender, an "inspired by" and olfactory notes. */
+    private const PERFUME_ONLY = ['gender', 'inspired_by', 'notes_top', 'notes_heart', 'notes_base'];
+
     /** @param array<string, mixed> $data */
     public function create(array $data): Product
     {
         return DB::transaction(function () use ($data) {
+            $data = $this->withoutPerfumeFields($data, ProductKind::from($data['kind']));
             $product = Product::create(Arr::only($data, self::FIELDS) + [
                 'kind' => ProductKind::from($data['kind']),
                 'slug' => $this->uniqueSlug($data['slug'] ?? $data['name']),
@@ -44,6 +48,7 @@ class ProductService
     public function update(Product $product, array $data): Product
     {
         return DB::transaction(function () use ($product, $data) {
+            $data = $this->withoutPerfumeFields($data, $product->kind);
             $product->fill(Arr::only($data, self::FIELDS));
             if (! empty($data['slug']) && $data['slug'] !== $product->slug) {
                 $product->slug = $data['slug'];
@@ -54,6 +59,15 @@ class ProductService
 
             return $this->fresh($product);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withoutPerfumeFields(array $data, ProductKind $kind): array
+    {
+        return $kind === ProductKind::Perfume ? $data : array_merge($data, array_fill_keys(self::PERFUME_ONLY, null));
     }
 
     /** Soft delete: old orders keep pointing at the product. */
@@ -67,7 +81,7 @@ class ProductService
             ->map(fn (PackItem $item) => $item->pack->product->name)->unique();
 
         if ($packs->isNotEmpty()) {
-            throw new ShopException("Ce parfum fait partie du pack : {$packs->implode(', ')}. Retirez-le du pack d'abord.");
+            throw new ShopException("Ce produit fait partie du pack : {$packs->implode(', ')}. Retirez-le du pack d'abord.");
         }
 
         $product->delete();
@@ -76,7 +90,7 @@ class ProductService
     /** @param array<string, mixed> $data */
     private function syncContents(Product $product, array $data): void
     {
-        if ($product->kind === ProductKind::Perfume && array_key_exists('variants', $data)) {
+        if ($product->kind->hasOwnStock() && array_key_exists('variants', $data)) {
             $this->syncVariants($product, $data['variants']);
         }
         if ($product->kind === ProductKind::Pack && isset($data['pack'])) {
@@ -95,10 +109,10 @@ class ProductService
             $attributes['stock_mode'] = StockMode::from($row['stock_mode']);
 
             if (! empty($row['id'])) {
-                $variant = $existing->get($row['id']) ?? throw new ShopException("La variante {$row['id']} n'appartient pas à ce parfum.");
+                $variant = $existing->get($row['id']) ?? throw new ShopException("La variante {$row['id']} n'appartient pas à ce produit.");
 
                 if ($variant->stock_mode !== $attributes['stock_mode'] && $variant->stock_qty > 0) {
-                    throw new ShopException("Videz d'abord les flacons scellés de « {$variant->label} » avant de changer son type de stock.");
+                    throw new ShopException("Videz d'abord le stock en unités de « {$variant->label} » avant de changer son type de stock.");
                 }
                 $variant->update($attributes);
             } else {

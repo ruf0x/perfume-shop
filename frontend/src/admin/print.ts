@@ -60,7 +60,7 @@ const PAYMENT: Record<string, string> = { especes: 'Espèces', carte: 'Carte', c
 export function printReceipt(order: Order, shop: { name: string; phone?: string | null; address?: string | null }) {
   const c = order.customer
   const lines = (order.items ?? [])
-    .map((i) => `<div class="row"><span>${esc(i.product_name)} ${esc(i.variant_label)}</span></div><div class="row sub"><span>${i.quantity} x ${formatPrice(i.unit_price)}</span><span>${formatPrice(i.line_total)}</span></div>`)
+    .map((i) => `<div class="row"><span>${esc(i.product_name)} ${esc(i.variant_label)}</span></div><div class="row sub"><span>${i.quantity} x ${formatPrice(i.unit_price)}</span><span>${formatPrice(i.line_total)}</span></div>${i.list_price && i.list_price > i.unit_price ? `<div class="sub muted">Prix normal ${formatPrice(i.list_price)}</div>` : ''}`)
     .join('')
 
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(order.reference)}</title>

@@ -34,6 +34,7 @@ export default function Boutique() {
       min_price: toInt(params.get('min_price')),
       max_price: toInt(params.get('max_price')),
       sort: SORTS.find((s) => s === params.get('sort')),
+      kind: (['perfume', 'cosmetic'] as const).find((k) => k === params.get('kind')),
     }),
     [params],
   )
@@ -53,7 +54,7 @@ export default function Boutique() {
     )
 
   const page = toInt(params.get('page')) ?? 1
-  const query = usePagedProducts({ ...filters, kind: 'perfume' }, page)
+  const query = usePagedProducts({ ...filters, kind: filters.kind ?? 'perfume,cosmetic' }, page)
   const items = query.data?.data ?? []
   const total = query.data?.meta.total ?? 0
   const goToPage = (n: number) => setParams((prev) => { const next = new URLSearchParams(prev); n > 1 ? next.set('page', String(n)) : next.delete('page'); return next }, { replace: true })
@@ -66,7 +67,15 @@ export default function Boutique() {
   }
 
   const typeName = types.data?.find((x) => x.slug === filters.type)?.name
-  useDocumentTitle(typeName ?? t('meta.shop'), t('meta.shopDescription'))
+  const kindTitle = filters.kind ? t(`shopPage.kinds.${filters.kind}Title`) : null
+  useDocumentTitle(typeName ?? kindTitle ?? t('meta.shop'), t('meta.shopDescription'))
+
+  // Switching between perfumes and cosmetics drops what no longer applies (the other side's category, the gender).
+  const pickKind = (kind: 'perfume' | 'cosmetic' | undefined) => {
+    const current = types.data?.find((x) => x.slug === filters.type)
+    const keepType = !kind || !current || (current.kind ?? 'perfume') === kind
+    setFilters({ kind, type: keepType ? filters.type : undefined, gender: kind === 'cosmetic' ? undefined : filters.gender })
+  }
 
   const chips: { key: keyof ProductFilters; label: string }[] = [
     filters.q ? { key: 'q', label: `« ${filters.q} »` } : null,
@@ -87,7 +96,7 @@ export default function Boutique() {
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl sm:text-5xl">{typeName ?? t('shopPage.title')}</h1>
+          <h1 className="text-4xl sm:text-5xl">{typeName ?? kindTitle ?? t('shopPage.title')}</h1>
           <p className="mt-2 text-muted-foreground" aria-live="polite">
             {query.isPending ? t('common.loading') : t('shopPage.count', { count: total })}
           </p>
@@ -122,6 +131,20 @@ export default function Boutique() {
           </label>
         </div>
       </header>
+
+      <div role="group" aria-label={t('shopPage.kindLabel')} className="mt-6 inline-flex rounded-md border border-input bg-card p-1">
+        {([undefined, 'perfume', 'cosmetic'] as const).map((kind) => (
+          <button
+            key={kind ?? 'all'}
+            type="button"
+            onClick={() => pickKind(kind)}
+            aria-pressed={filters.kind === kind}
+            className={`h-10 rounded px-4 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring ${filters.kind === kind ? 'bg-primary font-medium text-primary-foreground' : 'text-foreground/80 hover:bg-secondary'}`}
+          >
+            {t(`shopPage.kinds.${kind ?? 'all'}`)}
+          </button>
+        ))}
+      </div>
 
       {chips.length > 0 && (
         <ul className="mt-6 flex flex-wrap items-center gap-2">

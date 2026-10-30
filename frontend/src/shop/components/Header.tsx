@@ -1,6 +1,6 @@
 import { Menu, Search, ShoppingBag } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,19 @@ import { useSettings } from '../queries'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn('rounded-sm px-1 py-2 text-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-ring', isActive ? 'font-medium text-primary' : 'text-foreground/80')
+
+/** A menu link that is highlighted for its own page, and for its own kind on the shop page (?kind=perfume). */
+function NavItem({ to, children }: { to: string; children: string }) {
+  const { pathname, search } = useLocation()
+  const [path, query] = to.split('?')
+  const active = pathname === path && (path !== '/boutique' || new URLSearchParams(query ?? '').get('kind') === new URLSearchParams(search).get('kind'))
+
+  return (
+    <Link to={to} aria-current={active ? 'page' : undefined} className={navClass({ isActive: active })}>
+      {children}
+    </Link>
+  )
+}
 
 function SearchForm({ className }: { className?: string }) {
   const { t } = useTranslation()
@@ -63,12 +76,10 @@ export function Header() {
         </Link>
 
         <nav className="ml-6 hidden items-center gap-5 md:flex" aria-label={t('nav.main')}>
-          <NavLink to="/boutique" className={navClass}>
-            {t('nav.shop')}
-          </NavLink>
-          <NavLink to="/packs" className={navClass}>
-            {t('nav.packs')}
-          </NavLink>
+          <NavItem to="/boutique">{t('nav.shop')}</NavItem>
+          <NavItem to="/boutique?kind=perfume">{t('nav.perfumes')}</NavItem>
+          <NavItem to="/boutique?kind=cosmetic">{t('nav.cosmetics')}</NavItem>
+          <NavItem to="/packs">{t('nav.packs')}</NavItem>
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
@@ -98,6 +109,8 @@ export function Header() {
               {[
                 ['/', t('nav.home')],
                 ['/boutique', t('nav.shop')],
+                ['/boutique?kind=perfume', t('nav.perfumes')],
+                ['/boutique?kind=cosmetic', t('nav.cosmetics')],
                 ['/packs', t('nav.packs')],
               ].map(([to, label]) => (
                 <Link key={to} to={to} onClick={() => setMenu(false)} className="border-b border-border py-3 font-display text-lg focus-visible:outline-2 focus-visible:outline-ring">

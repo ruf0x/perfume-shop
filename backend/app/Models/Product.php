@@ -68,13 +68,37 @@ class Product extends Model
         return $query->where('kind', ProductKind::Perfume);
     }
 
+    public function scopeCosmetics(Builder $query): Builder
+    {
+        return $query->where('kind', ProductKind::Cosmetic);
+    }
+
+    /** Products that hold their own stock (perfumes and cosmetics, not packs). */
+    public function scopeStocked(Builder $query): Builder
+    {
+        return $query->where('kind', '!=', ProductKind::Pack);
+    }
+
+    /**
+     * Products running low: not enough ml in the pool and (perfumes) no sealed bottle left,
+     * or (cosmetics) no more than $maxUnits units left in total.
+     */
+    public function scopeLowStock(Builder $query, int $thresholdMl, int $maxUnits): Builder
+    {
+        $units = "(select coalesce(sum(stock_qty), 0) from product_variants where product_variants.product_id = products.id and stock_mode = 'unit' and is_active = 1)";
+
+        return $query->stocked()->where('stock_ml', '<', $thresholdMl)->where(fn (Builder $q) => $q
+            ->where(fn (Builder $p) => $p->where('kind', ProductKind::Perfume)->whereRaw("{$units} = 0"))
+            ->orWhere(fn (Builder $c) => $c->where('kind', ProductKind::Cosmetic)->whereRaw("{$units} <= ?", [$maxUnits])));
+    }
+
     public function scopePacks(Builder $query): Builder
     {
         return $query->where('kind', ProductKind::Pack);
     }
 
     /**
-     * Perfumes with at least $thresholdMl in the pool or one sealed unit in stock.
+     * Perfumes and cosmetics with at least $thresholdMl in the pool or one unit in stock.
      * Packs pass through: their availability depends on their components and is
      * resolved by StockService.
      */

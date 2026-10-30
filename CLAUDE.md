@@ -89,6 +89,15 @@ Use `127.0.0.1` or `localhost` consistently in the browser — Sanctum cookies a
 - `GET /admin/dashboard` returns `sales_by_day` with `revenue_online` / `revenue_pos` per day.
 - Vite on Windows sometimes serves a stale module after several quick edits: if a change does not show, `touch` the file or restart Vite.
 
+## Cosmetics (feature/cosmetics)
+- Perfumes and cosmetics live in one catalogue: `products.kind` is `perfume`, `cosmetic` or `pack`. `ProductKind::hasOwnStock()` is true for the first two. Packs may mix perfumes and cosmetics.
+- `perfume_types` (table kept for compatibility) holds both perfume **families** and cosmetic **categories**, told apart by its `kind` column. `PerfumeTypeSeeder` creates the default categories (Maquillage, Ongles, Soin du corps, Douche et bain, Cheveux, Déodorants, Soin du visage, Accessoires); run it on a server with `php artisan db:seed --class=PerfumeTypeSeeder --force` (it never resets the owner's edits). A product's type must match its kind (validated in `SaveProductRequest`).
+- Cosmetic options are free-form variants ("250 ml", "Rose nude", "Boîte de 24"): `unit` mode = counted pieces (no `ml` needed), `pool` = sold by the ml (needs `ml`). Perfume-only fields (gender, inspired_by, notes) are cleared for cosmetics in `ProductService`.
+- Low stock: `Product::scopeLowStock` / `StockService::stockStatus`. Perfumes: under the ml threshold and no sealed bottle; cosmetics: at or below `low_stock_threshold_qty` units. `openBottle` is perfume-only.
+- Shop: `GET /products?kind=perfume,cosmetic` (comma list). Boutique has a Tout / Parfums / Cosmétiques switch (`?kind=`); cosmetic pages are `/produit/:slug` with `OptionPicker` instead of the `VolumeGauge` vial; products without a photo are drawn as a pot (`shape: 'jar'` in `tones.ts`).
+- Caisse: a line can be sold at a negotiated price (`lines.*.unit_price`, `Pricing::quote(allowPriceOverride: true)` only from `placePos`); `order_items.list_price` keeps the catalogue price. Never enabled for online orders.
+- Demo data: `php artisan db:seed --class=CosmeticSeeder` (43 cosmetics + mixed packs, local only).
+
 ## Tests
 - Pest, run from `backend/`: `vendor/bin/pest`. They use the **`perfume_shop_test`** MariaDB database (see `phpunit.xml`); `Tests\TestCase` refuses to run on any database whose name does not end in `_test`, because `RefreshDatabase` wipes the schema.
 - Helpers (`makePerfume`, `makePack`, `placeOnline`, ...) are in `tests/Helpers.php`.

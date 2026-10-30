@@ -22,9 +22,13 @@ export default function Home() {
 
   const types = useTypes()
   const featured = useProducts({ kind: 'perfume' }, 8)
+  const cosmetics = useProducts({ kind: 'cosmetic' }, 4)
   const packs = useProducts({ kind: 'pack' }, 3)
   const featuredItems = featured.data?.pages.flatMap((p) => p.data) ?? []
   const packItems = packs.data?.pages.flatMap((p) => p.data) ?? []
+  const cosmeticItems = cosmetics.data?.pages.flatMap((p) => p.data) ?? []
+  const families = (types.data ?? []).filter((x) => (x.kind ?? 'perfume') === 'perfume')
+  const categories = (types.data ?? []).filter((x) => x.kind === 'cosmetic')
   const steps = t('home.steps', { returnObjects: true }) as { title: string; text: string }[]
 
   return (
@@ -55,7 +59,7 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6">
         <h2 className="text-3xl sm:text-4xl">{t('home.families')}</h2>
         <ul className="mt-8 divide-y divide-border border-y border-border">
-          {(types.data ?? []).map((type) => (
+          {families.map((type) => (
             <li key={type.id}>
               <Link
                 to={`/boutique?type=${type.slug}`}
@@ -78,6 +82,32 @@ export default function Home() {
         </div>
         <ProductGrid products={featuredItems} loading={featured.isPending} />
       </section>
+
+      {(cosmeticItems.length > 0 || cosmetics.isPending) && (
+        <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-3xl sm:text-4xl">{t('home.cosmeticsTitle')}</h2>
+              <p className="mt-2 text-muted-foreground">{t('home.cosmeticsLead')}</p>
+            </div>
+            <Link to="/boutique?kind=cosmetic" className="py-2 text-sm underline underline-offset-4 hover:no-underline">
+              {t('home.seeAll')}
+            </Link>
+          </div>
+          {categories.length > 0 && (
+            <ul className="mb-8 flex flex-wrap gap-2">
+              {categories.map((category) => (
+                <li key={category.id}>
+                  <Link to={`/boutique?kind=cosmetic&type=${category.slug}`} className="inline-flex h-10 items-center rounded-full border border-input bg-card px-4 text-sm transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-ring">
+                    {category.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <ProductGrid products={cosmeticItems} loading={cosmetics.isPending} skeletons={4} />
+        </section>
+      )}
 
       {packItems.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6">
