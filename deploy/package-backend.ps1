@@ -51,8 +51,8 @@ if ($WithVendor) {
 
 # 3) Zip (dotfiles such as .env.example and public\.htaccess are included by the wildcard).
 $zip = Join-Path $out ('backend-{0}{1}.zip' -f (Get-Date -Format 'yyyy-MM-dd-HHmm'), $(if ($WithVendor) { '-with-vendor' } else { '' }))
-if (Test-Path $zip) { Remove-Item $zip }
-Compress-Archive -Path "$stage\*" -DestinationPath $zip -Force
+. (Join-Path $PSScriptRoot 'zip-helper.ps1')
+New-LinuxZip -SourceDir $stage -ZipPath $zip
 Remove-Item $stage -Recurse -Force
 
 $size = [math]::Round((Get-Item $zip).Length / 1MB, 1)

@@ -38,8 +38,8 @@ $good = Get-ChildItem "$dist\assets\*.js" | Select-String -SimpleMatch $ApiUrl -
 if (-not $good) { throw "The build does not contain $ApiUrl." }
 
 $zip = Join-Path $out ("frontend-{0}.zip" -f (Get-Date -Format 'yyyy-MM-dd-HHmm'))
-if (Test-Path $zip) { Remove-Item $zip }
-Compress-Archive -Path "$dist\*" -DestinationPath $zip -Force   # the wildcard already includes .htaccess
+. (Join-Path $PSScriptRoot 'zip-helper.ps1')
+New-LinuxZip -SourceDir $dist -ZipPath $zip
 
 $size = [math]::Round((Get-Item $zip).Length / 1MB, 1)
 Write-Host ''
