@@ -94,7 +94,13 @@ export default function Boutique() {
   const panel = (id: string) => <FilterPanel hideSearch={id === 'sheet'} idPrefix={id} filters={filters} productTypes={productTypes.data ?? []} brands={brands.data ?? []} onChange={setFilters} />
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:grid md:grid-cols-[230px_1fr] md:gap-x-12 md:py-14">
+      {/* Starts at the very top and is never taller than the screen, so "Prix" is always in reach without scrolling the page. */}
+      <aside className="hidden md:block" aria-label={t('shopPage.filters')}>
+        <div className="sticky top-24 max-h-[calc(100svh-8.5rem)] overflow-y-auto overscroll-contain pr-1">{panel('side')}</div>
+      </aside>
+
+      <div className="min-w-0">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl sm:text-5xl">{typeName ?? kindTitle ?? t('shopPage.title')}</h1>
@@ -169,11 +175,7 @@ export default function Boutique() {
         </ul>
       )}
 
-      <div className="mt-10 grid gap-12 md:grid-cols-[230px_1fr]">
-        <aside className="hidden md:block" aria-label={t('shopPage.filters')}>
-          <div className="sticky top-24">{panel('side')}</div>
-        </aside>
-
+      <div className="mt-10">
         <div>
           {query.isError ? (
             <div className="py-16">
@@ -199,6 +201,8 @@ export default function Boutique() {
             </>
           )}
         </div>
+      </div>
+
       </div>
 
       <Sheet open={sheet} onOpenChange={setSheet}>

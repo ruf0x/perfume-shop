@@ -50,7 +50,7 @@ export function FilterPanel({ filters, productTypes, brands, onChange, idPrefix,
   const showGender = selected ? selected.uses_gender : productTypes.some((x) => x.uses_gender)
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <form onSubmit={submitSearch} role="search" className={hideSearch ? 'hidden' : undefined}>
         <label htmlFor={`${idPrefix}-q`} className="mb-2 block font-display text-lg">
           {t('shopPage.search')}
@@ -81,6 +81,7 @@ export function FilterPanel({ filters, productTypes, brands, onChange, idPrefix,
 
       <fieldset>
         <legend className="mb-2 font-display text-lg">{selected ? (selected.profile === 'perfume' ? t('shopPage.families') : t('shopPage.categories')) : t('shopPage.type')}</legend>
+        <div className="max-h-36 overflow-y-auto overscroll-contain pr-1">
         <Choice name={`${idPrefix}-type`} checked={!filters.type} label={t('shopPage.allTypes')} onSelect={() => onChange({ type: undefined })} />
         {groups.map((group) => (
           <div key={group.id} className={groups.length > 1 ? 'mt-2' : undefined}>
@@ -90,13 +91,16 @@ export function FilterPanel({ filters, productTypes, brands, onChange, idPrefix,
             ))}
           </div>
         ))}
+        </div>
       </fieldset>
 
       <fieldset className={showGender ? undefined : 'hidden'}>
         <legend className="mb-2 font-display text-lg">{t('shopPage.gender')}</legend>
+        <div className="grid grid-cols-2">
         {genders.map((g) => (
           <Choice key={g ?? 'all'} name={`${idPrefix}-gender`} checked={filters.gender === g} label={g ? t(`shopPage.genders.${g}`) : t('shopPage.anyGender')} onSelect={() => onChange({ gender: g })} />
         ))}
+        </div>
       </fieldset>
 
       <fieldset>
