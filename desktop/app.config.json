@@ -1,4 +1,4 @@
 {
   "productName": "Administration Boutique",
-  "apiUrl": "https://api.arena-cosmetique.com"
+  "apiUrl": "http://localhost:8000"
 }
