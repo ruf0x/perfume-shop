@@ -8,7 +8,7 @@ use App\Enums\StockMode;
 use App\Enums\StockMovementType;
 use App\Models\Brand;
 use App\Models\PackItem;
-use App\Models\PerfumeType;
+use App\Models\ProductType;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
@@ -32,7 +32,8 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
-        $types = PerfumeType::pluck('id', 'slug');
+        $perfumeType = ProductType::query()->where('slug', 'parfums')->firstOrFail();
+        $types = $perfumeType->categories()->pluck('id', 'slug');
         $made = [];
 
         // name, brand, type, gender, inspired_by, [top, heart, base], pool ml, sealed bottles
@@ -59,11 +60,16 @@ class DemoSeeder extends Seeder
                 ? Brand::firstOrCreate(['slug' => Str::slug($brandName)], ['name' => $brandName])
                 : null;
 
+            if ($brand) {
+                $perfumeType->brands()->syncWithoutDetaching([$brand->id]);
+            }
+
             $product = Product::create([
                 'kind' => ProductKind::Perfume,
                 'name' => $name,
                 'slug' => Str::slug($name),
                 'brand_id' => $brand?->id,
+                'product_type_id' => $perfumeType->id,
                 'perfume_type_id' => $types[$typeSlug],
                 'gender' => $gender,
                 'inspired_by' => $inspiredBy,

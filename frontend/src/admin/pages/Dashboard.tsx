@@ -183,7 +183,7 @@ export default function Dashboard() {
                   {d.low_stock.map((p) => (
                     <li key={p.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                       <span className="min-w-0 truncate font-medium">{p.name}</span>
-                      <span className="tnum shrink-0 text-muted-foreground">{p.kind === 'cosmetic' ? (p.units === 0 && p.stock_ml === 0 ? 'épuisé' : p.units > 0 ? `${p.units} restant${p.units > 1 ? 's' : ''}` : `${p.stock_ml} ml`) : p.stock_ml === 0 ? 'épuisé' : `${p.stock_ml} ml`}</span>
+                      <span className="tnum shrink-0 text-muted-foreground">{p.kind === 'standard' ? (p.units === 0 && p.stock_ml === 0 ? 'épuisé' : p.units > 0 ? `${p.units} restant${p.units > 1 ? 's' : ''}` : `${p.stock_ml} ml`) : p.stock_ml === 0 ? 'épuisé' : `${p.stock_ml} ml`}</span>
                     </li>
                   ))}
                 </ul>

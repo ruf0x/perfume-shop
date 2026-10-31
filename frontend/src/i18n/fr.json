@@ -3,9 +3,9 @@
     "name": "Arena Cosmétique"
   },
   "meta": {
-    "homeDescription": "Parfums au millilitre ou en flacon complet, maquillage, soins du corps, cheveux et accessoires. Commandez en ligne, payez à la livraison.",
+    "homeDescription": "Commandez en ligne et payez à la livraison, partout en Algérie.",
     "shop": "La boutique",
-    "shopDescription": "Tous nos parfums et cosmétiques : décants de 10 à 30 ml, flacons complets, maquillage, ongles, soins et accessoires.",
+    "shopDescription": "Tous nos produits, par type : commandez en ligne, payez à la livraison.",
     "packs": "Les packs",
     "cart": "Panier",
     "checkout": "Passer commande",
@@ -22,9 +22,7 @@
     "search": "Rechercher un parfum",
     "searchPlaceholder": "Un parfum, une marque",
     "openCart": "Ouvrir le panier, {{count}} article(s)",
-    "skip": "Aller au contenu",
-    "perfumes": "Parfums",
-    "cosmetics": "Cosmétiques"
+    "skip": "Aller au contenu"
   },
   "common": {
     "soldOut": "Épuisé",
@@ -40,8 +38,8 @@
     "free": "Offerte"
   },
   "home": {
-    "title": "Parfums et cosmétiques, à votre mesure.",
-    "lead": "Des décants de parfum dès 10 ml pour essayer sans vous ruiner, des flacons complets pour garder, et tout pour le maquillage, les ongles, les soins et les cheveux.",
+    "title": "Tout ce qu'il vous faut, au même endroit.",
+    "lead": "Choisissez, commandez en ligne et payez à la livraison.",
     "cta": "Voir la boutique",
     "ctaSecondary": "Comment commander",
     "vialTitle": "Un volume par parfum",
@@ -57,12 +55,12 @@
     "featured": "Nos coups de cœur",
     "seeAll": "Tout voir",
     "packsTitle": "Les packs",
-    "packsLead": "Parfums et cosmétiques réunis, à un prix unique.",
+    "packsLead": "Plusieurs produits réunis, à un prix unique.",
     "howTitle": "Commander est simple",
     "steps": [
       {
         "title": "Vous choisissez",
-        "text": "Un produit, une option : une taille de parfum, une teinte, une boîte."
+        "text": "Un produit, une option : une taille, une teinte, un modèle."
       },
       {
         "title": "Vous commandez",
@@ -73,8 +71,7 @@
         "text": "Nous confirmons par téléphone, puis nous livrons dans votre wilaya."
       }
     ],
-    "cosmeticsTitle": "Les cosmétiques",
-    "cosmeticsLead": "Maquillage, ongles, soins du corps, cheveux, déodorants et accessoires."
+    "leadTypes": "Chez nous : {{types}}. Commandez en ligne et payez à la livraison."
   },
   "shopPage": {
     "title": "La boutique",
@@ -113,11 +110,7 @@
     "apply": "Voir les {{count}} résultats",
     "kindLabel": "Type de produit",
     "kinds": {
-      "all": "Tout",
-      "perfume": "Parfums",
-      "cosmetic": "Cosmétiques",
-      "perfumeTitle": "Les parfums",
-      "cosmeticTitle": "Les cosmétiques"
+      "all": "Tout"
     },
     "families": "Famille",
     "categories": "Catégorie"
@@ -144,7 +137,7 @@
   },
   "packs": {
     "title": "Les packs",
-    "lead": "Parfums et cosmétiques réunis, à un prix unique.",
+    "lead": "Plusieurs produits réunis, à un prix unique.",
     "empty": "Aucun pack pour le moment."
   },
   "cart": {
@@ -233,7 +226,7 @@
     "home": "Retour à l'accueil"
   },
   "footer": {
-    "about": "Parfums designer, niche, arabes et créations maison, au millilitre ou en flacon complet, et une sélection de cosmétiques.",
+    "about": "Parfums, cosmétiques, montres, lunettes et bien plus : commandez en ligne, payez à la réception.",
     "contact": "Nous joindre",
     "shop": "La boutique",
     "payment": "Livraison dans toute l'Algérie. Paiement à la réception."

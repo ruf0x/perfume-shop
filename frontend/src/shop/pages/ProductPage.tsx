@@ -23,7 +23,7 @@ export default function ProductPage() {
   const [added, setAdded] = useState<string | null>(null)
 
   // Perfume sizes go from small to large; a cosmetic keeps the order the owner gave (shades, sizes, lots...).
-  const variants = useMemo(() => (product?.kind === 'cosmetic' ? [...product.variants] : [...(product?.variants ?? [])].sort((a, b) => (a.ml ?? 1e9) - (b.ml ?? 1e9) || a.price - b.price)), [product])
+  const variants = useMemo(() => (product?.kind === 'standard' ? [...product.variants] : [...(product?.variants ?? [])].sort((a, b) => (a.ml ?? 1e9) - (b.ml ?? 1e9) || a.price - b.price)), [product])
   const [variantId, setVariantId] = useState<number | null>(null)
   const [qty, setQty] = useState(1)
   const [photo, setPhoto] = useState(0)
@@ -63,7 +63,7 @@ export default function ProductPage() {
   }
 
   const isPack = product.kind === 'pack'
-  const isCosmetic = product.kind === 'cosmetic'
+  const isCosmetic = product.kind === 'standard'
   const variant = variants.find((v) => v.id === variantId) ?? variants[0]
   const anyAvailable = variants.some((v) => v.available)
   const maxQty = variant ? Math.max(1, variant.max_qty) : 1
@@ -87,6 +87,7 @@ export default function ProductPage() {
         price: variant.price,
         image: product.image,
         typeSlug: product.type?.slug ?? null,
+        rayonSlug: product.product_type?.slug ?? null,
       },
       quantity,
     )
@@ -115,7 +116,7 @@ export default function ProductPage() {
         {product.type && !isPack && (
           <>
             <span aria-hidden className="mx-2">/</span>
-            <Link to={`/boutique?kind=${product.kind}&type=${product.type.slug}`} className="underline-offset-4 hover:underline">
+            <Link to={`/boutique?rayon=${product.product_type?.slug ?? ''}&type=${product.type.slug}`} className="underline-offset-4 hover:underline">
               {product.type.name}
             </Link>
           </>
@@ -126,7 +127,7 @@ export default function ProductPage() {
         <div className="md:sticky md:top-24 md:self-start">
           {/* Shorter on phones so the size picker is not pushed a full screen down. */}
           <div className="aspect-[3/2] overflow-hidden rounded-md bg-secondary sm:aspect-[4/3] md:aspect-[4/5]">
-            <ProductVisual image={photos[photo] ?? null} name={product.name} type={product.type?.slug} level={anyAvailable ? 0.78 : 0.1} priority />
+            <ProductVisual image={photos[photo] ?? null} name={product.name} type={product.type?.slug} rayon={product.product_type?.slug} level={anyAvailable ? 0.78 : 0.1} priority />
           </div>
           {photos.length > 1 && (
             <ul className="mt-3 flex gap-2">

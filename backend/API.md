@@ -56,8 +56,9 @@ The request must carry an `Origin` (or `Referer`) from `SANCTUM_STATEFUL_DOMAINS
 | Method | Route | Purpose |
 |---|---|---|
 | GET | `/settings/public` | Shop name, phone, socials, pickup on/off, free-delivery threshold |
-| GET | `/types`, `/brands` | Active perfume families and cosmetic categories (`kind` tells them apart) / brands |
-| GET | `/products` | Catalogue. `q, type, brand, gender, kind (one or several of perfume, cosmetic, pack, comma-separated), min_price, max_price, featured, sort (newest, price_asc, price_desc, name), per_page, page` |
+| GET | `/product-types` | The shop's product types (Parfums, Cosmétiques, Montres, Lunettes…) with their families / categories. `profile` is `perfume` or `standard`; `uses_gender` says whether to offer a Homme / Femme filter |
+| GET | `/types`, `/brands` | Active families / categories of every type / brands (`/brands?rayon=montres` = only those sold in that type) |
+| GET | `/products` | Catalogue. `q, rayon (product type slug), type (family / category slug), brand, gender, kind (one or several of perfume, standard, pack, comma-separated), min_price, max_price, featured, sort (newest, price_asc, price_desc, name), per_page, page` |
 | GET | `/products/{slug}` | Product page: notes, photos, variants with `available` and `max_qty`, pack `contains` |
 | GET | `/wilayas` | Wilayas we deliver to, with `home_fee` and `desk_fee` |
 | GET | `/wilayas/{id}/communes` | Communes of a wilaya |
@@ -96,15 +97,16 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | PUT | `/orders/{id}` | ✅ | Edit a pending/confirmed order (client info, `lines`, `delivery_fee`, `discount`, `admin_note`) |
 | POST | `/orders/{id}/transition` | ✅ | Workflow action (below) |
 | POST | `/pos/sales` | ✅ | Caisse sale |
-| GET | `/products`, `/products/{id}` | ✅ | Catalogue with stock and hidden items. Filters: `q, kind (comma-separated), type_id, active, low_stock` |
+| GET | `/products`, `/products/{id}` | ✅ | Catalogue with stock and hidden items. Filters: `q, kind (comma-separated), product_type_id, type_id, active, low_stock` |
 | GET | `/types`, `/brands` | ✅ | With product counts |
 | GET | `/stock`, `/stock/movements` | ✅ | Overview (`q, status ok/low/out`) and ledger (`product_id, variant_id, order_id, type, from, to`) |
 | GET | `/dashboard` | | KPIs for `from`/`to` (default today): revenue split online / caisse, order counts, cancel rate, `sales_by_day` (each day has `revenue_online` and `revenue_pos`), `top_products`, `low_stock` |
-| POST/PUT/DELETE | `/products`, `/products/{id}` | | Create / edit / hide perfumes, cosmetics and packs |
+| POST/PUT/DELETE | `/products`, `/products/{id}` | | Create / edit / hide products of any type, and packs |
+| GET/POST/PUT/DELETE | `/product-types`, `/product-types/{id}` | | The shop's product types. A type with products cannot be deleted (hide it); an empty one is deleted with its categories |
 | POST | `/products/{id}/images` | | Upload a photo (`image`, multipart) |
 | PUT | `/products/{id}/images/order` | | `{ "ids": [..] }`; the first becomes the main photo |
 | DELETE | `/images/{id}` | | Delete a photo |
-| POST/PUT/DELETE | `/types`, `/types/{id}`, `/brands`, `/brands/{id}` | | Refused while products use them (`types` takes a `kind`: `perfume` family or `cosmetic` category) |
+| POST/PUT/DELETE | `/types`, `/types/{id}`, `/brands`, `/brands/{id}` | | Refused while products use them. `types` (families / categories) take a `product_type_id`; `brands` take `product_type_ids` (the types they are sold in) |
 | POST | `/stock/entries` | | Receive stock |
 | POST | `/stock/adjustments` | | Correction or loss |
 | POST | `/stock/open-bottle` | | Sealed bottle → decant pool |
@@ -143,17 +145,17 @@ POST /admin/products
     { "label": "Flacon complet 100 ml", "ml": 100, "price": 8000, "stock_mode": "unit" } ] }
 ```
 
-Cosmetic: free-form options, each with its own price and stock. `unit` counts pieces (a shade, a box of 24, a 250 ml bottle); `pool` sells by the millilitre and then needs `ml`. A cosmetic has no gender, notes or "inspired by", and belongs to a cosmetic category.
+A product always belongs to a **product type** (`product_type_id`): it decides how the product works. In a `standard` type (cosmetics, watches, glasses…) the options are free-form, each with its own price and stock: `unit` counts pieces (a shade, a box of 24, a 42 mm case); `pool` sells by the millilitre and then needs `ml`. Notes and "inspired by" only exist in `perfume` types, and a gender only when the type has `uses_gender`. The family / category (`perfume_type_id`) must belong to the same type.
 
 ```json
 POST /admin/products
-{ "kind": "cosmetic", "name": "Gel douche coco", "perfume_type_id": 9,
+{ "product_type_id": 2, "name": "Gel douche coco", "perfume_type_id": 9,
   "variants": [
     { "label": "250 ml", "price": 450, "stock_mode": "unit" },
     { "label": "500 ml", "price": 750, "stock_mode": "unit" } ] }
 ```
 
-Pack (its components can be perfumes and cosmetics, mixed):
+Pack (`"kind": "pack"`; its components can come from any product types, mixed; `product_type_id` is optional and only says where the pack is shown):
 
 ```json
 { "kind": "pack", "name": "Pack Découverte", "description": "Trois décants",
@@ -171,7 +173,7 @@ POST /admin/stock/entries        { "product_id": 4, "ml": 200, "unit_cost": 5200
 POST /admin/stock/entries        { "product_id": 4, "variant_id": 16, "qty": 3 }
 POST /admin/stock/adjustments    { "product_id": 4, "type": "perte", "ml_change": -20, "note": "Flacon renversé" }
 POST /admin/stock/open-bottle    { "variant_id": 16 }
-GET  /admin/stock?kind=cosmetic&type_id=9&status=low
+GET  /admin/stock?product_type_id=3&type_id=9&status=low
 ```
 
 A cosmetic's pieces are received with `qty` and the `variant_id` of its option. `open-bottle` is for perfumes only. Cosmetics show as `low` at `low_stock_threshold_qty` units or fewer (a setting, 3 by default).

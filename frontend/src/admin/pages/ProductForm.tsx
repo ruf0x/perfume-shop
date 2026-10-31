@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -14,8 +14,8 @@ import { useIsOwner } from '../auth'
 import { ConfirmDialog, ErrorState, Loading, PageHeader, inputClass } from '../components/common'
 import { VariantPicker } from '../components/VariantPicker'
 import { apiError, fieldErrors } from '../lib'
-import { useAdminProduct, useDeleteProduct, useProductImages, useSaveProduct, useTaxa } from '../queries'
-import type { AdminKind, AdminProduct, StockMode } from '../types'
+import { useAdminProduct, useDeleteProduct, useProductImages, useProductTypes, useSaveProduct, useTaxa } from '../queries'
+import type { AdminKind, AdminProduct, ProductTypeRef, StockMode } from '../types'
 
 interface Row {
   key: string
@@ -38,6 +38,8 @@ interface Component {
 
 interface FormState {
   name: string
+  /** Packs only: the product type the pack is shown under (empty = none). */
+  rayon_id: string
   type_id: string
   brand_id: string
   gender: string
@@ -70,6 +72,7 @@ function fromProduct(p?: AdminProduct): FormState {
   const pack = p?.kind === 'pack' ? p.variants?.[0] : undefined
   return {
     name: p?.name ?? '',
+    rayon_id: p?.kind === 'pack' && p.product_type?.id ? String(p.product_type.id) : '',
     type_id: p?.type?.id ? String(p.type.id) : '',
     brand_id: p?.brand?.id ? String(p.brand.id) : '',
     gender: p?.gender ?? '',
@@ -210,10 +213,13 @@ function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (fi
   )
 }
 
-function FormBody({ kind, product }: { kind: AdminKind; product?: AdminProduct }) {
+/** `type` is the product type the product lives in (not used for packs, which may sit under one). */
+function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminProduct; type?: ProductTypeRef | null }) {
   const isPack = kind === 'pack'
-  const isCosmetic = kind === 'cosmetic'
-  const noun = isPack ? 'Pack' : isCosmetic ? 'Cosmétique' : 'Parfum'
+  const isCosmetic = kind === 'standard' // options counted in pieces (cosmetics, watches, glasses...)
+  const usesGender = !!type?.uses_gender
+  const noun = isPack ? 'Pack' : 'Produit'
+  const productTypes = useProductTypes()
   const owner = useIsOwner()
   const navigate = useNavigate()
   const save = useSaveProduct()
@@ -241,9 +247,10 @@ function FormBody({ kind, product }: { kind: AdminKind; product?: AdminProduct }
     const n = (v: string) => (v.trim() === '' ? null : Number(v))
     const common = {
       name: f.name.trim(),
+      product_type_id: isPack ? n(f.rayon_id) : type?.id,
       brand_id: isPack ? null : n(f.brand_id),
       perfume_type_id: isPack ? null : n(f.type_id),
-      gender: isCosmetic ? null : f.gender || null,
+      gender: usesGender ? f.gender || null : null,
       inspired_by: isCosmetic ? null : f.inspired_by.trim() || null,
       short_description: f.short_description.trim() || null,
       description: f.description.trim() || null,
@@ -254,11 +261,10 @@ function FormBody({ kind, product }: { kind: AdminKind; product?: AdminProduct }
       is_featured: f.is_featured,
     }
     if (isPack) {
-      return { ...common, ...(product ? {} : { kind }), pack: { price: Number(f.packPrice), compare_at_price: n(f.packCompare), components: f.components.map((c) => ({ variant_id: c.variant_id, quantity: c.quantity })) } }
+      return { ...common, ...(product ? {} : { kind: 'pack' }), pack: { price: Number(f.packPrice), compare_at_price: n(f.packCompare), components: f.components.map((c) => ({ variant_id: c.variant_id, quantity: c.quantity })) } }
     }
     return {
       ...common,
-      ...(product ? {} : { kind }),
       variants: f.variants.map((r, i) => ({ id: r.id, label: r.label.trim(), ml: n(r.ml), price: Number(r.price), compare_at_price: n(r.compare), stock_mode: r.mode, is_active: r.active, sort_order: i })),
     }
   }
@@ -319,8 +325,8 @@ function FormBody({ kind, product }: { kind: AdminKind; product?: AdminProduct }
   return (
     <form onSubmit={submit} noValidate>
       <PageHeader
-        title={product ? product.name : isPack ? 'Nouveau pack' : isCosmetic ? 'Nouveau cosmétique' : 'Nouveau parfum'}
-        description={owner ? undefined : 'Lecture seule : seul le propriétaire peut modifier le catalogue.'}
+        title={product ? product.name : isPack ? 'Nouveau pack' : `Nouveau produit : ${type?.name ?? ''}`}
+        description={owner ? (product && !isPack && type ? `Type de produit : ${type.name}` : undefined) : 'Lecture seule : seul le propriétaire peut modifier le catalogue.'}
         actions={<Link to={base} className="text-sm underline underline-offset-4">Retour à la liste</Link>}
       />
 
@@ -329,21 +335,30 @@ function FormBody({ kind, product }: { kind: AdminKind; product?: AdminProduct }
           <Section title="Informations">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Nom" error={err('name')} className="sm:col-span-2"><input className={inputClass} value={f.name} onChange={(e) => set('name', e.target.value)} aria-invalid={!!err('name')} /></Field>
+              {isPack && (
+                <Field label="Afficher dans le type" className="sm:col-span-2">
+                  <select className={inputClass} value={f.rayon_id} onChange={(e) => set('rayon_id', e.target.value)}>
+                    <option value="">Aucun (seulement dans « Packs »)</option>
+                    {productTypes.data?.map((pt) => <option key={pt.id} value={pt.id}>{pt.name}</option>)}
+                  </select>
+                </Field>
+              )}
               {!isPack && (
                 <>
-                  <Field label={isCosmetic ? 'Catégorie' : 'Famille'}>
+                  <Field label={type?.profile === 'perfume' ? 'Famille' : 'Catégorie'}>
                     <select className={inputClass} value={f.type_id} onChange={(e) => set('type_id', e.target.value)}>
                       <option value="">Aucune</option>
-                      {types.data?.filter((t) => (t.kind ?? 'perfume') === kind && (t.is_active !== false || String(t.id) === f.type_id)).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      {types.data?.filter((c) => c.product_type_id === type?.id && (c.is_active !== false || String(c.id) === f.type_id)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </Field>
                   <Field label="Marque">
                     <select className={inputClass} value={f.brand_id} onChange={(e) => set('brand_id', e.target.value)}>
                       <option value="">Aucune</option>
-                      {brands.data?.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      <optgroup label={`Marques ${type?.name ?? ''}`}>{brands.data?.filter((b) => b.product_type_ids?.includes(type?.id ?? 0)).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</optgroup>
+                      <optgroup label="Autres marques">{brands.data?.filter((b) => !b.product_type_ids?.includes(type?.id ?? 0)).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</optgroup>
                     </select>
                   </Field>
-                  {!isCosmetic && <Field label="Pour qui">
+                  {usesGender && <Field label="Pour qui">
                     <select className={inputClass} value={f.gender} onChange={(e) => set('gender', e.target.value)}>
                       <option value="">Non précisé</option>
                       <option value="homme">Homme</option>
@@ -351,7 +366,7 @@ function FormBody({ kind, product }: { kind: AdminKind; product?: AdminProduct }
                       <option value="mixte">Mixte</option>
                     </select>
                   </Field>}
-                  {!isCosmetic && <Field label="Inspiré de (pour un dupe)"><input className={inputClass} value={f.inspired_by} onChange={(e) => set('inspired_by', e.target.value)} placeholder="Dior Sauvage" /></Field>}
+                  {kind === 'perfume' && <Field label="Inspiré de (pour un dupe)"><input className={inputClass} value={f.inspired_by} onChange={(e) => set('inspired_by', e.target.value)} placeholder="Dior Sauvage" /></Field>}
                 </>
               )}
               <Field label="Phrase d'accroche" className="sm:col-span-2"><input className={inputClass} value={f.short_description} onChange={(e) => set('short_description', e.target.value)} maxLength={255} /></Field>
@@ -476,16 +491,28 @@ function FormBody({ kind, product }: { kind: AdminKind; product?: AdminProduct }
   )
 }
 
-/** New product: `kind` comes from the route. Existing product: its own kind is used. */
-export default function ProductForm({ kind }: { kind?: AdminKind }) {
+/**
+ * New product: the product type comes from the address (?type=3), or `kind="pack"` from the route.
+ * Existing product: its own kind and product type are used.
+ */
+export default function ProductForm({ kind }: { kind?: 'pack' }) {
   const { id } = useParams()
+  const [search] = useSearchParams()
   const productId = id ? Number(id) : null
   const q = useAdminProduct(productId)
+  const productTypes = useProductTypes()
 
   if (productId !== null) {
     if (q.isPending) return <Loading />
     if (q.isError || !q.data) return <ErrorState onRetry={() => q.refetch()} message="Produit introuvable." />
+    return <FormBody key={productId} kind={q.data.kind} product={q.data} type={q.data.product_type} />
   }
 
-  return <FormBody key={productId ?? 'new'} kind={q.data?.kind ?? kind ?? 'perfume'} product={q.data} />
+  if (kind === 'pack') return <FormBody key="new-pack" kind="pack" />
+
+  if (productTypes.isPending) return <Loading />
+  const chosen = productTypes.data?.find((t) => String(t.id) === search.get('type'))
+  if (!chosen) return <ErrorState message="Choisissez d'abord un type de produit depuis la liste des produits." />
+
+  return <FormBody key={`new-${chosen.id}`} kind={chosen.profile} type={chosen} />
 }

@@ -5,16 +5,16 @@ import { useTranslation } from 'react-i18next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { cartCount, useCart, useCartUi } from '@/stores/cart'
-import { useSettings } from '../queries'
+import { useProductTypes, useSettings } from '../queries'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn('rounded-sm px-1 py-2 text-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-ring', isActive ? 'font-medium text-primary' : 'text-foreground/80')
 
-/** A menu link that is highlighted for its own page, and for its own kind on the shop page (?kind=perfume). */
+/** A menu link that is highlighted for its own page, and for its own product type on the shop page (?rayon=montres). */
 function NavItem({ to, children }: { to: string; children: string }) {
   const { pathname, search } = useLocation()
   const [path, query] = to.split('?')
-  const active = pathname === path && (path !== '/boutique' || new URLSearchParams(query ?? '').get('kind') === new URLSearchParams(search).get('kind'))
+  const active = pathname === path && (path !== '/boutique' || new URLSearchParams(query ?? '').get('rayon') === new URLSearchParams(search).get('rayon'))
 
   return (
     <Link to={to} aria-current={active ? 'page' : undefined} className={navClass({ isActive: active })}>
@@ -54,6 +54,7 @@ function SearchForm({ className }: { className?: string }) {
 export function Header() {
   const { t } = useTranslation()
   const { data: settings } = useSettings()
+  const { data: productTypes } = useProductTypes()
   const count = useCart((s) => cartCount(s.lines))
   const setCartOpen = useCartUi((s) => s.setOpen)
   const [menu, setMenu] = useState(false)
@@ -77,8 +78,11 @@ export function Header() {
 
         <nav className="ml-6 hidden items-center gap-5 md:flex" aria-label={t('nav.main')}>
           <NavItem to="/boutique">{t('nav.shop')}</NavItem>
-          <NavItem to="/boutique?kind=perfume">{t('nav.perfumes')}</NavItem>
-          <NavItem to="/boutique?kind=cosmetic">{t('nav.cosmetics')}</NavItem>
+          {(productTypes ?? []).map((pt) => (
+            <NavItem key={pt.id} to={`/boutique?rayon=${pt.slug}`}>
+              {pt.name}
+            </NavItem>
+          ))}
           <NavItem to="/packs">{t('nav.packs')}</NavItem>
         </nav>
 
@@ -109,8 +113,7 @@ export function Header() {
               {[
                 ['/', t('nav.home')],
                 ['/boutique', t('nav.shop')],
-                ['/boutique?kind=perfume', t('nav.perfumes')],
-                ['/boutique?kind=cosmetic', t('nav.cosmetics')],
+                ...(productTypes ?? []).map((pt) => [`/boutique?rayon=${pt.slug}`, pt.name]),
                 ['/packs', t('nav.packs')],
               ].map(([to, label]) => (
                 <Link key={to} to={to} onClick={() => setMenu(false)} className="border-b border-border py-3 font-display text-lg focus-visible:outline-2 focus-visible:outline-ring">

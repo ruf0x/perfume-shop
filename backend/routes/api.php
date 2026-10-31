@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductImageController;
+use App\Http\Controllers\Admin\ProductTypeController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StockController;
 use App\Http\Controllers\Admin\TypeController;
@@ -25,6 +26,7 @@ Route::get('/ping', fn () => response()->json(['pong' => true]));
 Route::get('/settings/public', [ShopController::class, 'settings']);
 // Lists that almost never change are cached by the browser for a few minutes (fewer requests to the host).
 Route::middleware('cache.headers:public;max_age=300;etag')->group(function () {
+    Route::get('/product-types', [CatalogController::class, 'productTypes']);
     Route::get('/types', [CatalogController::class, 'types']);
     Route::get('/brands', [CatalogController::class, 'brands']);
     Route::get('/wilayas', [GeoController::class, 'wilayas']);
@@ -59,6 +61,7 @@ Route::prefix('admin')->group(function () {
 
         Route::get('/products', [ProductController::class, 'index']);
         Route::get('/products/{product}', [ProductController::class, 'show']);
+        Route::get('/product-types', [ProductTypeController::class, 'index']);
         Route::get('/types', [TypeController::class, 'index']);
         Route::get('/brands', [BrandController::class, 'index']);
         Route::get('/stock', [StockController::class, 'index']);
@@ -75,6 +78,9 @@ Route::prefix('admin')->group(function () {
             Route::put('/products/{product}/images/order', [ProductImageController::class, 'reorder']);
             Route::delete('/images/{image}', [ProductImageController::class, 'destroy']);
 
+            Route::post('/product-types', [ProductTypeController::class, 'store']);
+            Route::put('/product-types/{productType}', [ProductTypeController::class, 'update']);
+            Route::delete('/product-types/{productType}', [ProductTypeController::class, 'destroy']);
             Route::post('/types', [TypeController::class, 'store']);
             Route::put('/types/{type}', [TypeController::class, 'update']);
             Route::delete('/types/{type}', [TypeController::class, 'destroy']);

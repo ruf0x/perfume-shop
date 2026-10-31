@@ -121,7 +121,23 @@ export interface AdminVariant {
   components: { variant_id: number; product: string; label: string; quantity: number }[] | null
 }
 
-export type AdminKind = 'perfume' | 'cosmetic' | 'pack'
+/** How a product works: `perfume` (decants, notes), `standard` (options counted in pieces) or a `pack`. */
+export type AdminKind = 'perfume' | 'standard' | 'pack'
+
+/** A product type ("rayon") the owner created: Parfums, Cosmétiques, Montres, Lunettes... */
+export interface AdminProductType {
+  id: number
+  name: string
+  slug: string
+  profile: 'perfume' | 'standard'
+  uses_gender: boolean
+  sort_order: number
+  is_active: boolean
+  products_count: number
+  categories_count: number
+}
+
+export type ProductTypeRef = Pick<AdminProductType, 'id' | 'name' | 'slug' | 'profile' | 'uses_gender'>
 
 export interface AdminProduct {
   id: number
@@ -129,7 +145,9 @@ export interface AdminProduct {
   name: string
   slug: string
   brand?: { id: number; name: string } | null
-  type?: { id: number; name: string; slug: string; kind?: 'perfume' | 'cosmetic' } | null
+  product_type?: ProductTypeRef | null
+  /** The family / category inside the product type. */
+  type?: { id: number; name: string; slug: string; product_type_id?: number } | null
   gender: 'homme' | 'femme' | 'mixte' | null
   inspired_by: string | null
   short_description: string | null
@@ -151,8 +169,10 @@ export interface Taxon {
   id: number
   name: string
   slug: string
-  /** Families belong to perfumes, categories to cosmetics (brands have none). */
-  kind?: 'perfume' | 'cosmetic'
+  /** Families / categories belong to one product type. */
+  product_type_id?: number
+  /** Brands are sold in one or several product types. */
+  product_type_ids?: number[]
   sort_order?: number
   is_active?: boolean
   products_count: number
@@ -160,7 +180,8 @@ export interface Taxon {
 
 export interface StockRow {
   product_id: number
-  kind: 'perfume' | 'cosmetic'
+  kind: 'perfume' | 'standard'
+  product_type: { id: number; name: string } | null
   name: string
   brand: string | null
   image: string | null
@@ -245,5 +266,5 @@ export interface Dashboard {
   cancel_rate: number
   sales_by_day: DashboardDay[]
   top_products: { product: string; variant: string; quantity: number; revenue: number }[]
-  low_stock: { id: number; name: string; kind: 'perfume' | 'cosmetic'; stock_ml: number; units: number }[]
+  low_stock: { id: number; name: string; kind: 'perfume' | 'standard'; stock_ml: number; units: number }[]
 }

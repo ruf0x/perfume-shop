@@ -20,7 +20,7 @@ interface VariantPickerProps {
 export function VariantPicker({ open, onOpenChange, onPick, includePacks, title = 'Ajouter un article' }: VariantPickerProps) {
   const [term, setTerm] = useState('')
   const q = useDebounced(term)
-  const { data, isPending } = useAdminProducts({ q: q || undefined, kind: includePacks ? undefined : 'perfume,cosmetic', active: true }, 8)
+  const { data, isPending } = useAdminProducts({ q: q || undefined, kind: includePacks ? undefined : 'perfume,standard', active: true }, 8)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

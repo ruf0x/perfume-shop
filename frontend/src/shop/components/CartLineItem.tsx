@@ -28,7 +28,7 @@ export function CartLineItem({ line, quote, onNavigate, compact }: CartLineItemP
     <li className="flex gap-4 py-5">
       <Link to={line.path} onClick={onNavigate} className="block w-20 shrink-0 overflow-hidden rounded-md bg-secondary" tabIndex={-1} aria-hidden>
         <div className="aspect-[4/5]">
-          <ProductVisual image={line.image} name={line.name} type={line.typeSlug} />
+          <ProductVisual image={line.image} name={line.name} type={line.typeSlug} rayon={line.rayonSlug} />
         </div>
       </Link>
 

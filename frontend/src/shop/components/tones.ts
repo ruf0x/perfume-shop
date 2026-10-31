@@ -2,7 +2,7 @@
 export interface Tone {
   ground: string
   liquid: string
-  shape: 'rect' | 'round' | 'attar' | 'jar'
+  shape: 'rect' | 'round' | 'attar' | 'jar' | 'watch' | 'glasses'
 }
 
 const TONES: Record<string, Tone> = {
@@ -22,6 +22,15 @@ const TONES: Record<string, Tone> = {
   accessoires: { ground: '#ece8f1', liquid: '#8c7cab', shape: 'jar' },
 }
 
+/** What to draw for a product type when its category has no colours of its own (the owner can create any type). */
+const RAYON_TONES: Record<string, Tone> = {
+  parfums: { ground: '#ecebe5', liquid: '#b38b3d', shape: 'rect' },
+  cosmetiques: { ground: '#f4e6e2', liquid: '#c98f7a', shape: 'jar' },
+  montres: { ground: '#e8e9ee', liquid: '#7b8199', shape: 'watch' },
+  lunettes: { ground: '#efe8dd', liquid: '#8a6a45', shape: 'glasses' },
+}
+
 const FALLBACK: Tone = { ground: '#ecebe5', liquid: '#b38b3d', shape: 'rect' }
 
-export const toneFor = (typeSlug?: string | null): Tone => (typeSlug && TONES[typeSlug]) || FALLBACK
+/** Tone of a category, else of its product type, else a neutral flacon. */
+export const toneFor = (typeSlug?: string | null, rayonSlug?: string | null): Tone => (typeSlug && TONES[typeSlug]) || (rayonSlug && RAYON_TONES[rayonSlug]) || FALLBACK

@@ -83,8 +83,8 @@ function ShopTab() {
           <input type="number" min={0} className={`${inputClass} max-w-40`} value={f.low_stock_threshold_ml} onChange={(e) => set('low_stock_threshold_ml', Math.max(0, Number(e.target.value) || 0))} />
         </label>
         <label className="block space-y-1 text-sm">
-          <span className="font-medium">Seuil de stock faible des cosmétiques (articles)</span>
-          <span className="block text-muted-foreground">À ce nombre d'articles ou moins, un cosmétique est signalé « stock faible » dans le stock et sur le tableau de bord.</span>
+          <span className="font-medium">Seuil de stock faible des produits à la pièce (articles)</span>
+          <span className="block text-muted-foreground">À ce nombre d'articles ou moins, un produit à la pièce (cosmétique, montre, lunettes…) est signalé « stock faible » dans le stock et sur le tableau de bord.</span>
           <input type="number" min={0} className={`${inputClass} max-w-40`} value={f.low_stock_threshold_qty} onChange={(e) => set('low_stock_threshold_qty', Math.max(0, Number(e.target.value) || 0))} />
         </label>
       </Card>

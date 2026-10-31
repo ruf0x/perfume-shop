@@ -13,32 +13,60 @@ use Illuminate\Validation\Rule;
 
 class BrandController extends Controller
 {
-    public function index(): JsonResponse
+    /** All brands with the product types they are sold in (`product_type_ids`). Filter with `?product_type_id=`. */
+    public function index(Request $request): JsonResponse
     {
-        return response()->json(['data' => Brand::query()->withCount('products')->orderBy('name')->get()]);
+        $brands = Brand::query()->withCount('products')->with('productTypes:id')
+            ->when($request->query('product_type_id'), fn ($q, $id) => $q->whereHas('productTypes', fn ($t) => $t->where('product_types.id', $id)))
+            ->orderBy('name')->get();
+
+        return response()->json(['data' => $brands->map(fn (Brand $b) => $this->present($b))->values()]);
     }
 
     public function store(Request $request): JsonResponse
     {
-        $v = $request->validate(['name' => ['required', 'string', 'max:100', Rule::unique('brands', 'name')]]);
+        $v = $request->validate([
+            'name' => ['required', 'string', 'max:100', Rule::unique('brands', 'name')],
+            /** The product types this brand is sold in. */
+            'product_type_ids' => ['sometimes', 'array'],
+            'product_type_ids.*' => ['integer', Rule::exists('product_types', 'id')->whereNull('deleted_at')],
+        ]);
 
-        return response()->json(['data' => Brand::create($v + ['slug' => Str::slug($v['name'])])], 201);
+        $brand = Brand::create(['name' => $v['name'], 'slug' => Str::slug($v['name'])]);
+        $brand->productTypes()->sync($v['product_type_ids'] ?? []);
+
+        return response()->json(['data' => $this->present($brand->load('productTypes:id'))], 201);
     }
 
     public function update(Request $request, Brand $brand): JsonResponse
     {
-        $v = $request->validate(['name' => ['required', 'string', 'max:100', Rule::unique('brands', 'name')->ignore($brand)]]);
+        $v = $request->validate([
+            'name' => ['sometimes', 'string', 'max:100', Rule::unique('brands', 'name')->ignore($brand)],
+            'product_type_ids' => ['sometimes', 'array'],
+            'product_type_ids.*' => ['integer', Rule::exists('product_types', 'id')->whereNull('deleted_at')],
+        ]);
 
-        $brand->update($v + ['slug' => Str::slug($v['name'])]);
+        if (isset($v['name'])) {
+            $brand->update(['name' => $v['name'], 'slug' => Str::slug($v['name'])]);
+        }
+        if (isset($v['product_type_ids'])) {
+            $brand->productTypes()->sync($v['product_type_ids']);
+        }
 
-        return response()->json(['data' => $brand->fresh()]);
+        return response()->json(['data' => $this->present($brand->fresh('productTypes:id'))]);
     }
 
-    /** Refused while perfumes use the brand. */
+    /** @return array<string, mixed> */
+    private function present(Brand $b): array
+    {
+        return ['id' => $b->id, 'name' => $b->name, 'slug' => $b->slug, 'products_count' => $b->products_count ?? $b->products()->count(), 'product_type_ids' => $b->productTypes->pluck('id')->values()];
+    }
+
+    /** Refused while products use the brand. */
     public function destroy(Brand $brand): Response
     {
         if ($brand->products()->exists()) {
-            throw new ShopException('Des parfums utilisent cette marque.');
+            throw new ShopException('Des produits utilisent cette marque.');
         }
 
         $brand->delete();

@@ -1,4 +1,4 @@
-import { Boxes, ClipboardList, Gift, LayoutDashboard, LogOut, Menu, Package, Receipt, Settings as SettingsIcon, Store, Tags, Users, Warehouse, Award, type LucideIcon } from 'lucide-react'
+import { Boxes, ClipboardList, Gift, Layers, LayoutDashboard, LogOut, Menu, Package, Receipt, Settings as SettingsIcon, Store, Tags, Users, Warehouse, Award, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { toast } from 'sonner'
@@ -22,6 +22,7 @@ const NAV: NavItem[] = [
   { to: '/admin/produits', label: 'Produits', icon: Package },
   { to: '/admin/packs', label: 'Packs', icon: Gift },
   { to: '/admin/stock', label: 'Stock', icon: Warehouse },
+  { to: '/admin/types-de-produits', label: 'Types de produits', icon: Layers, ownerOnly: true },
   { to: '/admin/types', label: 'Familles et catégories', icon: Tags, ownerOnly: true },
   { to: '/admin/marques', label: 'Marques', icon: Award, ownerOnly: true },
   { to: '/admin/clients', label: 'Clients', icon: Users, ownerOnly: true },

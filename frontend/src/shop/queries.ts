@@ -10,6 +10,7 @@ import type {
   Product,
   ProductCard,
   ProductFilters,
+  ShopProductType,
   ShopSettings,
   TypeRef,
   Wilaya,
@@ -23,8 +24,13 @@ export const useSettings = () =>
 export const useTypes = () =>
   useQuery({ queryKey: ['types'], staleTime: 10 * MINUTE, queryFn: () => api.get<{ data: TypeRef[] }>('/types').then((r) => r.data.data) })
 
-export const useBrands = () =>
-  useQuery({ queryKey: ['brands'], staleTime: 10 * MINUTE, queryFn: () => api.get<{ data: Brand[] }>('/brands').then((r) => r.data.data) })
+/** The shop's product types with their categories: they drive the menu, the home page and the filters. */
+export const useProductTypes = () =>
+  useQuery({ queryKey: ['product-types'], staleTime: 5 * MINUTE, queryFn: () => api.get<{ data: ShopProductType[] }>('/product-types').then((r) => r.data.data) })
+
+/** All brands, or only those sold in one product type. */
+export const useBrands = (rayon?: string) =>
+  useQuery({ queryKey: ['brands', rayon ?? null], staleTime: 10 * MINUTE, queryFn: () => api.get<{ data: Brand[] }>('/brands', { params: { rayon } }).then((r) => r.data.data) })
 
 export const useWilayas = () =>
   useQuery({ queryKey: ['wilayas'], staleTime: 10 * MINUTE, queryFn: () => api.get<{ data: Wilaya[] }>('/wilayas').then((r) => r.data.data) })

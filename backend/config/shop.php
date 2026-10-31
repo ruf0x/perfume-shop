@@ -16,6 +16,13 @@ return [
     | Bearer-token login (POST /api/admin/token) for Postman / Swagger testing. Cookie sessions are
     | what the real frontend uses; keep this off in production.
     */
+    /**
+     * Which of the starting product types the seeder creates (slugs, comma-separated).
+     * Empty = all of them: parfums, cosmetiques, montres, lunettes. A perfume and cosmetics shop sets
+     * SHOP_TYPES=parfums,cosmetiques. The owner can add or remove types later in the admin.
+     */
+    'types' => array_values(array_filter(array_map('trim', explode(',', (string) env('SHOP_TYPES', ''))))),
+
     'dev_tokens' => env('DEV_API_TOKENS', env('APP_ENV') === 'local'),
 
     /*

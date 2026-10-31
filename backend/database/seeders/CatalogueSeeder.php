@@ -7,7 +7,7 @@ use App\Enums\ProductKind;
 use App\Enums\StockMode;
 use App\Enums\StockMovementType;
 use App\Models\Brand;
-use App\Models\PerfumeType;
+use App\Models\ProductType;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
@@ -22,6 +22,8 @@ use Illuminate\Support\Str;
 class CatalogueSeeder extends Seeder
 {
     private const PER_FAMILY = 20;
+
+    private ProductType $perfumeType;
 
     /** Price per size in DZD: [10 ml, 20 ml, 30 ml, sealed 100 ml]. */
     private const PRICES = [
@@ -170,7 +172,8 @@ class CatalogueSeeder extends Seeder
         }
 
         mt_srand(540);
-        $types = PerfumeType::pluck('id', 'slug');
+        $this->perfumeType = ProductType::query()->where('slug', 'parfums')->firstOrFail();
+        $types = $this->perfumeType->categories()->pluck('id', 'slug');
 
         foreach ($this->families() as $family => $perfumes) {
             $have = Product::query()->where('kind', ProductKind::Perfume)->where('perfume_type_id', $types[$family])->count();
@@ -196,11 +199,16 @@ class CatalogueSeeder extends Seeder
     {
         $brand = $brandName ? Brand::firstOrCreate(['slug' => Str::slug($brandName)], ['name' => $brandName]) : null;
 
+        if ($brand) {
+            $this->perfumeType->brands()->syncWithoutDetaching([$brand->id]);
+        }
+
         $product = Product::create([
             'kind' => ProductKind::Perfume,
             'name' => $name,
             'slug' => Str::slug($name),
             'brand_id' => $brand?->id,
+            'product_type_id' => $this->perfumeType->id,
             'perfume_type_id' => $typeId,
             'gender' => $gender,
             'inspired_by' => $inspiredBy,

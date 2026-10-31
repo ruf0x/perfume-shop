@@ -2,11 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import type { Brand, Gender, ProductFilters, TypeRef } from '../types'
+import type { Brand, Gender, ProductFilters, ShopProductType } from '../types'
 
 interface FilterPanelProps {
   filters: ProductFilters
-  types: TypeRef[]
+  productTypes: ShopProductType[]
   brands: Brand[]
   onChange: (patch: Partial<ProductFilters>) => void
   idPrefix: string
@@ -23,7 +23,7 @@ function Choice({ name, checked, label, onSelect }: { name: string; checked: boo
 }
 
 /** Filters shared by the desktop sidebar and the mobile sheet. Every change is written to the URL by the parent. */
-export function FilterPanel({ filters, types, brands, onChange, idPrefix, hideSearch }: FilterPanelProps) {
+export function FilterPanel({ filters, productTypes, brands, onChange, idPrefix, hideSearch }: FilterPanelProps) {
   const { t } = useTranslation()
   const [q, setQ] = useState(filters.q ?? '')
   const [min, setMin] = useState(filters.min_price?.toString() ?? '')
@@ -43,12 +43,11 @@ export function FilterPanel({ filters, types, brands, onChange, idPrefix, hideSe
 
   const genders: (Gender | undefined)[] = [undefined, 'homme', 'femme', 'mixte']
 
-  // Families belong to perfumes, categories to cosmetics. With no kind chosen both lists are shown, under their own heading.
-  const isKind = (type: TypeRef, kind: 'perfume' | 'cosmetic') => (type.kind ?? 'perfume') === kind
-  const groups = [
-    { key: 'perfume' as const, title: t('shopPage.families'), items: types.filter((x) => isKind(x, 'perfume')) },
-    { key: 'cosmetic' as const, title: t('shopPage.categories'), items: types.filter((x) => isKind(x, 'cosmetic')) },
-  ].filter((g) => g.items.length > 0 && (!filters.kind || filters.kind === g.key))
+  // The categories of the chosen product type; with none chosen, every type's categories under its own heading.
+  const selected = productTypes.find((x) => x.slug === filters.rayon)
+  const groups = (selected ? [selected] : productTypes).filter((pt) => pt.categories.length > 0)
+  // A gender filter only makes sense where the product type has one.
+  const showGender = selected ? selected.uses_gender : productTypes.some((x) => x.uses_gender)
 
   return (
     <div className="space-y-8">
@@ -60,19 +59,19 @@ export function FilterPanel({ filters, types, brands, onChange, idPrefix, hideSe
       </form>
 
       <fieldset>
-        <legend className="mb-2 font-display text-lg">{filters.kind === 'cosmetic' ? t('shopPage.categories') : filters.kind === 'perfume' ? t('shopPage.families') : t('shopPage.type')}</legend>
+        <legend className="mb-2 font-display text-lg">{selected ? (selected.profile === 'perfume' ? t('shopPage.families') : t('shopPage.categories')) : t('shopPage.type')}</legend>
         <Choice name={`${idPrefix}-type`} checked={!filters.type} label={t('shopPage.allTypes')} onSelect={() => onChange({ type: undefined })} />
         {groups.map((group) => (
-          <div key={group.key} className={groups.length > 1 ? 'mt-2' : undefined}>
-            {groups.length > 1 && <p className="px-2 pt-2 pb-1 text-xs tracking-wide text-muted-foreground uppercase">{group.title}</p>}
-            {group.items.map((type) => (
-              <Choice key={type.id} name={`${idPrefix}-type`} checked={filters.type === type.slug} label={type.name} onSelect={() => onChange({ type: type.slug })} />
+          <div key={group.id} className={groups.length > 1 ? 'mt-2' : undefined}>
+            {groups.length > 1 && <p className="px-2 pt-2 pb-1 text-xs tracking-wide text-muted-foreground uppercase">{group.name}</p>}
+            {group.categories.map((category) => (
+              <Choice key={category.id} name={`${idPrefix}-type`} checked={filters.type === category.slug && (!filters.rayon || filters.rayon === group.slug)} label={category.name} onSelect={() => onChange({ type: category.slug, rayon: group.slug })} />
             ))}
           </div>
         ))}
       </fieldset>
 
-      <fieldset className={filters.kind === 'cosmetic' ? 'hidden' : undefined}>
+      <fieldset className={showGender ? undefined : 'hidden'}>
         <legend className="mb-2 font-display text-lg">{t('shopPage.gender')}</legend>
         {genders.map((g) => (
           <Choice key={g ?? 'all'} name={`${idPrefix}-gender`} checked={filters.gender === g} label={g ? t(`shopPage.genders.${g}`) : t('shopPage.anyGender')} onSelect={() => onChange({ gender: g })} />

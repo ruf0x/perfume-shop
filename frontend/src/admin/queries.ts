@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import { api } from '@/lib/api'
 import { clean } from './lib'
 import { prepareImage } from './imagePrep'
-import type { AdminProduct, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
+import type { AdminProduct, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
 
 /** Everything the admin shows may have changed after a write; "me" is left alone. */
 const refresh = (qc: QueryClient) => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'admin' && q.queryKey[1] !== 'me' })
@@ -57,8 +57,11 @@ export async function exportOrders(filters: OrderFilters): Promise<Blob> {
 // ── products & packs ────────────────────────────────────────────────────
 export interface ProductParams {
   q?: string
-  /** One or several kinds, comma-separated: `perfume,cosmetic`. */
+  /** One or several kinds, comma-separated: `perfume,standard`. */
   kind?: string
+  /** One product type (Parfums, Montres...). */
+  product_type_id?: number
+  /** One family / category. */
   type_id?: number
   active?: boolean
   low_stock?: boolean
@@ -113,7 +116,24 @@ export function useProductImages(productId: number) {
   }
 }
 
-// ── types & brands ──────────────────────────────────────────────────────
+// ── product types (rayons) ──────────────────────────────────────────────
+export const useProductTypes = () =>
+  useQuery({ queryKey: ['admin', 'product-types'], queryFn: () => api.get<{ data: AdminProductType[] }>('/admin/product-types').then((r) => r.data.data) })
+
+export function useSaveProductType() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id?: number } & Record<string, unknown>) => (id ? api.put(`/admin/product-types/${id}`, body) : api.post('/admin/product-types', body)),
+    onSuccess: () => refresh(qc),
+  })
+}
+
+export function useDeleteProductType() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: number) => api.delete(`/admin/product-types/${id}`), onSuccess: () => refresh(qc) })
+}
+
+// ── families / categories & brands ──────────────────────────────────────
 export type TaxonKind = 'types' | 'brands'
 
 export const useTaxa = (kind: TaxonKind) =>
@@ -133,7 +153,7 @@ export function useDeleteTaxon(kind: TaxonKind) {
 }
 
 // ── stock ───────────────────────────────────────────────────────────────
-export const useStock = (params: { q?: string; status?: 'ok' | 'low' | 'out'; kind?: 'perfume' | 'cosmetic'; type_id?: number }) =>
+export const useStock = (params: { q?: string; status?: 'ok' | 'low' | 'out'; product_type_id?: number; type_id?: number }) =>
   useQuery({
     queryKey: ['admin', 'stock', params],
     placeholderData: keepPreviousData,

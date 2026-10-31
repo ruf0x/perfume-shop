@@ -17,7 +17,7 @@ beforeEach(function () {
 function perfumePayload(array $overrides = []): array
 {
     return array_merge([
-        'kind' => 'perfume',
+        'product_type_id' => productType()->id,
         'name' => 'Oud Royal',
         'perfume_type_id' => PerfumeType::firstOrCreate(['slug' => 'arabe'], ['name' => 'Arabe'])->id,
         'inspired_by' => 'Tom Ford Oud Wood',
@@ -56,7 +56,7 @@ it('generates unique slugs', function () {
 });
 
 it('validates the payload', function () {
-    $this->postJson('/api/admin/products', ['kind' => 'perfume', 'name' => '', 'variants' => []])
+    $this->postJson('/api/admin/products', ['product_type_id' => productType()->id, 'name' => '', 'variants' => []])
         ->assertUnprocessable()->assertJsonValidationErrors(['name', 'variants']);
 
     $bad = perfumePayload();
@@ -207,8 +207,9 @@ it('rejects files that are not images or are too large', function () {
 });
 
 it('manages types and brands, and refuses to delete ones in use', function () {
-    $id = $this->postJson('/api/admin/types', ['name' => 'Oud Prestige'])->assertCreated()->assertJsonPath('data.slug', 'oud-prestige')->json('data.id');
-    $this->postJson('/api/admin/types', ['name' => 'Oud Prestige'])->assertUnprocessable()->assertJsonValidationErrors('name');
+    $typeId = productType()->id;
+    $id = $this->postJson('/api/admin/types', ['name' => 'Oud Prestige', 'product_type_id' => $typeId])->assertCreated()->assertJsonPath('data.slug', 'oud-prestige')->json('data.id');
+    $this->postJson('/api/admin/types', ['name' => 'Oud Prestige', 'product_type_id' => $typeId])->assertUnprocessable()->assertJsonValidationErrors('name');
     $this->putJson("/api/admin/types/{$id}", ['name' => 'Oud Royal', 'is_active' => false])->assertOk()->assertJsonPath('data.slug', 'oud-royal');
 
     $p = makePerfume('Typé');

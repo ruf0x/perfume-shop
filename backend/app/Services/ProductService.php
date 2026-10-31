@@ -8,6 +8,7 @@ use App\Exceptions\ShopException;
 use App\Models\OrderItem;
 use App\Models\PackItem;
 use App\Models\Product;
+use App\Models\ProductType;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use Illuminate\Support\Arr;
@@ -15,30 +16,31 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Creates and updates perfumes and packs together with their variants / contents.
+ * Creates and updates products (in any product type) and packs together with their variants / contents.
  * Never touches stock: that goes through StockService.
  */
 class ProductService
 {
     private const FIELDS = [
-        'name', 'brand_id', 'perfume_type_id', 'gender', 'inspired_by', 'short_description', 'description',
+        'name', 'product_type_id', 'brand_id', 'perfume_type_id', 'gender', 'inspired_by', 'short_description', 'description',
         'notes_top', 'notes_heart', 'notes_base', 'is_active', 'is_featured', 'sort_order',
     ];
 
-    /** Only perfumes have a gender, an "inspired by" and olfactory notes. */
-    private const PERFUME_ONLY = ['gender', 'inspired_by', 'notes_top', 'notes_heart', 'notes_base'];
+    /** Only perfumes have an "inspired by" and olfactory notes. */
+    private const PERFUME_ONLY = ['inspired_by', 'notes_top', 'notes_heart', 'notes_base'];
 
     /** @param array<string, mixed> $data */
     public function create(array $data): Product
     {
         return DB::transaction(function () use ($data) {
-            $data = $this->withoutPerfumeFields($data, ProductKind::from($data['kind']));
+            $data = $this->withoutPerfumeFields($data, ProductKind::from($data['kind']), isset($data['product_type_id']) ? ProductType::find($data['product_type_id']) : null);
             $product = Product::create(Arr::only($data, self::FIELDS) + [
                 'kind' => ProductKind::from($data['kind']),
                 'slug' => $this->uniqueSlug($data['slug'] ?? $data['name']),
             ]);
 
             $this->syncContents($product, $data);
+            $this->attachBrand($product);
 
             return $this->fresh($product);
         });
@@ -48,7 +50,7 @@ class ProductService
     public function update(Product $product, array $data): Product
     {
         return DB::transaction(function () use ($product, $data) {
-            $data = $this->withoutPerfumeFields($data, $product->kind);
+            $data = $this->withoutPerfumeFields($data, $product->kind, isset($data['product_type_id']) ? ProductType::find($data['product_type_id']) : $product->productType);
             $product->fill(Arr::only($data, self::FIELDS));
             if (! empty($data['slug']) && $data['slug'] !== $product->slug) {
                 $product->slug = $data['slug'];
@@ -56,18 +58,37 @@ class ProductService
             $product->save();
 
             $this->syncContents($product, $data);
+            $this->attachBrand($product);
 
             return $this->fresh($product);
         });
     }
 
     /**
+     * What a product keeps depends on its type: notes and "inspired by" only for perfumes, a gender only when
+     * the type uses one (watches, glasses, perfumes) and not for cosmetics.
+     *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function withoutPerfumeFields(array $data, ProductKind $kind): array
+    private function withoutPerfumeFields(array $data, ProductKind $kind, ?ProductType $type): array
     {
-        return $kind === ProductKind::Perfume ? $data : array_merge($data, array_fill_keys(self::PERFUME_ONLY, null));
+        if ($kind !== ProductKind::Perfume) {
+            $data = array_merge($data, array_fill_keys(self::PERFUME_ONLY, null));
+        }
+        if ($kind === ProductKind::Pack || ! $type?->uses_gender) {
+            $data['gender'] = null;
+        }
+
+        return $data;
+    }
+
+    /** A brand used on a product is listed under that product's type from then on. */
+    private function attachBrand(Product $product): void
+    {
+        if ($product->brand_id && $product->product_type_id) {
+            $product->productType->brands()->syncWithoutDetaching([$product->brand_id]);
+        }
     }
 
     /** Soft delete: old orders keep pointing at the product. */
@@ -161,6 +182,6 @@ class ProductService
 
     private function fresh(Product $product): Product
     {
-        return $product->fresh(['brand', 'type', 'images', 'variants.packItems.component.product']);
+        return $product->fresh(['brand', 'type', 'productType', 'images', 'variants.packItems.component.product']);
     }
 }

@@ -89,7 +89,7 @@ class StockService
             return 'low';
         }
 
-        $lowUnits = $product->kind === ProductKind::Cosmetic
+        $lowUnits = $product->kind === ProductKind::Standard
             && $product->stock_ml < settings()->lowStockThresholdMl()
             && $units <= settings()->lowStockThresholdQty();
 
@@ -203,7 +203,7 @@ class StockService
             foreach ($needs['units'] as $variantId => $units) {
                 if ($variants[$variantId]->stock_qty < $units) {
                     $v = $variants[$variantId];
-                    $unit = $v->product->kind === ProductKind::Cosmetic ? 'article(s)' : 'flacon(s)';
+                    $unit = $v->product->kind === ProductKind::Standard ? 'article(s)' : 'flacon(s)';
                     $shortages[] = ['name' => "{$v->product->name} ({$v->label})", 'unit' => $unit, 'requested' => $units, 'available' => $v->stock_qty];
                 }
             }
@@ -309,7 +309,7 @@ class StockService
         }
         if ($qty !== 0) {
             if (! $variant || $variant->product_id !== $product->id || $variant->stock_mode !== StockMode::Unit) {
-                throw new ShopException($product->kind === ProductKind::Cosmetic
+                throw new ShopException($product->kind === ProductKind::Standard
                     ? 'Les articles en stock se gèrent sur une variante « à l\'unité » de ce produit.'
                     : 'Les flacons scellés se gèrent sur une variante « flacon complet » de ce parfum.');
             }
@@ -323,7 +323,7 @@ class StockService
                 throw new ShopException("Stock insuffisant : {$lockedProduct->stock_ml} ml disponibles pour « {$lockedProduct->name} ».");
             }
             if ($qty !== 0 && $lockedVariant->stock_qty + $qty < 0) {
-                $thing = $lockedProduct->kind === ProductKind::Cosmetic ? 'article(s)' : 'flacon(s)';
+                $thing = $lockedProduct->kind === ProductKind::Standard ? 'article(s)' : 'flacon(s)';
                 throw new ShopException("Stock insuffisant : {$lockedVariant->stock_qty} {$thing} disponibles pour « {$lockedProduct->name} ».");
             }
 

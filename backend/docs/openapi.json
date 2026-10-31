@@ -238,8 +238,18 @@
         "/admin/brands": {
             "get": {
                 "operationId": "brand.index",
+                "summary": "All brands with the product types they are sold in (`product_type_ids`). Filter with `?product_type_id=`",
                 "tags": [
                     "Brand"
+                ],
+                "parameters": [
+                    {
+                        "name": "product_type_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -252,7 +262,40 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/Brand"
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "slug": {
+                                                        "type": "string"
+                                                    },
+                                                    "products_count": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "string"
+                                                            },
+                                                            {
+                                                                "type": "integer",
+                                                                "minimum": 0
+                                                            }
+                                                        ]
+                                                    },
+                                                    "product_type_ids": {
+                                                        "type": "array",
+                                                        "items": {}
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "name",
+                                                    "slug",
+                                                    "products_count",
+                                                    "product_type_ids"
+                                                ]
                                             }
                                         }
                                     },
@@ -283,6 +326,13 @@
                                     "name": {
                                         "type": "string",
                                         "maxLength": 100
+                                    },
+                                    "product_type_ids": {
+                                        "type": "array",
+                                        "description": "The product types this brand is sold in.",
+                                        "items": {
+                                            "type": "integer"
+                                        }
                                     }
                                 },
                                 "required": [
@@ -301,7 +351,40 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/Brand"
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "slug": {
+                                                    "type": "string"
+                                                },
+                                                "products_count": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "integer",
+                                                            "minimum": 0
+                                                        }
+                                                    ]
+                                                },
+                                                "product_type_ids": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "name",
+                                                "slug",
+                                                "products_count",
+                                                "product_type_ids"
+                                            ]
                                         }
                                     },
                                     "required": [
@@ -338,7 +421,6 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
@@ -347,11 +429,14 @@
                                     "name": {
                                         "type": "string",
                                         "maxLength": 100
+                                    },
+                                    "product_type_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
                                     }
-                                },
-                                "required": [
-                                    "name"
-                                ]
+                                }
                             }
                         }
                     }
@@ -365,13 +450,39 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "anyOf": [
-                                                {
-                                                    "$ref": "#/components/schemas/Brand"
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
                                                 },
-                                                {
-                                                    "type": "null"
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "slug": {
+                                                    "type": "string"
+                                                },
+                                                "products_count": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "integer",
+                                                            "minimum": 0
+                                                        }
+                                                    ]
+                                                },
+                                                "product_type_ids": {
+                                                    "type": "array",
+                                                    "items": {}
                                                 }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "name",
+                                                "slug",
+                                                "products_count",
+                                                "product_type_ids"
                                             ]
                                         }
                                     },
@@ -395,7 +506,7 @@
             },
             "delete": {
                 "operationId": "brand.destroy",
-                "summary": "Refused while perfumes use the brand",
+                "summary": "Refused while products use the brand",
                 "tags": [
                     "Brand"
                 ],
@@ -423,10 +534,90 @@
                 }
             }
         },
+        "/product-types": {
+            "get": {
+                "operationId": "catalog.productTypes",
+                "summary": "The shop's product types (Parfums, Cosm\u00e9tiques, Montres, Lunettes...) with their families / categories.\n`profile` says how the type works (`perfume` or `standard`); `uses_gender` whether to offer a Homme / Femme filter",
+                "tags": [
+                    "Catalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "slug": {
+                                                        "type": "string"
+                                                    },
+                                                    "profile": {
+                                                        "$ref": "#/components/schemas/ProductKind"
+                                                    },
+                                                    "uses_gender": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "categories": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "id": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "name": {
+                                                                    "type": "string"
+                                                                },
+                                                                "slug": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "id",
+                                                                "name",
+                                                                "slug"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "name",
+                                                    "slug",
+                                                    "profile",
+                                                    "uses_gender",
+                                                    "categories"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
         "/types": {
             "get": {
                 "operationId": "catalog.types",
-                "summary": "Active perfume families and cosmetic categories, in display order. `kind` tells them apart",
+                "summary": "Active families and categories of every active type, in display order",
                 "tags": [
                     "Catalog"
                 ],
@@ -459,8 +650,18 @@
         "/brands": {
             "get": {
                 "operationId": "catalog.brands",
+                "summary": "Brands, or only those sold in one product type with `?rayon=montres`",
                 "tags": [
                     "Catalog"
+                ],
+                "parameters": [
+                    {
+                        "name": "rayon",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -492,7 +693,7 @@
             "get": {
                 "operationId": "catalog.index",
                 "description": "When the owner turned \"show unavailable\" off, out-of-stock items are left out.",
-                "summary": "Catalogue listing (perfumes, cosmetics and packs), paginated",
+                "summary": "Catalogue listing (products of every type, and packs), paginated.\n`rayon` limits it to one product type; `kind` to how products work (perfume, standard, pack)",
                 "tags": [
                     "Catalog"
                 ],
@@ -512,7 +713,7 @@
                     {
                         "name": "type",
                         "in": "query",
-                        "description": "Family or category slug, e.g. `arabe` or `soin-du-corps`.",
+                        "description": "Family or category slug, e.g. `arabe` or `lunettes-de-soleil`.",
                         "schema": {
                             "type": [
                                 "string",
@@ -550,15 +751,27 @@
                         }
                     },
                     {
-                        "name": "kind",
+                        "name": "rayon",
                         "in": "query",
-                        "description": "One or several of `perfume`, `cosmetic`, `pack`, comma-separated: `perfume,cosmetic`.",
+                        "description": "Product type (rayon) slug, e.g. `montres`.",
                         "schema": {
                             "type": [
                                 "string",
                                 "null"
                             ],
-                            "pattern": "^(perfume|cosmetic|pack)(,(perfume|cosmetic|pack))*$"
+                            "maxLength": 80
+                        }
+                    },
+                    {
+                        "name": "kind",
+                        "in": "query",
+                        "description": "One or several of `perfume`, `standard`, `pack`, comma-separated: how the product works, not where it is shown.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "pattern": "^(perfume|standard|pack)(,(perfume|standard|pack))*$"
                         }
                     },
                     {
@@ -2300,8 +2513,8 @@
         "/admin/products": {
             "get": {
                 "operationId": "product.index",
-                "description": "Filters: `q` (name / brand), `kind`, `type_id`, `active`, `low_stock=1`.",
-                "summary": "Perfumes, cosmetics and packs, including hidden ones and stock quantities",
+                "description": "Filters: `q` (name / brand), `kind`, `product_type_id` (Parfums, Montres...), `type_id` (family / category), `active`, `low_stock=1`.",
+                "summary": "Products of every type, and packs, including hidden ones and stock quantities",
                 "tags": [
                     "Product"
                 ],
@@ -2320,13 +2533,24 @@
                     {
                         "name": "kind",
                         "in": "query",
-                        "description": "One or several of `perfume`, `cosmetic`, `pack`, comma-separated.",
+                        "description": "One or several of `perfume`, `standard`, `pack`, comma-separated (how the product works).",
                         "schema": {
                             "type": [
                                 "string",
                                 "null"
                             ],
-                            "pattern": "^(perfume|cosmetic|pack)(,(perfume|cosmetic|pack))*$"
+                            "pattern": "^(perfume|standard|pack)(,(perfume|standard|pack))*$"
+                        }
+                    },
+                    {
+                        "name": "product_type_id",
+                        "in": "query",
+                        "description": "One product type (Parfums, Montres...).",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
                         }
                     },
                     {
@@ -2391,6 +2615,7 @@
                                                         "type": "object",
                                                         "required": [
                                                             "brand",
+                                                            "product_type",
                                                             "type",
                                                             "variants"
                                                         ]
@@ -2534,8 +2759,8 @@
             },
             "post": {
                 "operationId": "product.store",
-                "description": "A perfume may have several sizes, each with its own price: e.g. 10 ml, 20 ml (poured from the\nml stock) and \"Flacon complet 100 ml\" (a sealed bottle counted separately). A cosmetic has\nfree-form options (\"250 ml\", \"Rose nude\", \"Bo\u00eete de 24\") counted in units, or sold by ml.",
-                "summary": "Create a perfume or a cosmetic (with `variants`) or a pack (with `pack`)",
+                "description": "A perfume may have several sizes, each with its own price: e.g. 10 ml, 20 ml (poured from the\nml stock) and \"Flacon complet 100 ml\" (a sealed bottle counted separately). In a `standard` type\n(cosmetics, watches, glasses...) a product has free-form options (\"250 ml\", \"Rose nude\", \"Bo\u00eetier 42 mm\")\ncounted in units, or sold by ml.",
+                "summary": "Create a product (with `product_type_id` and `variants`) or a pack (`\"kind\": \"pack\"`, with `pack`)",
                 "tags": [
                     "Product"
                 ],
@@ -2611,6 +2836,7 @@
                                                     "type": "object",
                                                     "required": [
                                                         "brand",
+                                                        "product_type",
                                                         "type",
                                                         "images",
                                                         "variants"
@@ -2877,6 +3103,402 @@
                         "in": "path",
                         "required": true,
                         "description": "The image ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/admin/product-types": {
+            "get": {
+                "operationId": "productType.index",
+                "summary": "All product types, hidden ones included, with how many products and categories each holds",
+                "tags": [
+                    "ProductType"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "slug": {
+                                                        "type": "string"
+                                                    },
+                                                    "profile": {
+                                                        "$ref": "#/components/schemas/ProductKind"
+                                                    },
+                                                    "uses_gender": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "sort_order": {
+                                                        "type": "integer"
+                                                    },
+                                                    "is_active": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "products_count": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "string"
+                                                            },
+                                                            {
+                                                                "type": "integer",
+                                                                "enum": [
+                                                                    0
+                                                                ]
+                                                            }
+                                                        ]
+                                                    },
+                                                    "categories_count": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "string"
+                                                            },
+                                                            {
+                                                                "type": "integer",
+                                                                "enum": [
+                                                                    0
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "name",
+                                                    "slug",
+                                                    "profile",
+                                                    "uses_gender",
+                                                    "sort_order",
+                                                    "is_active",
+                                                    "products_count",
+                                                    "categories_count"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "productType.store",
+                "tags": [
+                    "ProductType"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                    },
+                                    "profile": {
+                                        "type": "string",
+                                        "description": "`perfume` = decants by the ml, notes, sealed bottles. `standard` = options counted in pieces (watches, glasses, make-up...).",
+                                        "enum": [
+                                            "perfume",
+                                            "standard"
+                                        ]
+                                    },
+                                    "uses_gender": {
+                                        "type": "boolean",
+                                        "description": "Offer a Homme / Femme / Mixte filter and field (watches, glasses, perfumes)."
+                                    },
+                                    "sort_order": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "profile"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "slug": {
+                                                    "type": "string"
+                                                },
+                                                "profile": {
+                                                    "$ref": "#/components/schemas/ProductKind"
+                                                },
+                                                "uses_gender": {
+                                                    "type": "boolean"
+                                                },
+                                                "sort_order": {
+                                                    "type": "integer"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean"
+                                                },
+                                                "products_count": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "integer",
+                                                            "enum": [
+                                                                0
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                "categories_count": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "integer",
+                                                            "enum": [
+                                                                0
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "name",
+                                                "slug",
+                                                "profile",
+                                                "uses_gender",
+                                                "sort_order",
+                                                "is_active",
+                                                "products_count",
+                                                "categories_count"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/admin/product-types/{productType}": {
+            "put": {
+                "operationId": "productType.update",
+                "tags": [
+                    "ProductType"
+                ],
+                "parameters": [
+                    {
+                        "name": "productType",
+                        "in": "path",
+                        "required": true,
+                        "description": "The product type ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                    },
+                                    "profile": {
+                                        "type": "string",
+                                        "enum": [
+                                            "perfume",
+                                            "standard"
+                                        ]
+                                    },
+                                    "uses_gender": {
+                                        "type": "boolean"
+                                    },
+                                    "sort_order": {
+                                        "type": "integer"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "slug": {
+                                                    "type": "string"
+                                                },
+                                                "profile": {
+                                                    "$ref": "#/components/schemas/ProductKind"
+                                                },
+                                                "uses_gender": {
+                                                    "type": "boolean"
+                                                },
+                                                "sort_order": {
+                                                    "type": "integer"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean"
+                                                },
+                                                "products_count": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "integer",
+                                                            "enum": [
+                                                                0
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                "categories_count": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "integer",
+                                                            "enum": [
+                                                                0
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "name",
+                                                "slug",
+                                                "profile",
+                                                "uses_gender",
+                                                "sort_order",
+                                                "is_active",
+                                                "products_count",
+                                                "categories_count"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "productType.destroy",
+                "summary": "Refused while it still holds products: hide it instead (`is_active: false`).\nAn empty type is removed together with its (empty) families / categories",
+                "tags": [
+                    "ProductType"
+                ],
+                "parameters": [
+                    {
+                        "name": "productType",
+                        "in": "path",
+                        "required": true,
+                        "description": "The product type ID",
                         "schema": {
                             "type": "integer"
                         }
@@ -3472,8 +4094,8 @@
         "/admin/stock": {
             "get": {
                 "operationId": "stock.index",
-                "description": "`status` is `ok` (sold in the shop), `low` (below the low-stock threshold) or `out`.\nFilters: `q`, `status`, `kind` (`perfume` or `cosmetic`), `type_id` (a family or category).",
-                "summary": "Stock per perfume or cosmetic: millilitres in the pool and units (sealed bottles, pieces)",
+                "description": "`status` is `ok` (sold in the shop), `low` (below the low-stock threshold) or `out`.\nFilters: `q`, `status`, `product_type_id` (Parfums, Montres...), `type_id` (a family or category), `kind` (`perfume` or `standard`).",
+                "summary": "Stock per product, in any product type: millilitres in the pool and units (sealed bottles, pieces)",
                 "tags": [
                     "Stock"
                 ],
@@ -3515,8 +4137,18 @@
                             ],
                             "enum": [
                                 "perfume",
-                                "cosmetic",
+                                "standard",
                                 null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "product_type_id",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
                             ]
                         }
                     },
@@ -3549,6 +4181,24 @@
                                                     },
                                                     "kind": {
                                                         "$ref": "#/components/schemas/ProductKind"
+                                                    },
+                                                    "product_type": {
+                                                        "type": [
+                                                            "object",
+                                                            "null"
+                                                        ],
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "id",
+                                                            "name"
+                                                        ]
                                                     },
                                                     "name": {
                                                         "type": "string"
@@ -3616,6 +4266,7 @@
                                                 "required": [
                                                     "product_id",
                                                     "kind",
+                                                    "product_type",
                                                     "name",
                                                     "brand",
                                                     "image",
@@ -3897,7 +4548,7 @@
         "/admin/stock/entries": {
             "post": {
                 "operationId": "stock.entry",
-                "summary": "Receive stock. Send `ml` to add to the decant pool (2 bottles of 100 ml = `ml: 200`),\nand/or `qty` with a `variant_id` of a counted (`unit`) variant: sealed bottles, a cosmetic's pieces",
+                "summary": "Receive stock. Send `ml` to add to the decant pool (2 bottles of 100 ml = `ml: 200`),\nand/or `qty` with a `variant_id` of a counted (`unit`) variant: sealed bottles, a watch, a shade",
                 "tags": [
                     "Stock"
                 ],
@@ -3973,6 +4624,24 @@
                                                 "kind": {
                                                     "$ref": "#/components/schemas/ProductKind"
                                                 },
+                                                "product_type": {
+                                                    "type": [
+                                                        "object",
+                                                        "null"
+                                                    ],
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "id",
+                                                        "name"
+                                                    ]
+                                                },
                                                 "name": {
                                                     "type": "string"
                                                 },
@@ -4039,6 +4708,7 @@
                                             "required": [
                                                 "product_id",
                                                 "kind",
+                                                "product_type",
                                                 "name",
                                                 "brand",
                                                 "image",
@@ -4139,6 +4809,24 @@
                                                 "kind": {
                                                     "$ref": "#/components/schemas/ProductKind"
                                                 },
+                                                "product_type": {
+                                                    "type": [
+                                                        "object",
+                                                        "null"
+                                                    ],
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "id",
+                                                        "name"
+                                                    ]
+                                                },
                                                 "name": {
                                                     "type": "string"
                                                 },
@@ -4205,6 +4893,7 @@
                                             "required": [
                                                 "product_id",
                                                 "kind",
+                                                "product_type",
                                                 "name",
                                                 "brand",
                                                 "image",
@@ -4274,6 +4963,24 @@
                                                 "kind": {
                                                     "$ref": "#/components/schemas/ProductKind"
                                                 },
+                                                "product_type": {
+                                                    "type": [
+                                                        "object",
+                                                        "null"
+                                                    ],
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "id",
+                                                        "name"
+                                                    ]
+                                                },
                                                 "name": {
                                                     "type": "string"
                                                 },
@@ -4340,6 +5047,7 @@
                                             "required": [
                                                 "product_id",
                                                 "kind",
+                                                "product_type",
                                                 "name",
                                                 "brand",
                                                 "image",
@@ -4370,9 +5078,18 @@
         "/admin/types": {
             "get": {
                 "operationId": "type.index",
-                "summary": "All perfume families (Designer, Niche...) and cosmetic categories (Maquillage, Ongles...), including hidden ones. `kind` tells them apart",
+                "summary": "All families / categories of every product type (Designer, Niche... Maquillage... Lunettes de soleil...), hidden ones included. Filter with `?product_type_id=`",
                 "tags": [
                     "Type"
+                ],
+                "parameters": [
+                    {
+                        "name": "product_type_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -4413,21 +5130,14 @@
                             "schema": {
                                 "type": "object",
                                 "properties": {
+                                    "product_type_id": {
+                                        "type": "integer",
+                                        "description": "The product type this family / category belongs to."
+                                    },
                                     "name": {
                                         "type": "string",
+                                        "description": "Unique inside its product type.",
                                         "maxLength": 60
-                                    },
-                                    "kind": {
-                                        "type": [
-                                            "string",
-                                            "null"
-                                        ],
-                                        "description": "`perfume` (a famille) or `cosmetic` (a category). Defaults to `perfume`.",
-                                        "enum": [
-                                            "perfume",
-                                            "cosmetic",
-                                            null
-                                        ]
                                     },
                                     "sort_order": {
                                         "type": [
@@ -4440,6 +5150,7 @@
                                     }
                                 },
                                 "required": [
+                                    "product_type_id",
                                     "name"
                                 ]
                             }
@@ -4501,12 +5212,8 @@
                                         "type": "string",
                                         "maxLength": 60
                                     },
-                                    "kind": {
-                                        "type": "string",
-                                        "enum": [
-                                            "perfume",
-                                            "cosmetic"
-                                        ]
+                                    "product_type_id": {
+                                        "type": "integer"
                                     },
                                     "sort_order": {
                                         "type": "integer"
@@ -4834,6 +5541,36 @@
                             "name"
                         ]
                     },
+                    "product_type": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "slug": {
+                                "type": "string"
+                            },
+                            "profile": {
+                                "$ref": "#/components/schemas/ProductKind"
+                            },
+                            "uses_gender": {
+                                "type": "boolean"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "slug",
+                            "profile",
+                            "uses_gender"
+                        ]
+                    },
                     "type": {
                         "type": [
                             "object",
@@ -4849,15 +5586,18 @@
                             "slug": {
                                 "type": "string"
                             },
-                            "kind": {
-                                "$ref": "#/components/schemas/ProductKind"
+                            "product_type_id": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
                             }
                         },
                         "required": [
                             "id",
                             "name",
                             "slug",
-                            "kind"
+                            "product_type_id"
                         ]
                     },
                     "gender": {
@@ -4939,7 +5679,7 @@
                     },
                     "stock_ml": {
                         "type": "integer",
-                        "description": "Millilitres in the decant pool (perfumes, and cosmetics sold by volume)."
+                        "description": "Millilitres in the decant pool (perfumes, and any product sold by volume)."
                     },
                     "is_active": {
                         "type": "boolean"
@@ -5786,8 +6526,11 @@
                     "slug": {
                         "type": "string"
                     },
-                    "kind": {
-                        "$ref": "#/components/schemas/ProductKind"
+                    "product_type_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
                     },
                     "sort_order": {
                         "type": "integer"
@@ -5821,7 +6564,7 @@
                     "id",
                     "name",
                     "slug",
-                    "kind",
+                    "product_type_id",
                     "sort_order",
                     "is_active",
                     "created_at",
@@ -5936,11 +6679,12 @@
                             "null"
                         ]
                     },
-                    "type": {
+                    "product_type": {
                         "type": [
                             "object",
                             "null"
                         ],
+                        "description": "The product type (Parfums, Montres...): how the product is shown and sold.",
                         "properties": {
                             "id": {
                                 "type": "integer"
@@ -5951,15 +6695,42 @@
                             "slug": {
                                 "type": "string"
                             },
-                            "kind": {
+                            "profile": {
                                 "$ref": "#/components/schemas/ProductKind"
+                            },
+                            "uses_gender": {
+                                "type": "boolean"
                             }
                         },
                         "required": [
                             "id",
                             "name",
                             "slug",
-                            "kind"
+                            "profile",
+                            "uses_gender"
+                        ]
+                    },
+                    "type": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "The family / category inside the product type.",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "slug": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "slug"
                         ]
                     },
                     "gender": {
@@ -6028,6 +6799,7 @@
                     "kind",
                     "name",
                     "brand",
+                    "product_type",
                     "type",
                     "gender",
                     "inspired_by",
@@ -6042,9 +6814,10 @@
             },
             "ProductKind": {
                 "type": "string",
+                "description": "What a product is, for stock and display purposes. Perfume and Standard are the two *profiles* a product type can have; Pack is a bundle of other products.\n",
                 "enum": [
                     "perfume",
-                    "cosmetic",
+                    "standard",
                     "pack"
                 ],
                 "title": "ProductKind"
@@ -6070,11 +6843,12 @@
                             "null"
                         ]
                     },
-                    "type": {
+                    "product_type": {
                         "type": [
                             "object",
                             "null"
                         ],
+                        "description": "The product type (Parfums, Montres...): how the product is shown and sold.",
                         "properties": {
                             "id": {
                                 "type": "integer"
@@ -6085,15 +6859,42 @@
                             "slug": {
                                 "type": "string"
                             },
-                            "kind": {
+                            "profile": {
                                 "$ref": "#/components/schemas/ProductKind"
+                            },
+                            "uses_gender": {
+                                "type": "boolean"
                             }
                         },
                         "required": [
                             "id",
                             "name",
                             "slug",
-                            "kind"
+                            "profile",
+                            "uses_gender"
+                        ]
+                    },
+                    "type": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "The family / category inside the product type.",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "slug": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "slug"
                         ]
                     },
                     "gender": {
@@ -6218,6 +7019,7 @@
                     "kind",
                     "name",
                     "brand",
+                    "product_type",
                     "type",
                     "gender",
                     "inspired_by",
@@ -6275,15 +7077,25 @@
             },
             "SaveProductRequest": {
                 "type": "object",
-                "description": "Create / update a perfume, a cosmetic or a pack. Stock is NOT editable here (see the stock endpoints).",
+                "description": "Create / update a product (in one of the owner's product types) or a pack.\nStock is NOT editable here (see the stock endpoints).",
                 "properties": {
                     "kind": {
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Only `pack` is ever sent: everything else is created from its `product_type_id`.",
                         "enum": [
-                            "perfume",
-                            "cosmetic",
-                            "pack"
+                            "pack",
+                            null
                         ]
+                    },
+                    "product_type_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "The product type (Parfums, Montres...). Required, except for a pack where it only says where the pack is shown."
                     },
                     "name": {
                         "type": "string",
@@ -6308,13 +7120,15 @@
                         "type": [
                             "integer",
                             "null"
-                        ]
+                        ],
+                        "description": "The family / category inside the product type (Designer, Lunettes de soleil...)."
                     },
                     "gender": {
                         "type": [
                             "string",
                             "null"
                         ],
+                        "description": "Only kept when the product type uses a gender.",
                         "enum": [
                             "homme",
                             "femme",
@@ -6327,7 +7141,7 @@
                             "string",
                             "null"
                         ],
-                        "description": "For dupes: \"Inspir\u00e9 de Sauvage \u2013 Dior\".",
+                        "description": "Perfumes only. For dupes: \"Inspir\u00e9 de Sauvage \u2013 Dior\".",
                         "maxLength": 150
                     },
                     "short_description": {
@@ -6376,7 +7190,7 @@
                     },
                     "variants": {
                         "type": "array",
-                        "description": "Perfumes and cosmetics: sizes / options and prices. Send the full list; variants left out are removed (or deactivated if already used).",
+                        "description": "Products: sizes / options and prices. Send the full list; variants left out are removed (or deactivated if already used).",
                         "items": {
                             "type": "object",
                             "properties": {
@@ -6395,7 +7209,7 @@
                                         "integer",
                                         "null"
                                     ],
-                                    "description": "Millilitres: consumed per unit for `pool` variants, bottle size for `unit` variants. Optional for cosmetics sold by the piece.",
+                                    "description": "Millilitres: consumed per unit for `pool` variants, bottle size for `unit` variants. Optional for products sold by the piece.",
                                     "minimum": 1,
                                     "maximum": 10000
                                 },
@@ -6412,7 +7226,7 @@
                                 },
                                 "stock_mode": {
                                     "type": "string",
-                                    "description": "`pool` = poured from the product's ml stock, `unit` = an item counted on its own (sealed bottle, nail kit, shade...).",
+                                    "description": "`pool` = poured from the product's ml stock, `unit` = an item counted on its own (sealed bottle, watch, shade...).",
                                     "enum": [
                                         "pool",
                                         "unit"
@@ -6443,7 +7257,7 @@
                     },
                     "pack": {
                         "type": "object",
-                        "description": "Packs: price and contents.",
+                        "description": "Packs: price and contents. The contents can come from any product type.",
                         "properties": {
                             "price": {
                                 "type": "integer",
@@ -6482,7 +7296,6 @@
                     }
                 },
                 "required": [
-                    "kind",
                     "name",
                     "pack"
                 ],

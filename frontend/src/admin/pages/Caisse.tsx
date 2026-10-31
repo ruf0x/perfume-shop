@@ -11,7 +11,7 @@ import { useSettings } from '@/shop/queries'
 import { EmptyState, Loading, PageHeader, Pagination, inputClass } from '../components/common'
 import { apiError } from '../lib'
 import { printTicket } from '../printHelper'
-import { useAdminProducts, usePosSale, useTaxa } from '../queries'
+import { useAdminProducts, usePosSale, useProductTypes, useTaxa } from '../queries'
 import type { AdminProduct, AdminVariant, Order, StockMode } from '../types'
 import { useDebounced } from '../useDebounced'
 
@@ -121,6 +121,7 @@ function ReceiptDialog({ order, onNew }: { order: Order; onNew: () => void }) {
 export default function Caisse() {
   const sale = usePosSale()
   const types = useTaxa('types')
+  const productTypes = useProductTypes()
   const search = useRef<HTMLInputElement>(null)
   const [term, setTerm] = useState('')
   const q = useDebounced(term, 250)
@@ -216,12 +217,15 @@ export default function Caisse() {
             <label className="relative block">
               <span className="sr-only">Rechercher un produit</span>
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <input ref={search} type="search" autoFocus value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Rechercher un parfum, un cosmétique ou un pack   (touche /)" className={`${inputClass} h-11 pl-9`} />
+              <input ref={search} type="search" autoFocus value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Rechercher un produit ou un pack   (touche /)" className={`${inputClass} h-11 pl-9`} />
             </label>
             <select className={`${inputClass} h-11`} aria-label="Famille ou catégorie" value={typeId ?? ''} onChange={(e) => setTypeId(e.target.value ? Number(e.target.value) : undefined)}>
               <option value="">Tout le catalogue</option>
-              <optgroup label="Parfums">{types.data?.filter((t) => (t.kind ?? 'perfume') === 'perfume').map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</optgroup>
-              <optgroup label="Cosmétiques">{types.data?.filter((t) => t.kind === 'cosmetic').map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</optgroup>
+              {productTypes.data?.map((pt) => (
+                <optgroup key={pt.id} label={pt.name}>
+                  {types.data?.filter((c) => c.product_type_id === pt.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </optgroup>
+              ))}
             </select>
           </div>
 
@@ -232,7 +236,7 @@ export default function Caisse() {
                   <li key={p.id}>
                     <button type="button" onClick={() => setPicked(p)} disabled={!p.available && p.kind !== 'pack' && p.stock_ml === 0 && !p.variants?.some((v) => v.stock_qty > 0)} className="group block w-full rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50">
                       <div className="relative aspect-square overflow-hidden rounded-lg bg-secondary">
-                        <ProductVisual image={p.image} name={p.name} type={p.type?.slug} level={p.available ? 0.7 : 0.1} />
+                        <ProductVisual image={p.image} name={p.name} type={p.type?.slug} rayon={p.product_type?.slug} level={p.available ? 0.7 : 0.1} />
                         {!p.available && <span className="absolute top-2 left-2 rounded bg-oud px-2 py-0.5 text-xs text-oud-foreground">Épuisé</span>}
                       </div>
                       <p className="mt-2 truncate font-display text-base leading-tight group-hover:underline">{p.name}</p>

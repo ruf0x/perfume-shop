@@ -8,7 +8,7 @@ import { FilterPanel } from '../components/FilterPanel'
 import { Pager } from '../components/Pager'
 import { ProductGrid } from '../components/ProductGrid'
 import { bigButton } from '../components/ui'
-import { useBrands, usePagedProducts, useTypes } from '../queries'
+import { useBrands, usePagedProducts, useProductTypes } from '../queries'
 
 import type { Gender, ProductFilters } from '../types'
 import { useDocumentTitle } from '../useDocumentTitle'
@@ -22,8 +22,8 @@ export default function Boutique() {
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
   const [sheet, setSheet] = useState(false)
-  const types = useTypes()
-  const brands = useBrands()
+  const productTypes = useProductTypes()
+  const brands = useBrands(params.get('rayon') || undefined)
 
   const filters: ProductFilters = useMemo(
     () => ({
@@ -34,7 +34,7 @@ export default function Boutique() {
       min_price: toInt(params.get('min_price')),
       max_price: toInt(params.get('max_price')),
       sort: SORTS.find((s) => s === params.get('sort')),
-      kind: (['perfume', 'cosmetic'] as const).find((k) => k === params.get('kind')),
+      rayon: params.get('rayon') || undefined,
     }),
     [params],
   )
@@ -54,7 +54,7 @@ export default function Boutique() {
     )
 
   const page = toInt(params.get('page')) ?? 1
-  const query = usePagedProducts({ ...filters, kind: filters.kind ?? 'perfume,cosmetic' }, page)
+  const query = usePagedProducts({ ...filters, kind: 'perfume,standard' }, page)
   const items = query.data?.data ?? []
   const total = query.data?.meta.total ?? 0
   const goToPage = (n: number) => setParams((prev) => { const next = new URLSearchParams(prev); n > 1 ? next.set('page', String(n)) : next.delete('page'); return next }, { replace: true })
@@ -66,15 +66,16 @@ export default function Boutique() {
     setFilters({ q: term.trim() || undefined })
   }
 
-  const typeName = types.data?.find((x) => x.slug === filters.type)?.name
-  const kindTitle = filters.kind ? t(`shopPage.kinds.${filters.kind}Title`) : null
+  const selectedType = productTypes.data?.find((x) => x.slug === filters.rayon)
+  const categories = selectedType ? selectedType.categories : (productTypes.data ?? []).flatMap((pt) => pt.categories)
+  const typeName = categories.find((c) => c.slug === filters.type)?.name
+  const kindTitle = selectedType?.name ?? null
   useDocumentTitle(typeName ?? kindTitle ?? t('meta.shop'), t('meta.shopDescription'))
 
-  // Switching between perfumes and cosmetics drops what no longer applies (the other side's category, the gender).
-  const pickKind = (kind: 'perfume' | 'cosmetic' | undefined) => {
-    const current = types.data?.find((x) => x.slug === filters.type)
-    const keepType = !kind || !current || (current.kind ?? 'perfume') === kind
-    setFilters({ kind, type: keepType ? filters.type : undefined, gender: kind === 'cosmetic' ? undefined : filters.gender })
+  // Switching product type drops what belonged to the previous one (its category and brand, and the gender if the new type has none).
+  const pickRayon = (slug: string | undefined) => {
+    const next = productTypes.data?.find((x) => x.slug === slug)
+    setFilters({ rayon: slug, type: undefined, brand: undefined, gender: !next || next.uses_gender ? filters.gender : undefined })
   }
 
   const chips: { key: keyof ProductFilters; label: string }[] = [
@@ -90,7 +91,7 @@ export default function Boutique() {
   const clearChip = (key: keyof ProductFilters) => setFilters(key === 'min_price' ? { min_price: undefined, max_price: undefined } : { [key]: undefined })
   const reset = () => setParams({}, { replace: true })
 
-  const panel = (id: string) => <FilterPanel hideSearch={id === 'sheet'} idPrefix={id} filters={filters} types={types.data ?? []} brands={brands.data ?? []} onChange={setFilters} />
+  const panel = (id: string) => <FilterPanel hideSearch={id === 'sheet'} idPrefix={id} filters={filters} productTypes={productTypes.data ?? []} brands={brands.data ?? []} onChange={setFilters} />
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
@@ -132,19 +133,23 @@ export default function Boutique() {
         </div>
       </header>
 
-      <div role="group" aria-label={t('shopPage.kindLabel')} className="mt-6 inline-flex rounded-md border border-input bg-card p-1">
-        {([undefined, 'perfume', 'cosmetic'] as const).map((kind) => (
-          <button
-            key={kind ?? 'all'}
-            type="button"
-            onClick={() => pickKind(kind)}
-            aria-pressed={filters.kind === kind}
-            className={`h-10 rounded px-4 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring ${filters.kind === kind ? 'bg-primary font-medium text-primary-foreground' : 'text-foreground/80 hover:bg-secondary'}`}
-          >
-            {t(`shopPage.kinds.${kind ?? 'all'}`)}
-          </button>
-        ))}
-      </div>
+      {(productTypes.data?.length ?? 0) > 1 && (
+        <div role="group" aria-label={t('shopPage.kindLabel')} className="-mx-4 mt-6 flex overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+          <div className="inline-flex rounded-md border border-input bg-card p-1">
+            {[{ slug: undefined, name: t('shopPage.kinds.all') }, ...(productTypes.data ?? [])].map((pt) => (
+              <button
+                key={pt.slug ?? 'all'}
+                type="button"
+                onClick={() => pickRayon(pt.slug)}
+                aria-pressed={filters.rayon === pt.slug}
+                className={`h-10 shrink-0 rounded px-4 text-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-ring ${filters.rayon === pt.slug ? 'bg-primary font-medium text-primary-foreground' : 'text-foreground/80 hover:bg-secondary'}`}
+              >
+                {pt.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {chips.length > 0 && (
         <ul className="mt-6 flex flex-wrap items-center gap-2">

@@ -6,7 +6,7 @@ use App\Enums\ProductKind;
 use App\Enums\StockMode;
 use App\Models\Brand;
 use App\Models\PackItem;
-use App\Models\PerfumeType;
+use App\Models\ProductType;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\StockService;
@@ -21,6 +21,8 @@ use Illuminate\Support\Str;
  */
 class CosmeticSeeder extends Seeder
 {
+    private ProductType $cosmeticType;
+
     public function run(): void
     {
         if (app()->environment('production')) {
@@ -29,10 +31,11 @@ class CosmeticSeeder extends Seeder
             return;
         }
 
-        $this->call(PerfumeTypeSeeder::class);
+        $this->call(ProductTypeSeeder::class);
         mt_srand(2026);
 
-        $types = PerfumeType::pluck('id', 'slug');
+        $this->cosmeticType = ProductType::query()->where('slug', 'cosmetiques')->firstOrFail();
+        $types = $this->cosmeticType->categories()->pluck('id', 'slug');
         $created = 0;
 
         foreach ($this->catalogue() as $categorySlug => $products) {
@@ -128,8 +131,13 @@ class CosmeticSeeder extends Seeder
     {
         $brand = $brandName ? Brand::firstOrCreate(['slug' => Str::slug($brandName)], ['name' => $brandName]) : null;
 
+        if ($brand) {
+            $this->cosmeticType->brands()->syncWithoutDetaching([$brand->id]);
+        }
+
         $product = Product::create([
-            'kind' => ProductKind::Cosmetic,
+            'kind' => ProductKind::Standard,
+            'product_type_id' => $this->cosmeticType->id,
             'name' => $name,
             'slug' => Str::slug($name),
             'brand_id' => $brand?->id,

@@ -7,7 +7,7 @@ import { formatPrice } from '@/shop/format'
 import { useIsOwner } from '../auth'
 import { ConfirmDialog, EmptyState, ErrorState, Loading, PageHeader, Pagination, inputClass } from '../components/common'
 import { apiError, formatDateTime } from '../lib'
-import { useMovements, useStock, useStockWrite, useTaxa } from '../queries'
+import { useMovements, useProductTypes, useStock, useStockWrite, useTaxa } from '../queries'
 import type { StockRow } from '../types'
 
 const TYPE_LABEL: Record<string, string> = {
@@ -31,7 +31,7 @@ const sign = (n: number, unit: string) => (n === 0 ? null : <span className={cn(
 
 function EntryDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
   const { entry } = useStockWrite()
-  const cosmetic = row.kind === 'cosmetic'
+  const cosmetic = row.kind === 'standard'
   // A perfume is received in ml (for decanting) or as sealed bottles; a cosmetic in pieces, or in ml if sold by volume.
   const canMl = !cosmetic || row.has_pool || row.sealed.length === 0
   const canUnit = row.sealed.length > 0
@@ -96,7 +96,7 @@ function AdjustDialog({ row, onClose }: { row: StockRow; onClose: () => void }) 
   const { adjust } = useStockWrite()
   const [type, setType] = useState<'perte' | 'ajustement'>('perte')
   const [direction, setDirection] = useState<1 | -1>(-1)
-  const cosmetic = row.kind === 'cosmetic'
+  const cosmetic = row.kind === 'standard'
   const unitsOnly = cosmetic && !row.has_pool && row.sealed.length > 0
   const [target, setTarget] = useState<number>(unitsOnly ? row.sealed[0].variant_id : 0) // 0 = ml pool, else a counted variant id
   const [amount, setAmount] = useState('')
@@ -156,11 +156,12 @@ function Overview() {
   const owner = useIsOwner()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState<'' | 'ok' | 'low' | 'out'>('')
-  const [kind, setKind] = useState<'' | 'perfume' | 'cosmetic'>('')
+  const [rayonId, setRayonId] = useState('')
   const [typeId, setTypeId] = useState('')
-  const types = useTaxa('types')
-  const query = useStock({ q: q || undefined, status: status || undefined, kind: kind || undefined, type_id: typeId ? Number(typeId) : undefined })
-  const shownTypes = (types.data ?? []).filter((t) => !kind || (t.kind ?? 'perfume') === kind)
+  const productTypes = useProductTypes()
+  const categories = useTaxa('types')
+  const query = useStock({ q: q || undefined, status: status || undefined, product_type_id: rayonId ? Number(rayonId) : undefined, type_id: typeId ? Number(typeId) : undefined })
+  const shownCategories = (categories.data ?? []).filter((c) => !rayonId || c.product_type_id === Number(rayonId))
   const { openBottle } = useStockWrite()
   const [page, setPage] = useState(1)
   const [entry, setEntry] = useState<StockRow | null>(null)
@@ -177,31 +178,31 @@ function Overview() {
       <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
         <label className="col-span-2 space-y-1 text-sm md:col-span-1"><span className="text-muted-foreground">Rechercher</span><input type="search" className={inputClass} value={q} onChange={(e) => { setQ(e.target.value); setPage(1) }} placeholder="Nom du produit" /></label>
         <label className="space-y-1 text-sm"><span className="text-muted-foreground">Type de produit</span>
-          <select className={inputClass} value={kind} onChange={(e) => { setKind(e.target.value as typeof kind); setTypeId(''); setPage(1) }}><option value="">Tous</option><option value="perfume">Parfums</option><option value="cosmetic">Cosmétiques</option></select>
+          <select className={inputClass} value={rayonId} onChange={(e) => { setRayonId(e.target.value); setTypeId(''); setPage(1) }}><option value="">Tous</option>{productTypes.data?.map((pt) => <option key={pt.id} value={pt.id}>{pt.name}</option>)}</select>
         </label>
         <label className="space-y-1 text-sm"><span className="text-muted-foreground">Famille ou catégorie</span>
-          <select className={inputClass} value={typeId} onChange={(e) => { setTypeId(e.target.value); setPage(1) }}><option value="">Toutes</option>{shownTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
+          <select className={inputClass} value={typeId} onChange={(e) => { setTypeId(e.target.value); setPage(1) }}><option value="">Toutes</option>{shownCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         </label>
         <label className="space-y-1 text-sm"><span className="text-muted-foreground">État</span>
           <select className={inputClass} value={status} onChange={(e) => { setStatus(e.target.value as typeof status); setPage(1) }}><option value="">Tous</option><option value="ok">En stock</option><option value="low">Stock faible</option><option value="out">Épuisés</option></select>
         </label>
-        {query.data && <p className="col-span-2 text-sm text-muted-foreground md:col-span-5">Seuils : un parfum n'est plus proposé sous {query.data.low_stock_threshold_ml} ml ; un cosmétique est signalé « stock faible » à {query.data.low_stock_threshold_qty} article(s) ou moins.</p>}
+        {query.data && <p className="col-span-2 text-sm text-muted-foreground md:col-span-5">Seuils : un parfum n'est plus proposé sous {query.data.low_stock_threshold_ml} ml ; un produit à la pièce est signalé « stock faible » à {query.data.low_stock_threshold_qty} article(s) ou moins.</p>}
       </section>
 
-      {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun produit" hint={q || kind || typeId || status ? 'Aucun résultat avec ces filtres.' : 'Créez un produit pour gérer son stock.'} /> : (
+      {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun produit" hint={q || rayonId || typeId || status ? 'Aucun résultat avec ces filtres.' : 'Créez un produit pour gérer son stock.'} /> : (
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {pageRows.map((r) => (
             <li key={r.product_id} className="space-y-3 p-4 md:flex md:items-center md:gap-6 md:space-y-0">
               <div className="min-w-0 md:w-1/4">
-                <p className="truncate font-display text-lg leading-tight">{r.name}{r.kind === 'cosmetic' && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">Cosmétique</span>}</p>
+                <p className="truncate font-display text-lg leading-tight">{r.name}{r.kind === 'standard' && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">{r.product_type?.name ?? 'Standard'}</span>}</p>
                 <p className="truncate text-sm text-muted-foreground">{r.brand ?? '—'}{!r.is_active && ', masqué'}</p>
               </div>
               <div className="tnum flex-1 text-sm">
                 {(r.kind === 'perfume' || r.has_pool || r.sealed.length === 0) && <p><strong className="text-base">{r.stock_ml} ml</strong> {r.kind === 'perfume' ? 'à décanter' : 'en stock'}</p>}
                 {r.sealed.length > 0 && (
                   <p className={r.kind === 'perfume' ? 'text-muted-foreground' : undefined}>
-                    {r.kind === 'cosmetic' && <strong className="text-base">{r.sealed.reduce((n, s) => n + s.stock_qty, 0)} en stock</strong>}
-                    {r.kind === 'cosmetic' && <span className="text-muted-foreground"> : </span>}
+                    {r.kind === 'standard' && <strong className="text-base">{r.sealed.reduce((n, s) => n + s.stock_qty, 0)} en stock</strong>}
+                    {r.kind === 'standard' && <span className="text-muted-foreground"> : </span>}
                     <span className="text-muted-foreground">{r.sealed.map((s) => `${s.stock_qty} × ${s.label}`).join(', ')}</span>
                   </p>
                 )}

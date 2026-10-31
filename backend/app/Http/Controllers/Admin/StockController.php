@@ -18,18 +18,19 @@ class StockController extends Controller
     public function __construct(private StockService $stock) {}
 
     /**
-     * Stock per perfume or cosmetic: millilitres in the pool and units (sealed bottles, pieces).
+     * Stock per product, in any product type: millilitres in the pool and units (sealed bottles, pieces).
      *
      * `status` is `ok` (sold in the shop), `low` (below the low-stock threshold) or `out`.
-     * Filters: `q`, `status`, `kind` (`perfume` or `cosmetic`), `type_id` (a family or category).
+     * Filters: `q`, `status`, `product_type_id` (Parfums, Montres...), `type_id` (a family or category), `kind` (`perfume` or `standard`).
      */
     public function index(Request $request): JsonResponse
     {
-        $v = $request->validate(['q' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', 'in:ok,low,out'], 'kind' => ['nullable', 'in:perfume,cosmetic'], 'type_id' => ['nullable', 'integer']]);
+        $v = $request->validate(['q' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', 'in:ok,low,out'], 'kind' => ['nullable', 'in:perfume,standard'], 'product_type_id' => ['nullable', 'integer'], 'type_id' => ['nullable', 'integer']]);
 
-        $rows = Product::query()->stocked()
+        $rows = Product::query()->stocked()->with('productType:id,name')
             ->withExists(['variants as has_pool' => fn ($q) => $q->where('stock_mode', StockMode::Pool)->where('is_active', true)])
             ->when($v['kind'] ?? null, fn ($q, $kind) => $q->where('kind', $kind))
+            ->when($v['product_type_id'] ?? null, fn ($q, $id) => $q->where('product_type_id', $id))
             ->when($v['type_id'] ?? null, fn ($q, $id) => $q->where('perfume_type_id', $id))
             ->with(['brand:id,name', 'variants' => fn ($q) => $q->where('stock_mode', StockMode::Unit)->where('is_active', true)])
             ->when($v['q'] ?? null, fn ($q, $term) => $q->where('name', 'like', "%{$term}%"))
@@ -84,7 +85,7 @@ class StockController extends Controller
 
     /**
      * Receive stock. Send `ml` to add to the decant pool (2 bottles of 100 ml = `ml: 200`),
-     * and/or `qty` with a `variant_id` of a counted (`unit`) variant: sealed bottles, a cosmetic's pieces.
+     * and/or `qty` with a `variant_id` of a counted (`unit`) variant: sealed bottles, a watch, a shade...
      */
     public function entry(Request $request): JsonResponse
     {
@@ -143,7 +144,7 @@ class StockController extends Controller
 
     private function reload(Product $product): Product
     {
-        return $product->fresh(['brand:id,name', 'variants' => fn ($q) => $q->where('stock_mode', StockMode::Unit)->where('is_active', true)])
+        return $product->fresh(['brand:id,name', 'productType:id,name', 'variants' => fn ($q) => $q->where('stock_mode', StockMode::Unit)->where('is_active', true)])
             ->loadExists(['variants as has_pool' => fn ($q) => $q->where('stock_mode', StockMode::Pool)->where('is_active', true)]);
     }
 
@@ -155,6 +156,7 @@ class StockController extends Controller
         return [
             'product_id' => $p->id,
             'kind' => $p->kind,
+            'product_type' => $p->productType ? ['id' => $p->productType->id, 'name' => $p->productType->name] : null,
             'name' => $p->name,
             'brand' => $p->brand?->name,
             'image' => media_url($p->main_image),
