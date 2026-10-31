@@ -158,6 +158,58 @@
                 "security": []
             }
         },
+        "/admin/desktop/login": {
+            "post": {
+                "operationId": "auth.desktopLogin",
+                "description": "Send it as `Authorization: Bearer <token>`. Works whether or not the website's admin is switched on.\nThrottled like the website login.",
+                "summary": "Sign in from the desktop app: returns a Bearer token valid for 30 days",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "token": {
+                                            "type": "string"
+                                        },
+                                        "expires_at": {
+                                            "type": "string"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/UserResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "token",
+                                        "expires_at",
+                                        "user"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        },
         "/admin/logout": {
             "post": {
                 "operationId": "auth.logout",
@@ -3606,6 +3658,10 @@
                                     "store_pickup_enabled": {
                                         "type": "boolean"
                                     },
+                                    "web_admin_enabled": {
+                                        "type": "boolean",
+                                        "description": "`false` closes the admin on the website: only the desktop app can be used (turn it back on from the app, or with `php artisan admin:web on`)."
+                                    },
                                     "free_delivery_over": {
                                         "type": [
                                             "integer",
@@ -3828,6 +3884,10 @@
                                                 },
                                                 "show_unavailable": {
                                                     "type": "string"
+                                                },
+                                                "web_admin_enabled": {
+                                                    "type": "string",
+                                                    "description": "When false the website's /admin page only says to use the desktop app."
                                                 }
                                             },
                                             "required": [
@@ -3837,7 +3897,8 @@
                                                 "socials",
                                                 "store_pickup_enabled",
                                                 "free_delivery_over",
-                                                "show_unavailable"
+                                                "show_unavailable",
+                                                "web_admin_enabled"
                                             ]
                                         }
                                     },

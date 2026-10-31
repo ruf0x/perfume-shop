@@ -63,3 +63,27 @@ If the page is blank after adding a package: stop Vite and start it again with `
 ```
 
 Useful queries: `SELECT reference, status, total, created_at FROM orders;` and `SELECT name, stock_ml FROM products;`.
+
+## Desktop app (Electron)
+
+Run these from the `desktop` folder. The admin screens are the website's own, packed into a Windows app.
+
+| What | Command |
+|---|---|
+| Install (once) | `npm install` |
+| Build the admin, then open the app | `npm start` |
+| Open the app without rebuilding the admin | `npm run dev` |
+| Build the Windows installer (`desktop\dist\Administration-Boutique-Setup-1.0.0.exe`) | `npm run dist` |
+
+First launch asks for the shop's server address (for example `https://api.arena-cosmetique.com`); for a local test, `http://localhost:8000`.
+After changing the frontend, run `npm run web` again before `npm start` / `npm run dist`.
+
+Switch the website's admin off or on (the desktop app keeps working), from `backend`:
+
+```powershell
+php artisan admin:web off
+php artisan admin:web on
+php artisan admin:web      # shows the current state
+```
+
+The same switch is in the admin: Paramètres > Accès.

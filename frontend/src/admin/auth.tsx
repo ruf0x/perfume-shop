@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { createContext, useContext, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
-import { api, ensureCsrfCookie } from '@/lib/api'
+import { api, desktop, ensureCsrfCookie } from '@/lib/api'
 import type { AdminUser } from './types'
 
 const ME = ['admin', 'me'] as const
@@ -28,6 +28,14 @@ export function useLogin() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (v: { username: string; password: string }) => {
+      // Desktop app: a token kept by the app. Website: a cookie session.
+      if (desktop) {
+        const r = await api.post<{ token: string; user: AdminUser }>('/admin/desktop/login', v)
+        await desktop.setToken(r.data.token)
+
+        return r.data.user
+      }
+
       await ensureCsrfCookie()
       return api.post<{ data: AdminUser }>('/admin/login', v).then((r) => r.data.data)
     },
@@ -44,7 +52,13 @@ const dropAdminData = (qc: ReturnType<typeof useQueryClient>) => qc.removeQuerie
 export function useLogout() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => api.post('/admin/logout'),
+    mutationFn: async () => {
+      try {
+        await api.post('/admin/logout')
+      } finally {
+        await desktop?.setToken(null)
+      }
+    },
     onSettled: () => {
       dropAdminData(qc)
       qc.setQueryData(ME, null)

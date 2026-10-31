@@ -4,6 +4,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Exceptions\ShopException;
 use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\EnsureWebAdminAllowed;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,10 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => EnsureActiveUser::class,
             'role' => EnsureRole::class,
+            'web.admin' => EnsureWebAdminAllowed::class,
         ]);
         // Check access before route-model binding, so a forbidden user gets 403 whether or not the id exists.
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureActiveUser::class);
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureRole::class);
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsureWebAdminAllowed::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

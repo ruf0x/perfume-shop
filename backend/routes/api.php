@@ -44,8 +44,10 @@ Route::post('/orders', [ShopController::class, 'placeOrder'])->middleware('throt
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::post('/token', [AuthController::class, 'token'])->middleware('throttle:login');
+    // The desktop app signs in here and keeps the token (no cookie, no CSRF).
+    Route::post('/desktop/login', [AuthController::class, 'desktopLogin'])->middleware('throttle:login');
 
-    Route::middleware(['auth:sanctum', 'active'])->group(function () {
+    Route::middleware(['auth:sanctum', 'active', 'web.admin'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
         Route::put('/me/password', [AuthController::class, 'changePassword']);

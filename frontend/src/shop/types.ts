@@ -99,6 +99,7 @@ export interface ShopSettings {
   store_pickup_enabled: boolean
   free_delivery_over: number | null
   show_unavailable: boolean
+  web_admin_enabled?: boolean
 }
 
 export interface QuoteLine {

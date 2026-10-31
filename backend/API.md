@@ -30,6 +30,12 @@ Send it on every admin request as `Authorization: Bearer <token>`.
 - **Swagger page:** call `POST /admin/token` there, copy the token, click **Authorize**, paste it.
 - **Postman:** fill the collection variable `password`, then run **0. Auth › Get token**. It stores the token for all other requests.
 
+### The desktop app (Bearer token)
+
+The desktop app signs in with `POST /admin/desktop/login` (`{ "username", "password" }`) and gets `{ token, expires_at, user }`; the token lasts 30 days. Send it as `Authorization: Bearer <token>`; no cookie and no CSRF header. `POST /admin/logout` with the token deletes it. The app's origin is `app://local` (allowed by CORS).
+
+**Administration on the website.** The owner can switch it off (`PUT /admin/settings` `{ "web_admin_enabled": false }`, or `php artisan admin:web off|on`). While it is off, the website's cookie sign-in and every call that comes from a browser session answer `403 { "code": "web_admin_disabled" }`; calls with a Bearer token (the desktop app) keep working, and the shop itself is unaffected. `GET /settings/public` exposes `web_admin_enabled`. This closes the web admin, it is not a firewall: the token sign-in stays reachable and is protected by the password and the login throttle.
+
 ### The cookie flow (what the React app does)
 
 1. `GET /sanctum/csrf-cookie`

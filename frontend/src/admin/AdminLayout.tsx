@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet } from 'react-router'
 import { toast } from 'sonner'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { isDesktop } from '@/lib/api'
 import { useLogout, useUser } from './auth'
 
 interface NavItem {
@@ -61,10 +62,12 @@ function SidebarFooter() {
         <p className="truncate text-sm font-medium">{user.name}</p>
         <p className="text-xs text-muted-foreground">{user.role === 'owner' ? 'Propriétaire' : 'Équipe'}</p>
       </div>
-      <Link to="/" target="_blank" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-[0.95rem] text-foreground/80 hover:bg-secondary">
-        <Store className="size-[1.15rem]" aria-hidden />
-        Voir la boutique
-      </Link>
+      {!isDesktop && (
+        <Link to="/" target="_blank" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-[0.95rem] text-foreground/80 hover:bg-secondary">
+          <Store className="size-[1.15rem]" aria-hidden />
+          Voir la boutique
+        </Link>
+      )}
       <button
         type="button"
         onClick={() => logout.mutate(undefined, { onError: () => toast.error('Déconnexion impossible.') })}
