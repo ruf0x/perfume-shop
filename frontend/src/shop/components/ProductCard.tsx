@@ -5,7 +5,7 @@ import { formatPrice } from '../format'
 import type { ProductCard as ProductCardData } from '../types'
 import { ProductVisual } from './ProductVisual'
 
-export const productPath = (p: Pick<ProductCardData, 'kind' | 'slug'>) => (p.kind === 'pack' ? `/pack/${p.slug}` : `/parfum/${p.slug}`)
+export const productPath = (p: Pick<ProductCardData, 'kind' | 'slug'>) => (p.kind === 'pack' ? `/pack/${p.slug}` : p.kind === 'standard' ? `/produit/${p.slug}` : `/parfum/${p.slug}`)
 
 export function ProductCard({ product, className }: { product: ProductCardData; className?: string }) {
   const { t } = useTranslation()
@@ -18,6 +18,7 @@ export function ProductCard({ product, className }: { product: ProductCardData; 
           image={product.image}
           name={product.name}
           type={product.type?.slug}
+          rayon={product.product_type?.slug}
           level={product.available ? 0.72 : 0.12}
           className="transition-transform duration-500 group-hover:scale-[1.03]"
         />

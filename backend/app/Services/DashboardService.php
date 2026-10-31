@@ -91,14 +91,14 @@ class DashboardService
             ->all();
     }
 
-    /** Active perfumes under the threshold with no sealed bottle left. @return list<array{id: int, name: string, stock_ml: int}> */
+    /** Active perfumes and cosmetics running low. @return list<array{id: int, name: string, stock_ml: int, units: int}> */
     private function lowStock(): array
     {
-        return Product::query()->perfumes()->active()
-            ->where('stock_ml', '<', settings()->lowStockThresholdMl())
-            ->whereDoesntHave('variants', fn ($q) => $q->where('stock_mode', StockMode::Unit)->where('is_active', true)->where('stock_qty', '>', 0))
-            ->orderBy('stock_ml')->limit(20)->get(['id', 'name', 'stock_ml'])
-            ->map(fn (Product $p) => ['id' => $p->id, 'name' => $p->name, 'stock_ml' => $p->stock_ml])
+        return Product::query()->active()
+            ->lowStock(settings()->lowStockThresholdMl(), settings()->lowStockThresholdQty())
+            ->withSum(['variants as units' => fn ($q) => $q->where('stock_mode', StockMode::Unit)->where('is_active', true)], 'stock_qty')
+            ->orderBy('stock_ml')->orderBy('name')->limit(20)->get()
+            ->map(fn (Product $p) => ['id' => $p->id, 'name' => $p->name, 'kind' => $p->kind, 'stock_ml' => $p->stock_ml, 'units' => (int) $p->units])
             ->all();
     }
 }

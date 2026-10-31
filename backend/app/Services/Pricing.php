@@ -17,17 +17,27 @@ class Pricing
      * Price a cart from the database. Prices, delivery fee and availability are all
      * recomputed here; the client only supplies variant ids and quantities.
      *
-     * @param  list<array{variant_id: int, quantity: int}>  $lines
+     * At the caisse ($allowPriceOverride) the cashier may sell a line at another price than the
+     * catalogue's (a negotiated price): that is the only way a client-sent price is ever used.
+     *
+     * @param  list<array{variant_id: int, quantity: int, unit_price?: ?int}>  $lines
      */
-    public function quote(array $lines, ?int $wilayaId = null, ?DeliveryMode $mode = null, int $discount = 0): Quote
+    public function quote(array $lines, ?int $wilayaId = null, ?DeliveryMode $mode = null, int $discount = 0, bool $allowPriceOverride = false): Quote
     {
         $quantities = [];
+        $prices = [];
         foreach ($lines as $line) {
             $quantity = (int) $line['quantity'];
             if ($quantity < 1) {
                 throw new ShopException('Quantité invalide.');
             }
             $quantities[(int) $line['variant_id']] = ($quantities[(int) $line['variant_id']] ?? 0) + $quantity;
+            if ($allowPriceOverride && isset($line['unit_price'])) {
+                if ((int) $line['unit_price'] < 0) {
+                    throw new ShopException('Prix invalide.');
+                }
+                $prices[(int) $line['variant_id']] = (int) $line['unit_price'];
+            }
         }
         if ($quantities === []) {
             throw new ShopException('Le panier est vide.');
@@ -40,9 +50,10 @@ class Pricing
         foreach ($quantities as $variantId => $quantity) {
             $variant = $variants->get($variantId) ?? throw new ShopException('Un article du panier est introuvable.');
 
-            $lineTotal = $variant->price * $quantity;
+            $unitPrice = $prices[$variantId] ?? $variant->price;
+            $lineTotal = $unitPrice * $quantity;
             $subtotal += $lineTotal;
-            $quoteLines[] = new QuoteLine($variant, $quantity, $variant->price, $lineTotal, $this->stock->maxQty($variant));
+            $quoteLines[] = new QuoteLine($variant, $quantity, $unitPrice, $lineTotal, $this->stock->maxQty($variant));
         }
 
         if ($discount < 0 || $discount > $subtotal) {

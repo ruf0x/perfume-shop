@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+    <title>Administration Boutique</title>
+    <link rel="stylesheet" href="setup.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Bienvenue</h1>
+      <p class="lead">Indiquez l'adresse du serveur de votre boutique. Vous ne le ferez qu'une fois.</p>
+
+      <form id="form" novalidate>
+        <label for="url">Adresse du serveur</label>
+        <input id="url" type="url" inputmode="url" autocomplete="off" autofocus placeholder="https://api.votre-boutique.com" />
+        <p id="error" role="alert" hidden></p>
+        <button id="submit" type="submit">Continuer</button>
+      </form>
+
+      <p class="hint">C'est l'adresse de l'API de la boutique (par exemple <span>https://api.</span>suivi du nom de domaine). Votre revendeur ou le guide de mise en ligne vous l'a donnée.</p>
+    </main>
+    <script src="setup.js"></script>
+  </body>
+</html>

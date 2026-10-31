@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureWebAdminAllowed;
 use App\Http\Requests\Admin\ChangePasswordRequest;
 use App\Http\Requests\Admin\LoginRequest;
 use App\Http\Resources\UserResource;
@@ -12,7 +13,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -24,6 +27,11 @@ class AuthController extends Controller
     public function login(LoginRequest $request): UserResource
     {
         // Sanctum only starts a session for requests coming from a whitelisted frontend origin.
+        // The owner can close the admin on the website (desktop app only).
+        if (! settings()->webAdminEnabled()) {
+            throw new HttpResponseException(EnsureWebAdminAllowed::denied());
+        }
+
         abort_unless($request->hasSession(), 400, "Requête non reconnue : envoyez l'en-tête Origin (ou Referer) du site, par ex. http://localhost:5173.");
 
         $credentials = $request->validated() + ['is_active' => true];
@@ -60,8 +68,40 @@ class AuthController extends Controller
         return response()->json(['token' => $user->createToken('dev')->plainTextToken, 'user' => new UserResource($user)]);
     }
 
+    /**
+     * Sign in from the desktop app: returns a Bearer token valid for 30 days.
+     *
+     * Send it as `Authorization: Bearer <token>`. Works whether or not the website's admin is switched on.
+     * Throttled like the website login.
+     */
+    public function desktopLogin(LoginRequest $request): JsonResponse
+    {
+        $user = User::query()->where('username', $request->validated('username'))->where('is_active', true)->first();
+
+        if (! $user || ! Hash::check($request->validated('password'), $user->password)) {
+            throw ValidationException::withMessages(['username' => 'Identifiants incorrects.']);
+        }
+
+        $user->forceFill(['last_login_at' => now()])->save();
+        $expires = now()->addDays(30);
+
+        return response()->json([
+            'token' => $user->createToken('desktop', ['*'], $expires)->plainTextToken,
+            'expires_at' => $expires,
+            'user' => new UserResource($user),
+        ]);
+    }
+
     public function logout(Request $request): Response
     {
+        // Desktop app: forget this token. Website: end the cookie session.
+        $token = $request->user()?->currentAccessToken();
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+
+            return response()->noContent();
+        }
+
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

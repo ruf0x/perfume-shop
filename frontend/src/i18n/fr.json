@@ -1,9 +1,11 @@
 {
-  "brand": { "name": "Boutique de parfums" },
+  "brand": {
+    "name": "Arena Cosmétique"
+  },
   "meta": {
-    "homeDescription": "Parfums au millilitre ou en flacon complet : designer, niche, arabes et créations maison. Commandez en ligne, payez à la livraison.",
+    "homeDescription": "Commandez en ligne et payez à la livraison, partout en Algérie.",
     "shop": "La boutique",
-    "shopDescription": "Tous nos parfums, en décants de 10 à 30 ml ou en flacon complet.",
+    "shopDescription": "Tous nos produits, par type : commandez en ligne, payez à la livraison.",
     "packs": "Les packs",
     "cart": "Panier",
     "checkout": "Passer commande",
@@ -36,8 +38,8 @@
     "free": "Offerte"
   },
   "home": {
-    "title": "Le parfum, au millilitre.",
-    "lead": "Des décants dès 10 ml pour essayer sans vous ruiner, des flacons complets pour garder. Designer, niche, arabes et créations maison.",
+    "title": "Tout ce qu'il vous faut, au même endroit.",
+    "lead": "Choisissez, commandez en ligne et payez à la livraison.",
     "cta": "Voir la boutique",
     "ctaSecondary": "Comment commander",
     "vialTitle": "Un volume par parfum",
@@ -53,25 +55,39 @@
     "featured": "Nos coups de cœur",
     "seeAll": "Tout voir",
     "packsTitle": "Les packs",
-    "packsLead": "Plusieurs parfums réunis, à un prix unique.",
+    "packsLead": "Plusieurs produits réunis, à un prix unique.",
     "howTitle": "Commander est simple",
     "steps": [
-      { "title": "Vous choisissez", "text": "Un parfum, une taille : 10, 20, 30 ml ou le flacon complet." },
-      { "title": "Vous commandez", "text": "Quelques informations suffisent. Pas de compte, vous payez à la livraison." },
-      { "title": "Nous vous appelons", "text": "Nous confirmons par téléphone, puis nous livrons dans votre wilaya." }
-    ]
+      {
+        "title": "Vous choisissez",
+        "text": "Un produit, une option : une taille, une teinte, un modèle."
+      },
+      {
+        "title": "Vous commandez",
+        "text": "Quelques informations suffisent. Pas de compte, vous payez à la livraison."
+      },
+      {
+        "title": "Nous vous appelons",
+        "text": "Nous confirmons par téléphone, puis nous livrons dans votre wilaya."
+      }
+    ],
+    "leadTypes": "Chez nous : {{types}}. Commandez en ligne et payez à la livraison."
   },
   "shopPage": {
     "title": "La boutique",
-    "count_one": "{{count}} parfum",
-    "count_other": "{{count}} parfums",
+    "count_one": "{{count}} produit",
+    "count_other": "{{count}} produits",
     "search": "Rechercher",
     "filters": "Filtres",
-    "type": "Famille",
-    "allTypes": "Toutes les familles",
+    "type": "Famille ou catégorie",
+    "allTypes": "Toutes",
     "gender": "Pour qui",
     "anyGender": "Tous",
-    "genders": { "homme": "Homme", "femme": "Femme", "mixte": "Mixte" },
+    "genders": {
+      "homme": "Homme",
+      "femme": "Femme",
+      "mixte": "Mixte"
+    },
     "brand": "Marque",
     "allBrands": "Toutes les marques",
     "price": "Prix",
@@ -80,13 +96,24 @@
     "priceHint": "En dinars, par taille.",
     "priceChip": "{{min}} à {{max}} DA",
     "sort": "Trier par",
-    "sorts": { "newest": "Nouveautés", "price_asc": "Prix croissant", "price_desc": "Prix décroissant", "name": "Nom, de A à Z" },
+    "sorts": {
+      "newest": "Nouveautés",
+      "price_asc": "Prix croissant",
+      "price_desc": "Prix décroissant",
+      "name": "Nom, de A à Z"
+    },
     "removeFilter": "Retirer le filtre {{label}}",
     "reset": "Effacer les filtres",
-    "empty": "Aucun parfum ne correspond.",
+    "empty": "Aucun produit ne correspond.",
     "emptyHint": "Essayez d'enlever un filtre.",
     "error": "Impossible de charger la boutique.",
-    "apply": "Voir les {{count}} résultats"
+    "apply": "Voir les {{count}} résultats",
+    "kindLabel": "Type de produit",
+    "kinds": {
+      "all": "Tout"
+    },
+    "families": "Famille",
+    "categories": "Catégorie"
   },
   "product": {
     "breadcrumb": "Fil d'Ariane",
@@ -104,11 +131,13 @@
     "delivery": "Livraison dans toute l'Algérie. Vous payez à la réception.",
     "about": "À propos",
     "notFound": "Ce parfum n'existe pas ou n'est plus en vente.",
-    "backToShop": "Retour à la boutique"
+    "backToShop": "Retour à la boutique",
+    "chooseOption": "Choisissez votre option",
+    "unavailableCosmetic": "Ce produit est momentanément épuisé."
   },
   "packs": {
     "title": "Les packs",
-    "lead": "Plusieurs parfums réunis, à un prix unique.",
+    "lead": "Plusieurs produits réunis, à un prix unique.",
     "empty": "Aucun pack pour le moment."
   },
   "cart": {
@@ -197,9 +226,15 @@
     "home": "Retour à l'accueil"
   },
   "footer": {
-    "about": "Parfums designer, niche, arabes et créations maison, au millilitre ou en flacon complet.",
+    "about": "Parfums, cosmétiques, montres, lunettes et bien plus : commandez en ligne, payez à la réception.",
     "contact": "Nous joindre",
     "shop": "La boutique",
     "payment": "Livraison dans toute l'Algérie. Paiement à la réception."
+  },
+  "pager": {
+    "label": "Pages de résultats",
+    "previous": "Page précédente",
+    "next": "Page suivante",
+    "summary": "Page {{page}} sur {{lastPage}}, {{count}} produit(s)"
   }
 }

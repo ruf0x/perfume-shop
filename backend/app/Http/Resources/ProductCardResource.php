@@ -23,6 +23,9 @@ class ProductCardResource extends JsonResource
             'kind' => $this->kind,
             'name' => $this->name,
             'brand' => $this->brand?->name,
+            /** The product type (Parfums, Montres...): how the product is shown and sold. */
+            'product_type' => $this->productType ? ['id' => $this->productType->id, 'name' => $this->productType->name, 'slug' => $this->productType->slug, 'profile' => $this->productType->profile, 'uses_gender' => $this->productType->uses_gender] : null,
+            /** The family / category inside the product type. */
             'type' => $this->type ? ['id' => $this->type->id, 'name' => $this->type->name, 'slug' => $this->type->slug] : null,
             'gender' => $this->gender,
             'inspired_by' => $this->inspired_by,

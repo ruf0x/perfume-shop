@@ -23,7 +23,8 @@ class AdminProductResource extends JsonResource
             'name' => $this->name,
             'slug' => $this->slug,
             'brand' => $this->whenLoaded('brand', fn () => $this->brand ? ['id' => $this->brand->id, 'name' => $this->brand->name] : null),
-            'type' => $this->whenLoaded('type', fn () => $this->type ? ['id' => $this->type->id, 'name' => $this->type->name, 'slug' => $this->type->slug] : null),
+            'product_type' => $this->whenLoaded('productType', fn () => $this->productType ? ['id' => $this->productType->id, 'name' => $this->productType->name, 'slug' => $this->productType->slug, 'profile' => $this->productType->profile, 'uses_gender' => $this->productType->uses_gender] : null),
+            'type' => $this->whenLoaded('type', fn () => $this->type ? ['id' => $this->type->id, 'name' => $this->type->name, 'slug' => $this->type->slug, 'product_type_id' => $this->type->product_type_id] : null),
             'gender' => $this->gender,
             'inspired_by' => $this->inspired_by,
             'short_description' => $this->short_description,
@@ -35,7 +36,7 @@ class AdminProductResource extends JsonResource
             'images' => $this->whenLoaded('images', fn () => $this->images->map(fn ($i) => [
                 'id' => $i->id, 'url' => media_url($i->path), 'sort_order' => $i->sort_order,
             ])->values()),
-            /** Millilitres in the decant pool (perfumes). */
+            /** Millilitres in the decant pool (perfumes, and any product sold by volume). */
             'stock_ml' => $this->stock_ml,
             'is_active' => $this->is_active,
             'is_featured' => $this->is_featured,
@@ -48,7 +49,7 @@ class AdminProductResource extends JsonResource
                 'price' => $v->price,
                 'compare_at_price' => $v->compare_at_price,
                 'stock_mode' => $v->stock_mode,
-                /** Sealed bottles in stock (`unit` variants only). */
+                /** Units in stock (`unit` variants only): sealed bottles, nail kits, shades... */
                 'stock_qty' => $v->stock_qty,
                 'sku' => $v->sku,
                 'is_active' => $v->is_active,

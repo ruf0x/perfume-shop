@@ -10,7 +10,7 @@ function typed(string $name, string $type, int $poolMl = 100, ?string $brand = n
 {
     $p = makePerfume($name, poolMl: $poolMl);
     $p->update([
-        'perfume_type_id' => PerfumeType::firstOrCreate(['slug' => $type], ['name' => ucfirst($type)])->id,
+        'perfume_type_id' => PerfumeType::firstOrCreate(['slug' => $type], ['name' => ucfirst($type), 'product_type_id' => productType()->id])->id,
         'brand_id' => $brand ? Brand::firstOrCreate(['slug' => str($brand)->slug()], ['name' => $brand])->id : null,
     ]);
 
@@ -18,8 +18,9 @@ function typed(string $name, string $type, int $poolMl = 100, ?string $brand = n
 }
 
 it('lists types, brands, wilayas and communes', function () {
-    PerfumeType::create(['name' => 'Arabe', 'slug' => 'arabe']);
-    PerfumeType::create(['name' => 'Caché', 'slug' => 'cache', 'is_active' => false]);
+    $rayon = productType();
+    PerfumeType::create(['name' => 'Arabe', 'slug' => 'arabe', 'product_type_id' => $rayon->id]);
+    PerfumeType::create(['name' => 'Caché', 'slug' => 'cache', 'product_type_id' => $rayon->id, 'is_active' => false]);
     Brand::create(['name' => 'Lattafa', 'slug' => 'lattafa']);
     makeWilaya(16);
     makeWilaya(31)->update(['is_active' => false]);

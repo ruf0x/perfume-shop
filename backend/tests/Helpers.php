@@ -6,12 +6,21 @@ use App\Enums\UserRole;
 use App\Models\Order;
 use App\Models\PackItem;
 use App\Models\Product;
+use App\Models\ProductType;
 use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\Wilaya;
 use App\Services\OrderPlacement;
 use App\Services\StockService;
 use Illuminate\Support\Str;
+
+/**
+ * A product type (rayon). Created once by name: "Parfums" (perfume profile, with gender), "Cosmétiques" (standard)...
+ */
+function productType(string $name = 'Parfums', ProductKind $profile = ProductKind::Perfume, bool $gender = true): ProductType
+{
+    return ProductType::firstOrCreate(['slug' => Str::slug($name)], ['name' => $name, 'profile' => $profile, 'uses_gender' => $gender]);
+}
 
 /**
  * A perfume with 10/20/30 ml pool variants and a sealed 100 ml bottle variant.
@@ -21,6 +30,7 @@ function makePerfume(string $name = 'Parfum Test', int $poolMl = 0, int $sealed 
 {
     $product = Product::create([
         'kind' => ProductKind::Perfume,
+        'product_type_id' => productType()->id,
         'name' => $name,
         'slug' => Str::slug($name).'-'.Str::random(5),
     ]);
@@ -35,6 +45,31 @@ function makePerfume(string $name = 'Parfum Test', int $poolMl = 0, int $sealed 
     }
     if ($sealed > 0) {
         app(StockService::class)->addEntry($product, $full, qty: $sealed);
+    }
+
+    return $product->fresh('variants');
+}
+
+/**
+ * A product of a `standard` type, counted in units: one variant per option, each with its own price and stock.
+ * Default type: "Cosmétiques" (no gender).
+ *
+ * @param  array<string, array{0: int, 1: int}>  $options  label => [price, units in stock]
+ */
+function makeCosmetic(string $name = 'Gel douche Test', array $options = ['250 ml' => [900, 10], '500 ml' => [1500, 5]], ?ProductType $type = null): Product
+{
+    $product = Product::create([
+        'kind' => ProductKind::Standard,
+        'product_type_id' => ($type ?? productType('Cosmétiques', ProductKind::Standard, false))->id,
+        'name' => $name,
+        'slug' => Str::slug($name).'-'.Str::random(5),
+    ]);
+
+    foreach ($options as $label => [$price, $units]) {
+        $variant = $product->variants()->create(['label' => $label, 'price' => $price, 'stock_mode' => StockMode::Unit]);
+        if ($units > 0) {
+            app(StockService::class)->addEntry($product, $variant, qty: $units);
+        }
     }
 
     return $product->fresh('variants');

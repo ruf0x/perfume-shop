@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
+import { isDesktop } from '@/lib/api'
 import { useLogin, useMe } from '../auth'
 import { apiError } from '../lib'
 import { inputClass } from '../components/common'
@@ -53,11 +54,14 @@ export default function Login() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm">
-          <Link to="/" className="underline underline-offset-4 hover:no-underline">
-            Retour à la boutique
-          </Link>
-        </p>
+        {/* In the desktop app there is no shop to go back to. */}
+        {!isDesktop && (
+          <p className="mt-6 text-center text-sm">
+            <Link to="/" className="underline underline-offset-4 hover:no-underline">
+              Retour à la boutique
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   )

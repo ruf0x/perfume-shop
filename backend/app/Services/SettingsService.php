@@ -11,12 +11,17 @@ class SettingsService
 
     /** Defaults used until the owner saves a value. */
     public const DEFAULTS = [
-        'shop_name' => 'Boutique de parfums',
+        'shop_name' => 'Arena Cosmétique',
         'shop_phone' => null,
-        'shop_address' => null,
-        'socials' => [],
+        'shop_address' => 'MCR6+39H LPP Hayet Regency, Oran',
+        'socials' => [
+            'instagram' => 'https://www.instagram.com/arenecosmetique/',
+            'facebook' => 'https://web.facebook.com/people/Arena-cosm%C3%A9tique-Oran-hayate-regenci-lpp-Oran/61581182056275/',
+            'tiktok' => 'https://www.tiktok.com/@arenacosmetiq',
+        ],
         'show_unavailable' => false,
         'low_stock_threshold_ml' => 10,
+        'low_stock_threshold_qty' => 3,
         'store_pickup_enabled' => true,
         'free_delivery_over' => null,
     ];
@@ -61,6 +66,18 @@ class SettingsService
     public function lowStockThresholdMl(): int
     {
         return (int) $this->get('low_stock_threshold_ml');
+    }
+
+    /** Cosmetics are counted in units: at or below this many left, they show as low in stock. */
+    public function lowStockThresholdQty(): int
+    {
+        return (int) $this->get('low_stock_threshold_qty');
+    }
+
+    /** Whether the admin can be used from the website. A code switch (config/features.php), not an admin setting. */
+    public function webAdminEnabled(): bool
+    {
+        return (bool) config('features.web_admin');
     }
 
     public function storePickupEnabled(): bool

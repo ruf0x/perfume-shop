@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useCart } from '@/stores/cart'
+import { OptionPicker } from '../components/OptionPicker'
 import { ProductVisual } from '../components/ProductVisual'
 import { QtyStepper } from '../components/QtyStepper'
 import { bigButton, linkButton } from '../components/ui'
@@ -13,7 +14,7 @@ import { formatPrice } from '../format'
 import { useProduct } from '../queries'
 import { useDocumentTitle } from '../useDocumentTitle'
 
-/** Perfume page and pack page (same layout; a pack has one price and a contents list instead of sizes). */
+/** Perfume, cosmetic and pack page (same layout; a pack has one price and a contents list instead of sizes). */
 export default function ProductPage() {
   const { t } = useTranslation()
   const { slug } = useParams()
@@ -21,7 +22,8 @@ export default function ProductPage() {
   const add = useCart((s) => s.add)
   const [added, setAdded] = useState<string | null>(null)
 
-  const variants = useMemo(() => [...(product?.variants ?? [])].sort((a, b) => (a.ml ?? 1e9) - (b.ml ?? 1e9) || a.price - b.price), [product])
+  // Perfume sizes go from small to large; a cosmetic keeps the order the owner gave (shades, sizes, lots...).
+  const variants = useMemo(() => (product?.kind === 'standard' ? [...product.variants] : [...(product?.variants ?? [])].sort((a, b) => (a.ml ?? 1e9) - (b.ml ?? 1e9) || a.price - b.price)), [product])
   const [variantId, setVariantId] = useState<number | null>(null)
   const [qty, setQty] = useState(1)
   const [photo, setPhoto] = useState(0)
@@ -61,6 +63,7 @@ export default function ProductPage() {
   }
 
   const isPack = product.kind === 'pack'
+  const isCosmetic = product.kind === 'standard'
   const variant = variants.find((v) => v.id === variantId) ?? variants[0]
   const anyAvailable = variants.some((v) => v.available)
   const maxQty = variant ? Math.max(1, variant.max_qty) : 1
@@ -78,12 +81,13 @@ export default function ProductPage() {
     add(
       {
         variantId: variant.id,
-        path: isPack ? `/pack/${product.slug}` : `/parfum/${product.slug}`,
+        path: isPack ? `/pack/${product.slug}` : isCosmetic ? `/produit/${product.slug}` : `/parfum/${product.slug}`,
         name: product.name,
         label: variant.label,
         price: variant.price,
         image: product.image,
         typeSlug: product.type?.slug ?? null,
+        rayonSlug: product.product_type?.slug ?? null,
       },
       quantity,
     )
@@ -112,7 +116,7 @@ export default function ProductPage() {
         {product.type && !isPack && (
           <>
             <span aria-hidden className="mx-2">/</span>
-            <Link to={`/boutique?type=${product.type.slug}`} className="underline-offset-4 hover:underline">
+            <Link to={`/boutique?rayon=${product.product_type?.slug ?? ''}&type=${product.type.slug}`} className="underline-offset-4 hover:underline">
               {product.type.name}
             </Link>
           </>
@@ -123,7 +127,7 @@ export default function ProductPage() {
         <div className="md:sticky md:top-24 md:self-start">
           {/* Shorter on phones so the size picker is not pushed a full screen down. */}
           <div className="aspect-[3/2] overflow-hidden rounded-md bg-secondary sm:aspect-[4/3] md:aspect-[4/5]">
-            <ProductVisual image={photos[photo] ?? null} name={product.name} type={product.type?.slug} level={anyAvailable ? 0.78 : 0.1} priority />
+            <ProductVisual image={photos[photo] ?? null} name={product.name} type={product.type?.slug} rayon={product.product_type?.slug} level={anyAvailable ? 0.78 : 0.1} priority />
           </div>
           {photos.length > 1 && (
             <ul className="mt-3 flex gap-2">
@@ -178,7 +182,20 @@ export default function ProductPage() {
               )
             ) : (
               <>
-                <h2 className="mb-4 text-xl">{t('product.chooseSize')}</h2>
+                <h2 className="mb-4 text-xl">{isCosmetic ? t('product.chooseOption') : t('product.chooseSize')}</h2>
+                {isCosmetic ? (
+                  <OptionPicker
+                    options={variants.map((v) => ({ id: v.id, label: v.label, price: v.price, compareAt: v.compare_at_price, available: v.available }))}
+                    value={variant?.id ?? null}
+                    onChange={(id) => {
+                      setVariantId(id)
+                      setQty(1)
+                    }}
+                    legend={t('product.chooseOption')}
+                    soldOutLabel={t('common.soldOut')}
+                    className="max-w-md"
+                  />
+                ) : (
                 <VolumeGauge
                   options={variants.map((v) => ({ id: v.id, label: v.label, price: v.price, compareAt: v.compare_at_price, available: v.available }))}
                   value={variant?.id ?? null}
@@ -191,13 +208,14 @@ export default function ProductPage() {
                   soldOutLabel={t('common.soldOut')}
                   className="max-w-md"
                 />
+                )}
               </>
             )}
           </div>
 
           <div className="mt-8 max-w-md space-y-3">
             {!anyAvailable ? (
-              <p className="rounded-md bg-secondary p-4">{t('product.unavailable')}</p>
+              <p className="rounded-md bg-secondary p-4">{isCosmetic ? t('product.unavailableCosmetic') : t('product.unavailable')}</p>
             ) : (
               <>
                 <div className="flex items-center gap-4">

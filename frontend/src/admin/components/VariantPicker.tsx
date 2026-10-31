@@ -11,27 +11,27 @@ interface VariantPickerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onPick: (variant: AdminVariant, product: AdminProduct) => void
-  /** Packs can be sold, but a pack cannot contain a pack. */
+  /** Packs can be sold at the caisse, but a pack cannot contain a pack. */
   includePacks?: boolean
   title?: string
 }
 
-/** Search a perfume and choose one of its sizes. */
+/** Search a perfume or a cosmetic and choose one of its sizes / options. */
 export function VariantPicker({ open, onOpenChange, onPick, includePacks, title = 'Ajouter un article' }: VariantPickerProps) {
   const [term, setTerm] = useState('')
   const q = useDebounced(term)
-  const { data, isPending } = useAdminProducts({ q: q || undefined, kind: includePacks ? undefined : 'perfume', active: true }, 8)
+  const { data, isPending } = useAdminProducts({ q: q || undefined, kind: includePacks ? undefined : 'perfume,standard', active: true }, 8)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">{title}</DialogTitle>
-          <DialogDescription>Cherchez un parfum, puis choisissez sa taille.</DialogDescription>
+          <DialogDescription>Cherchez un produit, puis choisissez sa taille ou son option.</DialogDescription>
         </DialogHeader>
 
         <label className="relative block">
-          <span className="sr-only">Rechercher un parfum</span>
+          <span className="sr-only">Rechercher un produit</span>
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <input autoFocus type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Nom ou marque" className={`${inputClass} pl-9`} />
         </label>

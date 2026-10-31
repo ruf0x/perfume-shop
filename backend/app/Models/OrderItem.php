@@ -14,6 +14,7 @@ class OrderItem extends Model
         return [
             'ml' => 'integer',
             'unit_price' => 'integer',
+            'list_price' => 'integer',
             'quantity' => 'integer',
             'line_total' => 'integer',
         ];

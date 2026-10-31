@@ -106,7 +106,7 @@ class OrderPlacement
             : null;
 
         return DB::transaction(function () use ($data, $user, $payment, $phone) {
-            $quote = $this->pricing->quote($data['lines'], discount: (int) ($data['discount'] ?? 0));
+            $quote = $this->pricing->quote($data['lines'], discount: (int) ($data['discount'] ?? 0), allowPriceOverride: true);
             $this->assertAvailable($quote);
 
             $received = isset($data['amount_received']) ? (int) $data['amount_received'] : null;
@@ -176,6 +176,8 @@ class OrderPlacement
                 'variant_label' => $line->variant->label,
                 'ml' => $line->variant->ml,
                 'unit_price' => $line->unitPrice,
+                // The catalogue price at the time of the sale: it differs from unit_price when the cashier negotiated.
+                'list_price' => $line->variant->price,
                 'quantity' => $line->quantity,
                 'line_total' => $line->lineTotal,
             ]);

@@ -1,13 +1,15 @@
-import { SlidersHorizontal, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { FilterPanel } from '../components/FilterPanel'
+import { Pager } from '../components/Pager'
 import { ProductGrid } from '../components/ProductGrid'
 import { bigButton } from '../components/ui'
-import { useBrands, useProducts, useTypes } from '../queries'
+import { useBrands, usePagedProducts, useProductTypes } from '../queries'
+
 import type { Gender, ProductFilters } from '../types'
 import { useDocumentTitle } from '../useDocumentTitle'
 
@@ -20,8 +22,8 @@ export default function Boutique() {
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
   const [sheet, setSheet] = useState(false)
-  const types = useTypes()
-  const brands = useBrands()
+  const productTypes = useProductTypes()
+  const brands = useBrands(params.get('rayon') || undefined)
 
   const filters: ProductFilters = useMemo(
     () => ({
@@ -32,6 +34,7 @@ export default function Boutique() {
       min_price: toInt(params.get('min_price')),
       max_price: toInt(params.get('max_price')),
       sort: SORTS.find((s) => s === params.get('sort')),
+      rayon: params.get('rayon') || undefined,
     }),
     [params],
   )
@@ -40,6 +43,7 @@ export default function Boutique() {
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev)
+        next.delete('page') // a new search starts again on page 1
         for (const [key, value] of Object.entries(patch)) {
           if (value === undefined || value === '') next.delete(key)
           else next.set(key, String(value))
@@ -49,12 +53,30 @@ export default function Boutique() {
       { replace: true },
     )
 
-  const query = useProducts({ ...filters, kind: 'perfume' })
-  const items = query.data?.pages.flatMap((p) => p.data) ?? []
-  const total = query.data?.pages[0]?.meta.total ?? 0
+  const page = toInt(params.get('page')) ?? 1
+  const query = usePagedProducts({ ...filters, kind: 'perfume,standard' }, page)
+  const items = query.data?.data ?? []
+  const total = query.data?.meta.total ?? 0
+  const goToPage = (n: number) => setParams((prev) => { const next = new URLSearchParams(prev); n > 1 ? next.set('page', String(n)) : next.delete('page'); return next }, { replace: true })
 
-  const typeName = types.data?.find((x) => x.slug === filters.type)?.name
-  useDocumentTitle(typeName ?? t('meta.shop'), t('meta.shopDescription'))
+  const [term, setTerm] = useState(filters.q ?? '')
+  useEffect(() => setTerm(filters.q ?? ''), [filters.q])
+  const submitSearch = (e: FormEvent) => {
+    e.preventDefault()
+    setFilters({ q: term.trim() || undefined })
+  }
+
+  const selectedType = productTypes.data?.find((x) => x.slug === filters.rayon)
+  const categories = selectedType ? selectedType.categories : (productTypes.data ?? []).flatMap((pt) => pt.categories)
+  const typeName = categories.find((c) => c.slug === filters.type)?.name
+  const kindTitle = selectedType?.name ?? null
+  useDocumentTitle(typeName ?? kindTitle ?? t('meta.shop'), t('meta.shopDescription'))
+
+  // Switching product type drops what belonged to the previous one (its category and brand, and the gender if the new type has none).
+  const pickRayon = (slug: string | undefined) => {
+    const next = productTypes.data?.find((x) => x.slug === slug)
+    setFilters({ rayon: slug, type: undefined, brand: undefined, gender: !next || next.uses_gender ? filters.gender : undefined })
+  }
 
   const chips: { key: keyof ProductFilters; label: string }[] = [
     filters.q ? { key: 'q', label: `« ${filters.q} »` } : null,
@@ -69,19 +91,32 @@ export default function Boutique() {
   const clearChip = (key: keyof ProductFilters) => setFilters(key === 'min_price' ? { min_price: undefined, max_price: undefined } : { [key]: undefined })
   const reset = () => setParams({}, { replace: true })
 
-  const panel = (id: string) => <FilterPanel idPrefix={id} filters={filters} types={types.data ?? []} brands={brands.data ?? []} onChange={setFilters} />
+  const panel = (id: string) => <FilterPanel hideSearch={id === 'sheet'} idPrefix={id} filters={filters} productTypes={productTypes.data ?? []} brands={brands.data ?? []} onChange={setFilters} />
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:grid md:grid-cols-[230px_1fr] md:gap-x-12 md:py-14">
+      {/* Starts at the very top and is never taller than the screen, so "Prix" is always in reach without scrolling the page. */}
+      <aside className="hidden md:block" aria-label={t('shopPage.filters')}>
+        <div className="sticky top-24 max-h-[calc(100svh-8.5rem)] overflow-y-auto overscroll-contain pr-1">{panel('side')}</div>
+      </aside>
+
+      <div className="min-w-0">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl sm:text-5xl">{typeName ?? t('shopPage.title')}</h1>
+          <h1 className="text-4xl sm:text-5xl">{typeName ?? kindTitle ?? t('shopPage.title')}</h1>
           <p className="mt-2 text-muted-foreground" aria-live="polite">
             {query.isPending ? t('common.loading') : t('shopPage.count', { count: total })}
           </p>
         </div>
 
         <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
+          <form onSubmit={submitSearch} role="search" className="w-full md:hidden">
+            <label className="relative block">
+              <span className="sr-only">{t('nav.search')}</span>
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder={t('nav.searchPlaceholder')} className="h-11 w-full rounded-md border border-input bg-card pr-3 pl-9 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30" />
+            </label>
+          </form>
           <Button variant="outline" className={`${bigButton} md:hidden`} onClick={() => setSheet(true)}>
             <SlidersHorizontal className="size-4" aria-hidden />
             {t('shopPage.filters')}
@@ -104,6 +139,24 @@ export default function Boutique() {
         </div>
       </header>
 
+      {(productTypes.data?.length ?? 0) > 1 && (
+        <div role="group" aria-label={t('shopPage.kindLabel')} className="-mx-4 mt-6 flex overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+          <div className="inline-flex rounded-md border border-input bg-card p-1">
+            {[{ slug: undefined, name: t('shopPage.kinds.all') }, ...(productTypes.data ?? [])].map((pt) => (
+              <button
+                key={pt.slug ?? 'all'}
+                type="button"
+                onClick={() => pickRayon(pt.slug)}
+                aria-pressed={filters.rayon === pt.slug}
+                className={`h-10 shrink-0 rounded px-4 text-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-ring ${filters.rayon === pt.slug ? 'bg-primary font-medium text-primary-foreground' : 'text-foreground/80 hover:bg-secondary'}`}
+              >
+                {pt.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {chips.length > 0 && (
         <ul className="mt-6 flex flex-wrap items-center gap-2">
           {chips.map((c) => (
@@ -122,11 +175,7 @@ export default function Boutique() {
         </ul>
       )}
 
-      <div className="mt-10 grid gap-12 md:grid-cols-[230px_1fr]">
-        <aside className="hidden md:block" aria-label={t('shopPage.filters')}>
-          <div className="sticky top-24">{panel('side')}</div>
-        </aside>
-
+      <div className="mt-10">
         <div>
           {query.isError ? (
             <div className="py-16">
@@ -148,16 +197,12 @@ export default function Boutique() {
           ) : (
             <>
               <ProductGrid products={items} loading={query.isPending} skeletons={9} className="md:grid-cols-2 lg:grid-cols-3" />
-              {query.hasNextPage && (
-                <div className="mt-12 flex justify-center">
-                  <Button variant="outline" className={bigButton} onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-                    {query.isFetchingNextPage ? t('common.loading') : t('common.seeMore')}
-                  </Button>
-                </div>
-              )}
+              <Pager page={query.data?.meta.current_page ?? page} lastPage={query.data?.meta.last_page ?? 1} total={total} onPage={goToPage} />
             </>
           )}
         </div>
+      </div>
+
       </div>
 
       <Sheet open={sheet} onOpenChange={setSheet}>

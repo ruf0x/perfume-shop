@@ -57,28 +57,28 @@
 
 :root {
     /* Shop palette: chalk paper, oud ink, cardamom green for actions, saffron only for liquid. */
-    --chalk: #f8f8f5;
-    --oud: #1f1813;
+    --chalk: #fdf5f3;
+    --oud: #2e1f18;
     --oud-foreground: #f1ede4;
     --saffron: #d19a2b;
-    --background: #f8f8f5;
-    --foreground: #1f1813;
+    --background: #fdf5f3;
+    --foreground: #2e1f18;
     --card: #ffffff;
-    --card-foreground: #1f1813;
+    --card-foreground: #2e1f18;
     --popover: #ffffff;
-    --popover-foreground: #1f1813;
-    --primary: #14463a;
-    --primary-foreground: #f8f8f5;
-    --secondary: #eceae3;
-    --secondary-foreground: #1f1813;
-    --muted: #eceae3;
-    --muted-foreground: #6b625a;
-    --accent: #e3efe9;
-    --accent-foreground: #14463a;
+    --popover-foreground: #2e1f18;
+    --primary: #7b592c;
+    --primary-foreground: #fffaf7;
+    --secondary: #f7e6e2;
+    --secondary-foreground: #2e1f18;
+    --muted: #f7e6e2;
+    --muted-foreground: #735f55;
+    --accent: #f6e4cf;
+    --accent-foreground: #5e4220;
     --destructive: #a3282a;
-    --border: #dedad0;
-    --input: #cfc9bc;
-    --ring: #14463a;
+    --border: #ecd6d0;
+    --input: #dfc3bb;
+    --ring: #a37a3e;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);

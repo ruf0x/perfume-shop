@@ -2,14 +2,15 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import type { Brand, Gender, ProductFilters, TypeRef } from '../types'
+import type { Brand, Gender, ProductFilters, ShopProductType } from '../types'
 
 interface FilterPanelProps {
   filters: ProductFilters
-  types: TypeRef[]
+  productTypes: ShopProductType[]
   brands: Brand[]
   onChange: (patch: Partial<ProductFilters>) => void
   idPrefix: string
+  hideSearch?: boolean
 }
 
 function Choice({ name, checked, label, onSelect }: { name: string; checked: boolean; label: string; onSelect: () => void }) {
@@ -22,7 +23,7 @@ function Choice({ name, checked, label, onSelect }: { name: string; checked: boo
 }
 
 /** Filters shared by the desktop sidebar and the mobile sheet. Every change is written to the URL by the parent. */
-export function FilterPanel({ filters, types, brands, onChange, idPrefix }: FilterPanelProps) {
+export function FilterPanel({ filters, productTypes, brands, onChange, idPrefix, hideSearch }: FilterPanelProps) {
   const { t } = useTranslation()
   const [q, setQ] = useState(filters.q ?? '')
   const [min, setMin] = useState(filters.min_price?.toString() ?? '')
@@ -42,29 +43,20 @@ export function FilterPanel({ filters, types, brands, onChange, idPrefix }: Filt
 
   const genders: (Gender | undefined)[] = [undefined, 'homme', 'femme', 'mixte']
 
+  // The categories of the chosen product type; with none chosen, every type's categories under its own heading.
+  const selected = productTypes.find((x) => x.slug === filters.rayon)
+  const groups = (selected ? [selected] : productTypes).filter((pt) => pt.categories.length > 0)
+  // A gender filter only makes sense where the product type has one.
+  const showGender = selected ? selected.uses_gender : productTypes.some((x) => x.uses_gender)
+
   return (
-    <div className="space-y-8">
-      <form onSubmit={submitSearch} role="search">
+    <div className="space-y-5">
+      <form onSubmit={submitSearch} role="search" className={hideSearch ? 'hidden' : undefined}>
         <label htmlFor={`${idPrefix}-q`} className="mb-2 block font-display text-lg">
           {t('shopPage.search')}
         </label>
         <Input id={`${idPrefix}-q`} type="search" value={q} onChange={(e) => setQ(e.target.value)} onBlur={() => q.trim() !== (filters.q ?? '') && onChange({ q: q.trim() || undefined })} placeholder={t('nav.searchPlaceholder')} className="h-10 text-base" />
       </form>
-
-      <fieldset>
-        <legend className="mb-2 font-display text-lg">{t('shopPage.type')}</legend>
-        <Choice name={`${idPrefix}-type`} checked={!filters.type} label={t('shopPage.allTypes')} onSelect={() => onChange({ type: undefined })} />
-        {types.map((type) => (
-          <Choice key={type.id} name={`${idPrefix}-type`} checked={filters.type === type.slug} label={type.name} onSelect={() => onChange({ type: type.slug })} />
-        ))}
-      </fieldset>
-
-      <fieldset>
-        <legend className="mb-2 font-display text-lg">{t('shopPage.gender')}</legend>
-        {genders.map((g) => (
-          <Choice key={g ?? 'all'} name={`${idPrefix}-gender`} checked={filters.gender === g} label={g ? t(`shopPage.genders.${g}`) : t('shopPage.anyGender')} onSelect={() => onChange({ gender: g })} />
-        ))}
-      </fieldset>
 
       {brands.length > 0 && (
         <div>
@@ -86,6 +78,30 @@ export function FilterPanel({ filters, types, brands, onChange, idPrefix }: Filt
           </select>
         </div>
       )}
+
+      <fieldset>
+        <legend className="mb-2 font-display text-lg">{selected ? (selected.profile === 'perfume' ? t('shopPage.families') : t('shopPage.categories')) : t('shopPage.type')}</legend>
+        <div className="max-h-36 overflow-y-auto overscroll-contain pr-1">
+        <Choice name={`${idPrefix}-type`} checked={!filters.type} label={t('shopPage.allTypes')} onSelect={() => onChange({ type: undefined })} />
+        {groups.map((group) => (
+          <div key={group.id} className={groups.length > 1 ? 'mt-2' : undefined}>
+            {groups.length > 1 && <p className="px-2 pt-2 pb-1 text-xs tracking-wide text-muted-foreground uppercase">{group.name}</p>}
+            {group.categories.map((category) => (
+              <Choice key={category.id} name={`${idPrefix}-type`} checked={filters.type === category.slug && (!filters.rayon || filters.rayon === group.slug)} label={category.name} onSelect={() => onChange({ type: category.slug, rayon: group.slug })} />
+            ))}
+          </div>
+        ))}
+        </div>
+      </fieldset>
+
+      <fieldset className={showGender ? undefined : 'hidden'}>
+        <legend className="mb-2 font-display text-lg">{t('shopPage.gender')}</legend>
+        <div className="grid grid-cols-2">
+        {genders.map((g) => (
+          <Choice key={g ?? 'all'} name={`${idPrefix}-gender`} checked={filters.gender === g} label={g ? t(`shopPage.genders.${g}`) : t('shopPage.anyGender')} onSelect={() => onChange({ gender: g })} />
+        ))}
+        </div>
+      </fieldset>
 
       <fieldset>
         <legend className="mb-2 font-display text-lg">{t('shopPage.price')}</legend>

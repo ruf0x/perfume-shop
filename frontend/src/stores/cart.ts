@@ -12,6 +12,8 @@ export interface CartLine {
   image: string | null
   /** Perfume type slug, used to draw the flacon when there is no photo. */
   typeSlug: string | null
+  /** Product type slug (Parfums, Montres...), to draw the right placeholder when there is no photo. */
+  rayonSlug?: string | null
   qty: number
 }
 

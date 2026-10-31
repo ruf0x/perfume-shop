@@ -1,0 +1,54 @@
+{
+  "name": "boutique-admin-desktop",
+  "productName": "Administration Boutique",
+  "version": "1.0.0",
+  "description": "Application de bureau pour gérer la boutique : commandes, caisse, stock, produits.",
+  "author": "Boutique",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "ensure": "node scripts/ensure-electron.mjs",
+    "web": "node scripts/copy-web.mjs",
+    "start": "npm run ensure && npm run web && electron .",
+    "dev": "npm run ensure && electron .",
+    "pack": "npm run ensure && npm run web && electron-builder --dir",
+    "dist": "npm run ensure && npm run web && electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "dz.boutique.admin",
+    "productName": "Administration Boutique",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "web/**/*",
+      "app.config.json",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "language": "1036"
+    },
+    "artifactName": "Administration-Boutique-Setup-${version}.${ext}"
+  }
+}

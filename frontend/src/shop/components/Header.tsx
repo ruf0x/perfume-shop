@@ -1,6 +1,6 @@
 import { Menu, Search, ShoppingBag } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -10,7 +10,19 @@ import { useSettings } from '../queries'
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn('rounded-sm px-1 py-2 text-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-ring', isActive ? 'font-medium text-primary' : 'text-foreground/80')
 
-function SearchForm({ className, onDone }: { className?: string; onDone?: () => void }) {
+/** A menu link, highlighted on its own page ("Boutique" stays highlighted whichever product type is chosen inside it). */
+function NavItem({ to, children }: { to: string; children: string }) {
+  const { pathname } = useLocation()
+  const active = pathname === to
+
+  return (
+    <Link to={to} aria-current={active ? 'page' : undefined} className={navClass({ isActive: active })}>
+      {children}
+    </Link>
+  )
+}
+
+function SearchForm({ className }: { className?: string }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [term, setTerm] = useState('')
@@ -19,7 +31,6 @@ function SearchForm({ className, onDone }: { className?: string; onDone?: () => 
     e.preventDefault()
     navigate(term.trim() ? `/boutique?q=${encodeURIComponent(term.trim())}` : '/boutique')
     setTerm('')
-    onDone?.()
   }
 
   return (
@@ -58,17 +69,14 @@ export function Header() {
           <Menu className="size-5" />
         </button>
 
-        <Link to="/" className="font-display text-xl font-medium tracking-tight focus-visible:outline-2 focus-visible:outline-ring">
-          {settings?.shop_name ?? t('brand.name')}
+        <Link to="/" className="flex items-center gap-2.5 font-display text-lg font-medium tracking-tight focus-visible:outline-2 focus-visible:outline-ring sm:text-xl">
+          <img src="/brand/logo-mark.webp" alt="" width={256} height={179} className="h-9 w-auto" />
+          <span className="leading-tight">{settings?.shop_name ?? t('brand.name')}</span>
         </Link>
 
         <nav className="ml-6 hidden items-center gap-5 md:flex" aria-label={t('nav.main')}>
-          <NavLink to="/boutique" className={navClass}>
-            {t('nav.shop')}
-          </NavLink>
-          <NavLink to="/packs" className={navClass}>
-            {t('nav.packs')}
-          </NavLink>
+          <NavItem to="/boutique">{t('nav.shop')}</NavItem>
+          <NavItem to="/packs">{t('nav.packs')}</NavItem>
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
@@ -94,7 +102,6 @@ export function Header() {
             <SheetDescription className="sr-only">{t('nav.menu')}</SheetDescription>
           </SheetHeader>
           <div className="space-y-6 p-5">
-            <SearchForm onDone={() => setMenu(false)} />
             <nav className="flex flex-col" aria-label={t('nav.main')}>
               {[
                 ['/', t('nav.home')],

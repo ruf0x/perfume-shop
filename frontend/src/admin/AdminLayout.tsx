@@ -1,9 +1,10 @@
-import { Boxes, ClipboardList, Gift, LayoutDashboard, LogOut, Menu, Package, Receipt, Settings as SettingsIcon, Store, Tags, Users, Warehouse, Award, type LucideIcon } from 'lucide-react'
+import { Boxes, ClipboardList, Gift, Layers, LayoutDashboard, LogOut, Menu, Package, Receipt, Settings as SettingsIcon, Store, Tags, Users, Warehouse, Award, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { toast } from 'sonner'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { isDesktop } from '@/lib/api'
 import { useLogout, useUser } from './auth'
 
 interface NavItem {
@@ -22,7 +23,8 @@ const NAV: NavItem[] = [
   { to: '/admin/produits', label: 'Produits', icon: Package },
   { to: '/admin/packs', label: 'Packs', icon: Gift },
   { to: '/admin/stock', label: 'Stock', icon: Warehouse },
-  { to: '/admin/types', label: 'Familles', icon: Tags, ownerOnly: true },
+  { to: '/admin/types-de-produits', label: 'Types de produits', icon: Layers, ownerOnly: true },
+  { to: '/admin/types', label: 'Familles et catégories', icon: Tags, ownerOnly: true },
   { to: '/admin/marques', label: 'Marques', icon: Award, ownerOnly: true },
   { to: '/admin/clients', label: 'Clients', icon: Users, ownerOnly: true },
   { to: '/admin/parametres', label: 'Paramètres', icon: SettingsIcon, ownerOnly: true },
@@ -60,10 +62,12 @@ function SidebarFooter() {
         <p className="truncate text-sm font-medium">{user.name}</p>
         <p className="text-xs text-muted-foreground">{user.role === 'owner' ? 'Propriétaire' : 'Équipe'}</p>
       </div>
-      <Link to="/" target="_blank" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-[0.95rem] text-foreground/80 hover:bg-secondary">
-        <Store className="size-[1.15rem]" aria-hidden />
-        Voir la boutique
-      </Link>
+      {!isDesktop && (
+        <Link to="/" target="_blank" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-[0.95rem] text-foreground/80 hover:bg-secondary">
+          <Store className="size-[1.15rem]" aria-hidden />
+          Voir la boutique
+        </Link>
+      )}
       <button
         type="button"
         onClick={() => logout.mutate(undefined, { onError: () => toast.error('Déconnexion impossible.') })}

@@ -11,7 +11,7 @@ import { useSettings } from '@/shop/queries'
 import { EmptyState, Loading, PageHeader, Pagination, inputClass } from '../components/common'
 import { apiError } from '../lib'
 import { printTicket } from '../printHelper'
-import { useAdminProducts, usePosSale, useTaxa } from '../queries'
+import { useAdminProducts, usePosSale, useProductTypes, useTaxa } from '../queries'
 import type { AdminProduct, AdminVariant, Order, StockMode } from '../types'
 import { useDebounced } from '../useDebounced'
 
@@ -20,7 +20,10 @@ interface Line {
   productId: number
   name: string
   label: string
-  price: number
+  /** The catalogue price. */
+  listPrice: number
+  /** What the cashier typed: the price actually charged per unit (empty = the catalogue price). */
+  priceText: string
   qty: number
   mode: StockMode
   ml: number | null
@@ -36,6 +39,9 @@ const PAYMENTS = [
 ] as const
 
 type Payment = (typeof PAYMENTS)[number][0]
+
+/** The unit price charged for a line: the catalogue price unless the cashier changed it. */
+const priceOf = (l: Line) => (l.priceText.trim() === '' || Number.isNaN(Number(l.priceText)) ? l.listPrice : Math.max(0, Math.round(Number(l.priceText))))
 
 /** How many of this line the shop can still sell, counting the other lines drawn from the same ml stock. */
 function maxFor(line: Line, lines: Line[]) {
@@ -58,7 +64,7 @@ function SizeDialog({ product, onClose, onPick }: { product: AdminProduct; onClo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">{product.name}</DialogTitle>
-          <DialogDescription>Choisissez la taille.</DialogDescription>
+          <DialogDescription>Choisissez la taille ou l'option.</DialogDescription>
         </DialogHeader>
         <ul className="grid gap-2">
           {product.variants?.filter((v) => v.is_active).map((v) => {
@@ -91,7 +97,12 @@ function ReceiptDialog({ order, onNew }: { order: Order; onNew: () => void }) {
         </DialogHeader>
         <div className="space-y-3 rounded-md bg-secondary/60 p-4 text-sm">
           <ul className="space-y-1">
-            {order.items?.map((i) => <li key={i.id} className="tnum flex justify-between gap-3"><span>{i.quantity} × {i.product_name} {i.variant_label}</span><span>{formatPrice(i.line_total)}</span></li>)}
+            {order.items?.map((i) => (
+              <li key={i.id} className="tnum flex justify-between gap-3">
+                <span>{i.quantity} × {i.product_name} {i.variant_label}{i.list_price && i.list_price > i.unit_price ? <span className="block text-xs text-muted-foreground">{formatPrice(i.unit_price)} au lieu de {formatPrice(i.list_price)}</span> : null}</span>
+                <span>{formatPrice(i.line_total)}</span>
+              </li>
+            ))}
           </ul>
           <p className="tnum flex items-baseline justify-between border-t border-border pt-2 text-base font-medium"><span>Total</span><span className="font-display text-2xl">{formatPrice(order.total)}</span></p>
           {order.change_due !== null && order.change_due > 0 && (
@@ -110,6 +121,7 @@ function ReceiptDialog({ order, onNew }: { order: Order; onNew: () => void }) {
 export default function Caisse() {
   const sale = usePosSale()
   const types = useTaxa('types')
+  const productTypes = useProductTypes()
   const search = useRef<HTMLInputElement>(null)
   const [term, setTerm] = useState('')
   const q = useDebounced(term, 250)
@@ -127,7 +139,9 @@ export default function Caisse() {
   const [client, setClient] = useState({ first_name: '', last_name: '', phone: '' })
   const [done, setDone] = useState<Order | null>(null)
 
-  const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0)
+  const subtotal = lines.reduce((s, l) => s + priceOf(l) * l.qty, 0)
+  // How much the cashier gave away by changing prices (shown, so it is never a surprise).
+  const priceCut = lines.reduce((s, l) => s + (l.listPrice - priceOf(l)) * l.qty, 0)
   const rawDiscount = Number(discountValue) || 0
   const discount = Math.min(subtotal, Math.max(0, discountMode === 'pct' ? Math.round((subtotal * Math.min(rawDiscount, 100)) / 100) : Math.round(rawDiscount)))
   const total = subtotal - discount
@@ -138,7 +152,7 @@ export default function Caisse() {
   const canSell = lines.length > 0 && (payment !== 'especes' || cash >= total) && !sale.isPending
 
   const add = (p: AdminProduct, v: AdminVariant) => {
-    const base: Line = { variantId: v.id, productId: p.id, name: p.name, label: v.label, price: v.price, qty: 1, mode: v.stock_mode, ml: v.ml, poolStock: p.stock_ml, unitStock: v.stock_qty }
+    const base: Line = { variantId: v.id, productId: p.id, name: p.name, label: v.label, listPrice: v.price, priceText: String(v.price), qty: 1, mode: v.stock_mode, ml: v.ml, poolStock: p.stock_ml, unitStock: v.stock_qty }
     const existing = lines.find((l) => l.variantId === v.id)
     const next = existing ? lines.map((l) => (l.variantId === v.id ? { ...l, qty: l.qty + 1 } : l)) : [...lines, base]
     const line = next.find((l) => l.variantId === v.id)!
@@ -161,7 +175,7 @@ export default function Caisse() {
     if (!canSell) return
     sale.mutate(
       {
-        lines: lines.map((l) => ({ variant_id: l.variantId, quantity: l.qty })),
+        lines: lines.map((l) => ({ variant_id: l.variantId, quantity: l.qty, unit_price: priceOf(l) !== l.listPrice ? priceOf(l) : undefined })),
         discount: discount || undefined,
         payment_method: payment,
         amount_received: payment === 'especes' ? cash : undefined,
@@ -203,11 +217,15 @@ export default function Caisse() {
             <label className="relative block">
               <span className="sr-only">Rechercher un produit</span>
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <input ref={search} type="search" autoFocus value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Rechercher un parfum ou un pack   (touche /)" className={`${inputClass} h-11 pl-9`} />
+              <input ref={search} type="search" autoFocus value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Rechercher un produit ou un pack   (touche /)" className={`${inputClass} h-11 pl-9`} />
             </label>
-            <select className={`${inputClass} h-11`} aria-label="Famille" value={typeId ?? ''} onChange={(e) => setTypeId(e.target.value ? Number(e.target.value) : undefined)}>
-              <option value="">Toutes les familles</option>
-              {types.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            <select className={`${inputClass} h-11`} aria-label="Famille ou catégorie" value={typeId ?? ''} onChange={(e) => setTypeId(e.target.value ? Number(e.target.value) : undefined)}>
+              <option value="">Tout le catalogue</option>
+              {productTypes.data?.map((pt) => (
+                <optgroup key={pt.id} label={pt.name}>
+                  {types.data?.filter((c) => c.product_type_id === pt.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </optgroup>
+              ))}
             </select>
           </div>
 
@@ -216,9 +234,9 @@ export default function Caisse() {
               <ul className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4', products.isPlaceholderData && 'opacity-60')}>
                 {items.map((p) => (
                   <li key={p.id}>
-                    <button type="button" onClick={() => setPicked(p)} disabled={!p.available && p.kind === 'perfume' && p.stock_ml === 0 && !p.variants?.some((v) => v.stock_qty > 0)} className="group block w-full rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50">
+                    <button type="button" onClick={() => setPicked(p)} disabled={!p.available && p.kind !== 'pack' && p.stock_ml === 0 && !p.variants?.some((v) => v.stock_qty > 0)} className="group block w-full rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50">
                       <div className="relative aspect-square overflow-hidden rounded-lg bg-secondary">
-                        <ProductVisual image={p.image} name={p.name} type={p.type?.slug} level={p.available ? 0.7 : 0.1} />
+                        <ProductVisual image={p.image} name={p.name} type={p.type?.slug} rayon={p.product_type?.slug} level={p.available ? 0.7 : 0.1} />
                         {!p.available && <span className="absolute top-2 left-2 rounded bg-oud px-2 py-0.5 text-xs text-oud-foreground">Épuisé</span>}
                       </div>
                       <p className="mt-2 truncate font-display text-base leading-tight group-hover:underline">{p.name}</p>
@@ -239,12 +257,35 @@ export default function Caisse() {
           </div>
 
           {lines.length === 0 ? (
-            <p className="rounded-md bg-secondary/60 p-4 text-center text-sm text-muted-foreground">Touchez un parfum pour commencer.</p>
+            <p className="rounded-md bg-secondary/60 p-4 text-center text-sm text-muted-foreground">Touchez un produit pour commencer.</p>
           ) : (
             <ul className="divide-y divide-border">
               {lines.map((l) => (
                 <li key={l.variantId} className="flex items-center justify-between gap-3 py-3">
-                  <div className="min-w-0"><p className="truncate font-medium">{l.name}</p><p className="tnum text-sm text-muted-foreground">{l.label}, {formatPrice(l.price)}</p></div>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{l.name}</p>
+                    <p className="text-sm text-muted-foreground">{l.label}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <label className="flex items-center gap-1">
+                        <span className="sr-only">Prix unitaire de {l.name}, en dinars</span>
+                        <input
+                          type="number"
+                          min={0}
+                          inputMode="numeric"
+                          value={l.priceText}
+                          onChange={(e) => setLines(lines.map((x) => (x.variantId === l.variantId ? { ...x, priceText: e.target.value } : x)))}
+                          onBlur={() => priceOf(l) === l.listPrice && l.priceText !== String(l.listPrice) && setLines(lines.map((x) => (x.variantId === l.variantId ? { ...x, priceText: String(l.listPrice) } : x)))}
+                          className={cn('tnum h-8 w-24 rounded-md border bg-card px-2 text-sm', priceOf(l) !== l.listPrice ? 'border-primary font-medium text-primary' : 'border-input')}
+                        />
+                        <span className="text-sm text-muted-foreground">DA</span>
+                      </label>
+                      {priceOf(l) !== l.listPrice && (
+                        <button type="button" onClick={() => setLines(lines.map((x) => (x.variantId === l.variantId ? { ...x, priceText: String(l.listPrice) } : x)))} className="tnum text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground" title="Remettre le prix normal">
+                          <s>{formatPrice(l.listPrice)}</s>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <QtyStepper value={l.qty} max={Math.max(1, maxFor(l, lines))} onChange={(n) => setLines(n < 1 ? lines.filter((x) => x.variantId !== l.variantId) : lines.map((x) => (x.variantId === l.variantId ? { ...x, qty: n } : x)))} />
                     <button type="button" onClick={() => setLines(lines.filter((x) => x.variantId !== l.variantId))} className="flex size-10 items-center justify-center rounded text-muted-foreground hover:text-destructive" aria-label={`Retirer ${l.name}`}><Trash2 className="size-4" /></button>
@@ -294,6 +335,7 @@ export default function Caisse() {
 
           <dl className="tnum space-y-1.5 border-t border-border pt-4 text-sm">
             <div className="flex justify-between"><dt className="text-muted-foreground">Sous-total ({count})</dt><dd>{formatPrice(subtotal)}</dd></div>
+            {priceCut !== 0 && <div className="flex justify-between"><dt className="text-muted-foreground">{priceCut > 0 ? 'Prix baissés (déjà dans le total)' : 'Prix augmentés (déjà dans le total)'}</dt><dd>{priceCut > 0 ? '−' : '+'}{formatPrice(Math.abs(priceCut))}</dd></div>}
             {discount > 0 && <div className="flex justify-between"><dt className="text-muted-foreground">Remise</dt><dd>−{formatPrice(discount)}</dd></div>}
             <div className="flex items-baseline justify-between text-base font-medium"><dt>Total</dt><dd className="font-display text-3xl">{formatPrice(total)}</dd></div>
             {payment === 'especes' && lines.length > 0 && cash > 0 && (

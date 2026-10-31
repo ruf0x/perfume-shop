@@ -8,10 +8,29 @@ export interface Paginated<T> {
   meta: { current_page: number; last_page: number; per_page: number; total: number }
 }
 
+/** How a product works: `perfume` (decants, notes), `standard` (options counted in pieces) or a `pack`. */
+export type ProductKind = 'perfume' | 'standard' | 'pack'
+
+/** A family or category inside a product type: Designer, Niche (Parfums), Lunettes de soleil (Lunettes)... */
 export interface TypeRef {
   id: number
   name: string
   slug: string
+  product_type_id?: number
+}
+
+/** A product type ("rayon") of the shop: Parfums, Cosmétiques, Montres, Lunettes... Created by the owner. */
+export interface ProductTypeInfo {
+  id: number
+  name: string
+  slug: string
+  profile: 'perfume' | 'standard'
+  /** Offer a Homme / Femme filter. */
+  uses_gender: boolean
+}
+
+export interface ShopProductType extends ProductTypeInfo {
+  categories: TypeRef[]
 }
 
 export interface Brand {
@@ -23,9 +42,10 @@ export interface Brand {
 export interface ProductCard {
   id: number
   slug: string
-  kind: 'perfume' | 'pack'
+  kind: ProductKind
   name: string
   brand: string | null
+  product_type: ProductTypeInfo | null
   type: TypeRef | null
   gender: Gender | null
   inspired_by: string | null
@@ -79,6 +99,7 @@ export interface ShopSettings {
   store_pickup_enabled: boolean
   free_delivery_over: number | null
   show_unavailable: boolean
+  web_admin_enabled?: boolean
 }
 
 export interface QuoteLine {
@@ -105,10 +126,14 @@ export interface CartQuote {
 
 export interface ProductFilters {
   q?: string
+  /** Product type (rayon) slug. */
+  rayon?: string
+  /** Family / category slug, inside the product type. */
   type?: string
   brand?: string
   gender?: Gender
-  kind?: 'perfume' | 'pack'
+  /** One or several kinds, comma-separated: `perfume,cosmetic`. */
+  kind?: string
   min_price?: number
   max_price?: number
   featured?: boolean

@@ -58,6 +58,8 @@ class OrderResource extends JsonResource
                 'variant_label' => $item->variant_label,
                 'ml' => $item->ml,
                 'unit_price' => $item->unit_price,
+                /** Catalogue price when the sale was made (null on old orders); differs from unit_price for a negotiated price. */
+                'list_price' => $item->list_price,
                 'quantity' => $item->quantity,
                 'line_total' => $item->line_total,
             ])->values()),

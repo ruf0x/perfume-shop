@@ -20,6 +20,7 @@ class SettingsController extends Controller
      *
      * `show_unavailable`: show out-of-stock items greyed out (true) or hide them (false).
      * `low_stock_threshold_ml`: below this many ml a perfume counts as unavailable (default 10).
+     * `low_stock_threshold_qty`: at or below this many units a cosmetic shows as low in stock (default 3).
      */
     public function update(Request $request): JsonResponse
     {
@@ -31,6 +32,7 @@ class SettingsController extends Controller
             'socials.*' => ['nullable', 'string', 'max:255'],
             'show_unavailable' => ['sometimes', 'boolean'],
             'low_stock_threshold_ml' => ['sometimes', 'integer', 'min:0', 'max:10000'],
+            'low_stock_threshold_qty' => ['sometimes', 'integer', 'min:0', 'max:10000'],
             'store_pickup_enabled' => ['sometimes', 'boolean'],
             /** Subtotal (DZD) from which delivery is free; `null` disables it. */
             'free_delivery_over' => ['sometimes', 'nullable', 'integer', 'min:0'],
