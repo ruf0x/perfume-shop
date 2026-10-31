@@ -58,26 +58,6 @@ export function FilterPanel({ filters, productTypes, brands, onChange, idPrefix,
         <Input id={`${idPrefix}-q`} type="search" value={q} onChange={(e) => setQ(e.target.value)} onBlur={() => q.trim() !== (filters.q ?? '') && onChange({ q: q.trim() || undefined })} placeholder={t('nav.searchPlaceholder')} className="h-10 text-base" />
       </form>
 
-      <fieldset>
-        <legend className="mb-2 font-display text-lg">{selected ? (selected.profile === 'perfume' ? t('shopPage.families') : t('shopPage.categories')) : t('shopPage.type')}</legend>
-        <Choice name={`${idPrefix}-type`} checked={!filters.type} label={t('shopPage.allTypes')} onSelect={() => onChange({ type: undefined })} />
-        {groups.map((group) => (
-          <div key={group.id} className={groups.length > 1 ? 'mt-2' : undefined}>
-            {groups.length > 1 && <p className="px-2 pt-2 pb-1 text-xs tracking-wide text-muted-foreground uppercase">{group.name}</p>}
-            {group.categories.map((category) => (
-              <Choice key={category.id} name={`${idPrefix}-type`} checked={filters.type === category.slug && (!filters.rayon || filters.rayon === group.slug)} label={category.name} onSelect={() => onChange({ type: category.slug, rayon: group.slug })} />
-            ))}
-          </div>
-        ))}
-      </fieldset>
-
-      <fieldset className={showGender ? undefined : 'hidden'}>
-        <legend className="mb-2 font-display text-lg">{t('shopPage.gender')}</legend>
-        {genders.map((g) => (
-          <Choice key={g ?? 'all'} name={`${idPrefix}-gender`} checked={filters.gender === g} label={g ? t(`shopPage.genders.${g}`) : t('shopPage.anyGender')} onSelect={() => onChange({ gender: g })} />
-        ))}
-      </fieldset>
-
       {brands.length > 0 && (
         <div>
           <label htmlFor={`${idPrefix}-brand`} className="mb-2 block font-display text-lg">
@@ -98,6 +78,26 @@ export function FilterPanel({ filters, productTypes, brands, onChange, idPrefix,
           </select>
         </div>
       )}
+
+      <fieldset>
+        <legend className="mb-2 font-display text-lg">{selected ? (selected.profile === 'perfume' ? t('shopPage.families') : t('shopPage.categories')) : t('shopPage.type')}</legend>
+        <Choice name={`${idPrefix}-type`} checked={!filters.type} label={t('shopPage.allTypes')} onSelect={() => onChange({ type: undefined })} />
+        {groups.map((group) => (
+          <div key={group.id} className={groups.length > 1 ? 'mt-2' : undefined}>
+            {groups.length > 1 && <p className="px-2 pt-2 pb-1 text-xs tracking-wide text-muted-foreground uppercase">{group.name}</p>}
+            {group.categories.map((category) => (
+              <Choice key={category.id} name={`${idPrefix}-type`} checked={filters.type === category.slug && (!filters.rayon || filters.rayon === group.slug)} label={category.name} onSelect={() => onChange({ type: category.slug, rayon: group.slug })} />
+            ))}
+          </div>
+        ))}
+      </fieldset>
+
+      <fieldset className={showGender ? undefined : 'hidden'}>
+        <legend className="mb-2 font-display text-lg">{t('shopPage.gender')}</legend>
+        {genders.map((g) => (
+          <Choice key={g ?? 'all'} name={`${idPrefix}-gender`} checked={filters.gender === g} label={g ? t(`shopPage.genders.${g}`) : t('shopPage.anyGender')} onSelect={() => onChange({ gender: g })} />
+        ))}
+      </fieldset>
 
       <fieldset>
         <legend className="mb-2 font-display text-lg">{t('shopPage.price')}</legend>
