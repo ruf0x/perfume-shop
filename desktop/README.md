@@ -12,7 +12,7 @@ Ce sont les mêmes écrans que sur le site : le même code est embarqué dans l'
 Ce qu'il faut savoir :
 - La connexion est mémorisée **30 jours**, chiffrée par Windows. « Se déconnecter » l'efface. Pour changer de serveur : menu Fichier, « Changer de serveur… ».
 - L'impression des tickets de caisse et des bordereaux ouvre la fenêtre d'impression de Windows, comme sur le site.
-- L'application fonctionne **même quand l'administration du site web est désactivée** (Paramètres, Accès). C'est elle qui permet de la réactiver.
+- L'application fonctionne **même quand l'administration du site web est désactivée** (le réglage `web_admin` du fichier `backend/config/features.php`, `false` = application de bureau seulement).
 
 ## Fabriquer l'application (développeur)
 

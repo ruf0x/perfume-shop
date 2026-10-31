@@ -9,7 +9,7 @@ use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * "Administration sur le site web" switch. When the owner turns it off, the admin can only be used from the
+ * The website-admin switch (config/features.php, `web_admin`). When it is off, the admin can only be used from the
  * desktop app, which signs in with a token: every call that comes through a browser session is refused.
  *
  * Note: this closes the web admin (page, login and session calls); it is not a firewall. The token sign-in of the

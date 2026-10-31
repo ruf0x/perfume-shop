@@ -78,12 +78,10 @@ Run these from the `desktop` folder. The admin screens are the website's own, pa
 First launch asks for the shop's server address (for example `https://api.arena-cosmetique.com`); for a local test, `http://localhost:8000`.
 After changing the frontend, run `npm run web` again before `npm start` / `npm run dist`.
 
-Switch the website's admin off or on (the desktop app keeps working), from `backend`:
+Turn the website's admin off or on (the desktop app keeps working): edit one line in `backend\config\features.php`:
 
-```powershell
-php artisan admin:web off
-php artisan admin:web on
-php artisan admin:web      # shows the current state
+```php
+'web_admin' => true,   // false = desktop app only
 ```
 
-The same switch is in the admin: Paramètres > Accès.
+On a server, then run `php artisan optimize:clear && php artisan optimize` (no frontend rebuild needed).

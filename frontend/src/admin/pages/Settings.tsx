@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
-import { desktop, isDesktop, WEB_ADMIN_DISABLED } from '@/lib/api'
 import { useUser } from '../auth'
 import { ConfirmDialog, ErrorState, Loading, PageHeader, inputClass } from '../components/common'
 import { apiError, fieldErrors, formatDateTime } from '../lib'
@@ -242,67 +241,7 @@ const TABS = [
   ['delivery', 'Tarifs de livraison'],
   ['team', 'Équipe'],
   ['account', 'Mon compte'],
-  ['access', 'Accès'],
 ] as const
-
-/** Where the admin can be used: on the website, in the desktop app, or only in the app. */
-function AccessTab() {
-  const q = useAdminSettings()
-  const save = useSaveSettings()
-  const [confirmOff, setConfirmOff] = useState(false)
-
-  if (q.isError) return <ErrorState onRetry={() => q.refetch()} />
-  if (!q.data) return <Loading />
-
-  const enabled = q.data.web_admin_enabled !== false
-  const apply = (value: boolean) =>
-    save.mutate(
-      { web_admin_enabled: value },
-      {
-        onSuccess: () => {
-          setConfirmOff(false)
-          toast.success(value ? "L'administration du site web est activée." : "L'administration du site web est désactivée.")
-          // On the website the very next screen is the "use the desktop app" page.
-          if (!value && !isDesktop) window.dispatchEvent(new Event(WEB_ADMIN_DISABLED))
-        },
-        onError: (e) => toast.error(apiError(e)),
-      },
-    )
-
-  return (
-    <div className="grid max-w-3xl gap-6">
-      <Card title="Administration sur le site web" hint="Gérez la boutique depuis un navigateur, depuis l'application de bureau, ou seulement depuis l'application.">
-        <Toggle
-          label="Autoriser l'administration sur le site web"
-          hint={enabled ? "Vous (et votre équipe) pouvez ouvrir l'administration dans un navigateur, à l'adresse /admin." : "Désactivée : la page /admin du site n'affiche plus que « utilisez l'application de bureau ». Seule l'application peut gérer la boutique."}
-          checked={enabled}
-          onChange={(v) => (v || isDesktop ? apply(v) : setConfirmOff(true))}
-        />
-        {!enabled && !isDesktop && <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">Vous n'avez plus accès à l'administration depuis ce navigateur.</p>}
-      </Card>
-
-      <Card title="Application de bureau" hint="L'administration complète (commandes, caisse, stock, produits) dans une fenêtre de votre ordinateur.">
-        <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
-          <li>On s'y connecte avec le même identifiant et le même mot de passe que sur le site.</li>
-          <li>Elle fonctionne <strong className="text-foreground">même quand l'administration du site est désactivée</strong> : c'est elle qui permet de la réactiver.</li>
-          <li>La connexion est mémorisée 30 jours, chiffrée par Windows. « Se déconnecter » l'efface.</li>
-        </ul>
-        {desktop && <p className="rounded-md bg-accent p-3 text-sm text-accent-foreground">Vous utilisez l'application de bureau, version {desktop.version}, connectée à <span className="tnum">{desktop.apiUrl}</span>.</p>}
-      </Card>
-
-      <ConfirmDialog
-        open={confirmOff}
-        onOpenChange={setConfirmOff}
-        title="Désactiver l'administration sur le site ?"
-        description="Vous ne pourrez plus ouvrir l'administration dans un navigateur, ni vous ni votre équipe. Pour la réactiver, ouvrez l'application de bureau, puis Paramètres, Accès."
-        confirmLabel="Désactiver"
-        destructive
-        loading={save.isPending}
-        onConfirm={() => apply(false)}
-      />
-    </div>
-  )
-}
 
 export default function Settings() {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('shop')
@@ -319,7 +258,6 @@ export default function Settings() {
       {tab === 'delivery' && <DeliveryTab />}
       {tab === 'team' && <TeamTab />}
       {tab === 'account' && <AccountTab />}
-      {tab === 'access' && <AccessTab />}
     </>
   )
 }

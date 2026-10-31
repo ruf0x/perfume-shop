@@ -2,7 +2,6 @@
 
 use App\Enums\UserRole;
 use App\Models\User;
-use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /** The desktop app signs in with a token; the website's admin can be switched off. */
@@ -78,6 +77,7 @@ describe('desktop sign-in', function () {
     });
 });
 
+/** The switch lives in config/features.php (set in the code, per shop), not in the admin. */
 describe('administration on the website', function () {
     it('is on by default and says so to the website', function () {
         expect(settings()->webAdminEnabled())->toBeTrue();
@@ -86,7 +86,7 @@ describe('administration on the website', function () {
 
     it('refuses the website sign-in and every browser session call once it is switched off', function () {
         $user = desktopUser();
-        settings()->set('web_admin_enabled', false);
+        config(['features.web_admin' => false]);
 
         $this->getJson('/api/settings/public')->assertJsonPath('data.web_admin_enabled', false);
 
@@ -102,46 +102,38 @@ describe('administration on the website', function () {
 
     it('keeps the desktop app fully working while it is off', function () {
         desktopUser();
-        settings()->set('web_admin_enabled', false);
+        config(['features.web_admin' => false]);
 
         $token = desktopLogin($this)->assertOk()->json('token');
 
         $this->withToken($token)->getJson('/api/admin/me')->assertOk();
         $this->withToken($token)->getJson('/api/admin/orders')->assertOk();
-        $this->withToken($token)->putJson('/api/admin/settings', ['web_admin_enabled' => true])->assertOk()->assertJsonPath('data.web_admin_enabled', true);
 
-        // switched back on: the website works again
+        // switched back on in the code: the website works again
+        config(['features.web_admin' => true]);
+        $this->flushHeaders();
         $this->app['auth']->forgetGuards();
         $this->withHeaders(desktopSpa())->postJson('/api/admin/login', ['username' => 'boss', 'password' => 'secret-pass'])->assertOk();
     });
 
-    it('can be switched off by the owner from the settings', function () {
-        $this->actingAs(desktopUser())->putJson('/api/admin/settings', ['web_admin_enabled' => false])->assertOk()->assertJsonPath('data.web_admin_enabled', false);
+    it('cannot be changed from the admin: it is a switch in the code', function () {
+        $this->actingAs(desktopUser())->putJson('/api/admin/settings', ['web_admin_enabled' => false])->assertOk();
 
-        expect(settings()->webAdminEnabled())->toBeFalse();
-        $this->getJson('/api/admin/me')->assertForbidden();   // the very next browser call is refused
+        expect(settings()->webAdminEnabled())->toBeTrue();
+        $this->getJson('/api/admin/me')->assertOk();   // still open
+        expect(settings()->all())->not->toHaveKey('web_admin_enabled');
+    });
+
+    it('is on in the shipped config/features.php', function () {
+        expect(require base_path('config/features.php'))->toBe(['web_admin' => true]);
     });
 
     it('does not touch the shop itself', function () {
-        settings()->set('web_admin_enabled', false);
+        config(['features.web_admin' => false]);
 
         $this->getJson('/api/products')->assertOk();
         $this->getJson('/api/product-types')->assertOk();
         $this->getJson('/api/settings/public')->assertOk();
-    });
-
-    it('has a rescue command to switch it back on', function () {
-        settings()->set('web_admin_enabled', false);
-
-        Artisan::call('admin:web', ['state' => 'on']);
-        expect(settings()->webAdminEnabled())->toBeTrue()->and(Artisan::output())->toContain('activée');
-
-        Artisan::call('admin:web', ['state' => 'off']);
-        expect(settings()->webAdminEnabled())->toBeFalse();
-
-        expect(Artisan::call('admin:web', ['state' => 'maybe']))->not->toBe(0);
-        Artisan::call('admin:web');
-        expect(Artisan::output())->toContain('désactivée');
     });
 });
 

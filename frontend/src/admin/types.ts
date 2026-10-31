@@ -243,8 +243,6 @@ export interface ShopSettings {
   low_stock_threshold_qty: number
   store_pickup_enabled: boolean
   free_delivery_over: number | null
-  /** Whether the admin can be used from the website (off = desktop app only). */
-  web_admin_enabled: boolean
 }
 
 export interface DashboardDay {

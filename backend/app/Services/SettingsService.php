@@ -20,8 +20,6 @@ class SettingsService
             'tiktok' => 'https://www.tiktok.com/@arenacosmetiq',
         ],
         'show_unavailable' => false,
-        /** Whether the admin can be used from the website. Off = desktop app only. */
-        'web_admin_enabled' => true,
         'low_stock_threshold_ml' => 10,
         'low_stock_threshold_qty' => 3,
         'store_pickup_enabled' => true,
@@ -76,9 +74,10 @@ class SettingsService
         return (int) $this->get('low_stock_threshold_qty');
     }
 
+    /** Whether the admin can be used from the website. A code switch (config/features.php), not an admin setting. */
     public function webAdminEnabled(): bool
     {
-        return (bool) $this->get('web_admin_enabled');
+        return (bool) config('features.web_admin');
     }
 
     public function storePickupEnabled(): bool
