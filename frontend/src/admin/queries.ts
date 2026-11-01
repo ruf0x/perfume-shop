@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import { api } from '@/lib/api'
 import { clean } from './lib'
 import { prepareImage } from './imagePrep'
-import type { AdminProduct, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
+import type { AdminProduct, BottleMovement, BottleSizeRow, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
 
 /** Everything the admin shows may have changed after a write; "me" is left alone. */
 const refresh = (qc: QueryClient) => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'admin' && q.queryKey[1] !== 'me' })
@@ -270,4 +270,29 @@ export function usePosSale() {
     mutationFn: (body: PosSalePayload) => api.post<{ data: Order }>('/admin/pos/sales', body).then((r) => r.data.data),
     onSuccess: () => refresh(qc), // stock, products, orders and dashboard all changed
   })
+}
+
+// ── decant bottles ───────────────────────────────────────────────────────
+export function useBottles() {
+  return useQuery({
+    queryKey: ['admin', 'bottles'],
+    queryFn: () => api.get<{ data: BottleSizeRow[]; totals: { bottles_left: number; bought: number; invested: number; value_left: number } }>('/admin/bottles').then((r) => r.data),
+  })
+}
+
+export function useBottleMovements(ml?: number) {
+  return useQuery({
+    queryKey: ['admin', 'bottles', 'movements', ml ?? 'all'],
+    queryFn: () => api.get<{ data: BottleMovement[] }>('/admin/bottles/movements', { params: clean({ ml }) }).then((r) => r.data),
+  })
+}
+
+export function useBottleWrite() {
+  const qc = useQueryClient()
+  const done = () => refresh(qc)
+
+  return {
+    entry: useMutation({ mutationFn: (body: { ml: number; quantity: number; total_cost?: number; note?: string }) => api.post('/admin/bottles/entries', body), onSuccess: done }),
+    adjust: useMutation({ mutationFn: (body: { ml: number; quantity: number; type: 'perte' | 'ajustement'; note: string }) => api.post('/admin/bottles/adjustments', body), onSuccess: done }),
+  }
 }

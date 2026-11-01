@@ -16,6 +16,7 @@ const Orders = lazy(() => import('./pages/Orders'))
 const Products = lazy(() => import('./pages/Products'))
 const ProductForm = lazy(() => import('./pages/ProductForm'))
 const Stock = lazy(() => import('./pages/Stock'))
+const Bottles = lazy(() => import('./pages/Bottles'))
 const Taxonomy = lazy(() => import('./pages/Taxonomy'))
 const ProductTypes = lazy(() => import('./pages/ProductTypes'))
 const Customers = lazy(() => import('./pages/Customers'))
@@ -88,6 +89,7 @@ export default function AdminApp() {
           <Route path="packs/nouveau" element={owner(<ProductForm kind="pack" />)} />
           <Route path="packs/:id" element={<ProductForm kind="pack" />} />
           <Route path="stock" element={<Stock />} />
+          <Route path="bouteilles" element={owner(<Bottles />)} />
           <Route path="types-de-produits" element={owner(<ProductTypes />)} />
           <Route path="types" element={owner(<Taxonomy kind="types" />)} />
           <Route path="marques" element={owner(<Taxonomy kind="brands" />)} />

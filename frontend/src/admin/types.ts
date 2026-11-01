@@ -113,6 +113,30 @@ export interface OrderFilters {
   page?: number
 }
 
+/** The empty decant bottles of one size. */
+export interface BottleSizeRow {
+  id: number
+  ml: number
+  qty: number
+  bought: number
+  invested: number
+  unit_cost: number | null
+  value_left: number | null
+  low: boolean
+}
+
+export interface BottleMovement {
+  id: number
+  ml: number
+  type: string
+  qty_change: number
+  total_cost: number | null
+  order: string | null
+  user: string | null
+  note: string | null
+  created_at: string
+}
+
 export type StockMode = 'pool' | 'unit' | 'pack'
 
 export interface AdminVariant {

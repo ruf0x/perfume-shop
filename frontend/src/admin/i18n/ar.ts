@@ -604,6 +604,33 @@ export const AR: Record<string, string> = {
   'flacon(s)': 'قارورة',
   'article(s)': 'قطعة',
 
+  // Decant bottles
+  'Bouteilles': 'القوارير',
+  "Les petites bouteilles vides où vous versez les décants (10 ml, 20 ml…). Chaque décant vendu en utilise une. Une taille que vous n'avez pas ajoutée n'est pas comptée.": 'القوارير الصغيرة الفارغة التي تسكب فيها العطر المقسّم (10 مل، 20 مل…). كل عطر مقسّم يُباع يستهلك واحدة. الحجم الذي لم تضفه لا يُحسب.',
+  'Ajouter des bouteilles': 'إضافة قوارير',
+  'Vous avez reçu ou acheté des bouteilles vides.': 'استلمت أو اشتريت قوارير فارغة.',
+  'Investi': 'المستثمَر',
+  "Total des achats de bouteilles": 'مجموع مشتريات القوارير',
+  'Bouteilles achetées': 'القوارير المشتراة',
+  'Bouteilles restantes': 'القوارير المتبقية',
+  'Valeur restante': 'القيمة المتبقية',
+  "Au prix moyen d'achat": 'بمتوسط سعر الشراء',
+  'Restantes': 'المتبقية',
+  'Achetées': 'المشتراة',
+  'Prix moyen': 'متوسط السعر',
+  'Épuisées': 'نفدت',
+  'Taille (ml)': 'الحجم (مل)',
+  'Nombre de bouteilles': 'عدد القوارير',
+  'Indiquez la taille et la quantité.': 'أدخل الحجم والكمية.',
+  'Bouteilles ajoutées.': 'تمت إضافة القوارير.',
+  "Le nombre de bouteilles ne peut jamais passer sous zéro.": 'لا يمكن أن ينزل عدد القوارير تحت الصفر.',
+  'Perte (cassées, abîmées…)': 'خسارة (مكسورة، تالفة…)',
+  'Correction de comptage': 'تصحيح العدّ',
+  'Bouteilles cassées, erreur de comptage…': 'قوارير مكسورة، خطأ في العدّ…',
+  'Toutes les tailles': 'كل الأحجام',
+  'Correction': 'تصحيح',
+  'Aucune bouteille suivie. Ajoutez vos premières bouteilles (par exemple 100 bouteilles de 10 ml) pour commencer le suivi.': 'لا توجد قوارير مُتتبَّعة. أضف أولى قواريرك (مثلاً 100 قارورة 10 مل) لبدء التتبع.',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',
@@ -619,6 +646,8 @@ export const AR: Record<string, string> = {
 
 /** Words of a sentence whose other part is data (names, numbers). Longest match first is not needed: each is anchored. */
 export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) => string) => string]> = [
+  [/^Perte ou correction, (\d*) ml$/, (m) => `خسارة أو تصحيح، ${m[1]} مل`],
+  [/^(\d+) bouteille\(s\) de (\d+) ml$/, (m) => `${m[1]} قارورة من ${m[2]} مل`],
   [/^(En stock|Stock insuffisant) : (.+)$/, (m, tr) => `${m[1] === 'En stock' ? 'في المخزون' : 'مخزون غير كافٍ'}: ${tr(m[2])}`],
   [/^(\d+) flacon\(s\)$/, (m) => `${m[1]} قارورة`],
   [/^(\d+) article\(s\)$/, (m) => `${m[1]} قطعة`],
