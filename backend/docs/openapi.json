@@ -8555,6 +8555,22 @@
                         "type": "integer",
                         "minimum": 0
                     },
+                    "payment_method": {
+                        "type": "string",
+                        "description": "Caisse sales only: how it was really paid. Cash needs `amount_received`.",
+                        "enum": [
+                            "especes",
+                            "carte",
+                            "ccp"
+                        ]
+                    },
+                    "amount_received": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 0
+                    },
                     "admin_note": {
                         "type": [
                             "string",

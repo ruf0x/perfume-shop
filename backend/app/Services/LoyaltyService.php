@@ -60,6 +60,31 @@ class LoyaltyService
         });
     }
 
+    /**
+     * Take an order's perfumes off its customer's count (the order was attached to another customer). A gift that
+     * these perfumes had earned and that was not given yet is cancelled and the rest of its batch is counted again;
+     * a gift already handed over stays given.
+     */
+    public function forgetOrder(Order $order): void
+    {
+        $entries = LoyaltyEntry::query()->where('order_id', $order->id)->get();
+        if ($entries->isEmpty()) {
+            return;
+        }
+
+        DB::transaction(function () use ($order, $entries) {
+            $customerId = $entries->first()->customer_id;
+            $rewardIds = $entries->pluck('reward_id')->filter()->unique();
+
+            LoyaltyEntry::query()->where('order_id', $order->id)->delete();
+            foreach (LoyaltyReward::query()->whereIn('id', $rewardIds)->whereNull('given_at')->get() as $reward) {
+                LoyaltyEntry::query()->where('reward_id', $reward->id)->update(['reward_id' => null]);
+                $reward->delete();
+            }
+            $this->grant($customerId);
+        });
+    }
+
     /** Turn every full batch of N uncounted perfumes into a reward. */
     private function grant(int $customerId): void
     {

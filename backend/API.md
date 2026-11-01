@@ -100,7 +100,7 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | GET | `/orders` | ✅ | List. Filters: `status, channel, from, to, wilaya_id, customer_id, min_total, max_total, q, sort (created_at, total), dir, per_page`. Also returns `counts` per status |
 | GET | `/orders/export` | ✅ | CSV of the filtered list (UTF-8, `;` separated) |
 | GET | `/orders/{id}` | ✅ | Detail: client, items, totals, history, `allowed_actions`, `awaiting_stock`, and for a pending order `stock_check` (`possible`, `shortages`, and per item `item_id`, `ok`, `left`, `max_qty`: what the stock can cover) |
-| PUT | `/orders/{id}` | ✅ | Edit a pending/confirmed order (client info, `lines`, `delivery_fee`, `discount`, `admin_note`, `awaiting_stock`: put the order aside until stock arrives, it stays pending) |
+| PUT | `/orders/{id}` | ✅ | Edit an order. Pending / confirmed: everything (client info, `lines`, `delivery_fee`, `discount`, `delivery_mode`, `admin_note`, `awaiting_stock`: put the order aside until stock arrives, it stays pending). Any other status (shipped, delivered, sold in shop, cancelled, returned): only the client (names, phones, address, wilaya / commune), `admin_note`, and for a caisse sale `payment_method` + `amount_received`; sending `lines`, `discount` or fees is refused. Adding or changing the phone links the order to that customer (created if new), moving its counters and loyalty perfumes |
 | POST | `/orders/{id}/transition` | ✅ | Workflow action (below) |
 | POST | `/pos/sales` | ✅ | Caisse sale |
 | GET | `/products`, `/products/{id}` | ✅ | Catalogue with stock and hidden items. Filters: `q, kind (comma-separated), product_type_id, type_id, active, low_stock` |

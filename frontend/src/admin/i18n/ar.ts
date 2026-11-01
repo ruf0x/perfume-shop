@@ -642,6 +642,12 @@ export const AR: Record<string, string> = {
   'Dans la valeur conseillée.': 'ضمن القيمة المقترحة.',
   "Le flacon sort du stock et son prix d'achat compte dans le bénéfice.": 'تخرج القارورة من المخزون ويُحسب سعر شرائها ضمن الربح.',
 
+  // Editing finished orders
+  'Informations modifiées.': 'تم تعديل المعلومات.',
+  'Les articles, la remise et la livraison ne se modifient plus une fois la commande expédiée, vendue ou annulée. Vous pouvez corriger le client.': 'لا تُعدَّل المنتجات والتخفيض والتوصيل بعد شحن الطلب أو بيعه أو إلغائه. يمكنك تصحيح الزبون.',
+  'Les articles, la remise et la livraison ne se modifient plus une fois la commande expédiée, vendue ou annulée. Vous pouvez corriger le client et le mode de paiement.': 'لا تُعدَّل المنتجات والتخفيض والتوصيل بعد شحن الطلب أو بيعه أو إلغائه. يمكنك تصحيح الزبون وطريقة الدفع.',
+  "Ajoutez son téléphone pour l'enregistrer comme client (ses parfums comptent alors pour la fidélité).": 'أضف هاتفه لتسجيله كزبون (فتُحتسب عطوره عندئذٍ في برنامج الولاء).',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',
@@ -721,6 +727,7 @@ export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) =
   [/^Stock insuffisant pour (.+)\.$/, (m) => `المخزون غير كافٍ لـ ${m[1]}.`],
   [/^(\d+) ventes? terminées?$/, (m) => `${m[1]} مبيعات منجزة`],
   [/^(\d+) produit\(s\) l'utilisent : la suppression sera refusée\.( Masquez-la plutôt\.)?$/, (m) => `${m[1]} منتج يستعملها: سيُرفض الحذف.${m[2] ? ' أخفِها بدلاً من ذلك.' : ''}`],
+  [/^Passée le (.+), par (.+)$/, (m) => `بتاريخ ${m[1]}، بواسطة ${m[2]}`],
   [/^Passée le (.+)$/, (m) => `بتاريخ ${m[1]}`],
   [/^Semaine du (.+) au (.+)$/, (m) => `أسبوع من ${m[1]} إلى ${m[2]}`],
   [/^Ventes par période : (.+) au total\. Utilisez « Voir en tableau » pour le détail\.$/, (m) => `المبيعات حسب الفترة: ${m[1]} في المجموع. استعمل «عرض كجدول» للتفاصيل.`],

@@ -188,7 +188,9 @@ it('refuses to edit finished orders and bad discounts or communes', function () 
     admin()->putJson("/api/admin/orders/{$order->id}", ['phone' => '123'])->assertUnprocessable();
 
     admin()->postJson("/api/admin/orders/{$order->id}/transition", ['action' => 'cancel'])->assertOk();
-    admin()->putJson("/api/admin/orders/{$order->id}", ['admin_note' => 'x'])->assertUnprocessable()->assertJsonPath('message', 'Cette commande ne peut plus être modifiée.');
+    // A cancelled order keeps its items, discount and delivery locked; the client and the notes can still be corrected.
+    admin()->putJson("/api/admin/orders/{$order->id}", ['discount' => 10])->assertUnprocessable();
+    admin()->putJson("/api/admin/orders/{$order->id}", ['admin_note' => 'x'])->assertOk()->assertJsonPath('data.admin_note', 'x');
 });
 
 it('exports the filtered orders as a CSV that opens in Excel', function () {

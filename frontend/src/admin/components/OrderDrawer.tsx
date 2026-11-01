@@ -58,7 +58,6 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
   const [gift, setGift] = useState(false)
 
   const c = order.customer
-  const editable = order.status === 'en_attente' || order.status === 'confirmee'
   const name = [c.first_name, c.last_name].filter(Boolean).join(' ')
   const place = [order.address, order.commune?.name, order.wilaya?.name].filter(Boolean).join(', ')
 
@@ -172,8 +171,8 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
 
         <section aria-label="Note interne">
           <h3 className="mb-2 font-display text-lg">Note interne</h3>
-          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} disabled={!editable} placeholder="Visible uniquement par l'équipe" className="text-sm" />
-          {editable && note !== (order.admin_note ?? '') && (
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Visible uniquement par l'équipe" className="text-sm" />
+          {note !== (order.admin_note ?? '') && (
             <Button className="mt-2 h-9" disabled={saveNote.isPending} onClick={() => saveNote.mutate({ id: order.id, admin_note: note || null }, { onSuccess: () => toast.success('Note enregistrée.'), onError: (e) => toast.error(apiError(e)) })}>
               Enregistrer la note
             </Button>
@@ -226,7 +225,7 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
           </div>
         )}
         <div className="flex gap-2">
-          {editable && <Button variant="outline" className="h-10 flex-1" onClick={onEdit}><Pencil className="size-4" aria-hidden />Modifier</Button>}
+          <Button variant="outline" className="h-10 flex-1" onClick={onEdit}><Pencil className="size-4" aria-hidden />Modifier</Button>
           <Button variant="outline" className="h-10 flex-1" onClick={() => print(order, settings?.shop_name ?? 'Boutique')}><Printer className="size-4" aria-hidden />Imprimer</Button>
         </div>
       </div>
