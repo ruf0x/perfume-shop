@@ -1611,6 +1611,44 @@
                                                     "type": "number",
                                                     "description": "Cancelled share of the online orders created in the range, in percent."
                                                 },
+                                                "profit": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "amount": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "cost": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "revenue": {
+                                                            "type": "integer",
+                                                            "const": 0
+                                                        },
+                                                        "percent": {
+                                                            "type": [
+                                                                "number",
+                                                                "null"
+                                                            ],
+                                                            "description": "Profit as a share of the purchase cost (a 20 % gain means selling at cost + 20 %)."
+                                                        },
+                                                        "orders_counted": {
+                                                            "type": "integer"
+                                                        },
+                                                        "orders_without_cost": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "amount",
+                                                        "cost",
+                                                        "revenue",
+                                                        "percent",
+                                                        "orders_counted",
+                                                        "orders_without_cost"
+                                                    ]
+                                                },
                                                 "sales_by_day": {
                                                     "type": "array",
                                                     "items": {
@@ -1657,13 +1695,20 @@
                                                             },
                                                             "revenue": {
                                                                 "type": "integer"
+                                                            },
+                                                            "profit": {
+                                                                "type": [
+                                                                    "integer",
+                                                                    "null"
+                                                                ]
                                                             }
                                                         },
                                                         "required": [
                                                             "product",
                                                             "variant",
                                                             "quantity",
-                                                            "revenue"
+                                                            "revenue",
+                                                            "profit"
                                                         ]
                                                     }
                                                 },
@@ -1709,6 +1754,7 @@
                                                 "pending_count",
                                                 "in_delivery_count",
                                                 "cancel_rate",
+                                                "profit",
                                                 "sales_by_day",
                                                 "top_products",
                                                 "low_stock"
@@ -3657,10 +3703,6 @@
                                     },
                                     "store_pickup_enabled": {
                                         "type": "boolean"
-                                    },
-                                    "web_admin_enabled": {
-                                        "type": "boolean",
-                                        "description": "`false` closes the admin on the website: only the desktop app can be used (turn it back on from the app, or with `php artisan admin:web on`)."
                                     },
                                     "free_delivery_over": {
                                         "type": [
@@ -5780,6 +5822,13 @@
                                         "null"
                                     ]
                                 },
+                                "cost_price": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "What the shop paid for one unit (null = not entered); for a pack, the sum of its components. Admin only."
+                                },
                                 "stock_mode": {
                                     "$ref": "#/components/schemas/StockMode"
                                 },
@@ -5816,6 +5865,12 @@
                                             "label": {
                                                 "type": "string"
                                             },
+                                            "cost_price": {
+                                                "type": [
+                                                    "integer",
+                                                    "null"
+                                                ]
+                                            },
                                             "quantity": {
                                                 "type": "integer"
                                             }
@@ -5824,6 +5879,7 @@
                                             "variant_id",
                                             "product",
                                             "label",
+                                            "cost_price",
                                             "quantity"
                                         ]
                                     }
@@ -5835,6 +5891,7 @@
                                 "ml",
                                 "price",
                                 "compare_at_price",
+                                "cost_price",
                                 "stock_mode",
                                 "stock_qty",
                                 "sku",
@@ -6307,6 +6364,14 @@
                             "null"
                         ]
                     },
+                    "awaiting_stock": {
+                        "type": "boolean",
+                        "description": "The owner put this order aside until stock arrives."
+                    },
+                    "stock_check": {
+                        "type": "string",
+                        "description": "Pending orders only, when the items are loaded: can the stock cover it, and what is left per line."
+                    },
                     "subtotal": {
                         "type": "integer"
                     },
@@ -6530,6 +6595,7 @@
                     "delivery_mode",
                     "customer_note",
                     "admin_note",
+                    "awaiting_stock",
                     "subtotal",
                     "delivery_fee",
                     "discount",
@@ -7285,6 +7351,13 @@
                                     ],
                                     "minimum": 0
                                 },
+                                "cost_price": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0
+                                },
                                 "stock_mode": {
                                     "type": "string",
                                     "description": "`pool` = poured from the product's ml stock, `unit` = an item counted on its own (sealed bottle, watch, shade...).",
@@ -7602,6 +7675,10 @@
                             "null"
                         ],
                         "maxLength": 2000
+                    },
+                    "awaiting_stock": {
+                        "type": "boolean",
+                        "description": "Put the order aside until stock arrives (it stays pending)."
                     },
                     "lines": {
                         "type": "array",

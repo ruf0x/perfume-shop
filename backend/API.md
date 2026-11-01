@@ -65,11 +65,11 @@ The request must carry an `Origin` (or `Referer`) from `SANCTUM_STATEFUL_DOMAINS
 | GET | `/product-types` | The shop's product types (Parfums, Cosmétiques, Montres, Lunettes…) with their families / categories. `profile` is `perfume` or `standard`; `uses_gender` says whether to offer a Homme / Femme filter |
 | GET | `/types`, `/brands` | Active families / categories of every type / brands (`/brands?rayon=montres` = only those sold in that type) |
 | GET | `/products` | Catalogue. `q, rayon (product type slug), type (family / category slug), brand, gender, kind (one or several of perfume, standard, pack, comma-separated), min_price, max_price, featured, sort (newest, price_asc, price_desc, name), per_page, page` |
-| GET | `/products/{slug}` | Product page: notes, photos, variants with `available` and `max_qty`, pack `contains` |
+| GET | `/products/{slug}` | Product page: notes, photos, variants with `available` and `max_qty`, pack `contains`. With `features.backorder` `max_qty` is a flat cap (50) for any listed item, never the stock; otherwise it is the stock |
 | GET | `/wilayas` | Wilayas we deliver to, with `home_fee` and `desk_fee` |
 | GET | `/wilayas/{id}/communes` | Communes of a wilaya |
-| POST | `/cart/validate` | Re-price a cart; reports removed lines, availability, delivery fee and total |
-| POST | `/orders` | Place an order (cash on delivery). Returns the `reference` |
+| POST | `/cart/validate` | Re-price a cart; reports removed lines, availability (`available`, `max_qty`: the shop's limit, see above), delivery fee and total |
+| POST | `/orders` | Place an order (cash on delivery). Returns the `reference`. With `features.backorder` the quantity may exceed the stock (cap 50 per line); an item that is no longer listed is refused without revealing the stock |
 
 The catalogue hides out-of-stock items unless the owner enabled `show_unavailable`; then they come back with `available: false`. Stock quantities are never exposed publicly.
 
@@ -99,15 +99,15 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | PUT | `/me/password` | ✅ | `current_password`, `password`, `password_confirmation` |
 | GET | `/orders` | ✅ | List. Filters: `status, channel, from, to, wilaya_id, customer_id, min_total, max_total, q, sort (created_at, total), dir, per_page`. Also returns `counts` per status |
 | GET | `/orders/export` | ✅ | CSV of the filtered list (UTF-8, `;` separated) |
-| GET | `/orders/{id}` | ✅ | Detail: client, items, totals, history, `allowed_actions` |
-| PUT | `/orders/{id}` | ✅ | Edit a pending/confirmed order (client info, `lines`, `delivery_fee`, `discount`, `admin_note`) |
+| GET | `/orders/{id}` | ✅ | Detail: client, items, totals, history, `allowed_actions`, `awaiting_stock`, and for a pending order `stock_check` (`possible`, `shortages`, and per item `item_id`, `ok`, `left`, `max_qty`: what the stock can cover) |
+| PUT | `/orders/{id}` | ✅ | Edit a pending/confirmed order (client info, `lines`, `delivery_fee`, `discount`, `admin_note`, `awaiting_stock`: put the order aside until stock arrives, it stays pending) |
 | POST | `/orders/{id}/transition` | ✅ | Workflow action (below) |
 | POST | `/pos/sales` | ✅ | Caisse sale |
 | GET | `/products`, `/products/{id}` | ✅ | Catalogue with stock and hidden items. Filters: `q, kind (comma-separated), product_type_id, type_id, active, low_stock` |
 | GET | `/types`, `/brands` | ✅ | With product counts |
 | GET | `/stock`, `/stock/movements` | ✅ | Overview (`q, status ok/low/out`) and ledger (`product_id, variant_id, order_id, type, from, to`) |
-| GET | `/dashboard` | | KPIs for `from`/`to` (default today): revenue split online / caisse, order counts, cancel rate, `sales_by_day` (each day has `revenue_online` and `revenue_pos`), `top_products`, `low_stock` |
-| POST/PUT/DELETE | `/products`, `/products/{id}` | | Create / edit / hide products of any type, and packs |
+| GET | `/dashboard` | | KPIs for `from`/`to` (default today): revenue split online / caisse, order counts, cancel rate, `sales_by_day` (each day has `revenue_online` and `revenue_pos`), `top_products` (every size sold, best sellers first, each with `profit`, null when a purchase price is missing), `profit` (`amount`, `cost`, `revenue`, `percent` of the purchase cost, `orders_counted`, `orders_without_cost`; only orders whose items all have a cost are counted), `low_stock` |
+| POST/PUT/DELETE | `/products`, `/products/{id}` | | Create / edit / hide products of any type, and packs. Each variant takes an optional `cost_price` (what the shop paid for one unit, admin only; a pack's `cost_price` in the response is the sum of its components) |
 | GET/POST/PUT/DELETE | `/product-types`, `/product-types/{id}` | | The shop's product types. A type with products cannot be deleted (hide it); an empty one is deleted with its categories |
 | POST | `/products/{id}/images` | | Upload a photo (`image`, multipart) |
 | PUT | `/products/{id}/images/order` | | `{ "ids": [..] }`; the first becomes the main photo |
