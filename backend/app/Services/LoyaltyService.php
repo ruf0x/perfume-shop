@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\LoyaltyEntry;
 use App\Models\LoyaltyReward;
 use App\Models\Order;
+use App\Models\PackItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -43,21 +44,54 @@ class LoyaltyService
             return;
         }
 
-        $order->loadMissing('items');
-        $perfumeIds = Product::withTrashed()->whereIn('id', $order->items->pluck('product_id')->filter())->where('kind', ProductKind::Perfume)->pluck('id')->all();
-
-        DB::transaction(function () use ($order, $perfumeIds) {
-            foreach ($order->items as $item) {
-                // A zero-price line is a gift: it never counts.
-                if (! in_array($item->product_id, $perfumeIds, true) || $item->unit_price <= 0) {
-                    continue;
-                }
-                for ($i = 0; $i < $item->quantity; $i++) {
-                    LoyaltyEntry::create(['customer_id' => $order->customer_id, 'order_id' => $order->id, 'product_name' => $item->product_name, 'unit_price' => $item->unit_price]);
-                }
+        DB::transaction(function () use ($order) {
+            foreach ($this->perfumes($order) as $perfume) {
+                LoyaltyEntry::create(['customer_id' => $order->customer_id, 'order_id' => $order->id, 'product_name' => $perfume['name'], 'unit_price' => $perfume['price']]);
             }
             $this->grant($order->customer_id);
         });
+    }
+
+    /**
+     * Every perfume an order holds, one entry per unit at the price it was sold for. A perfume inside a pack counts
+     * too: it takes its share of the pack's price (in proportion to the catalogue prices of what the pack holds).
+     * Zero-price lines (gifts) and everything that is not a perfume are left out.
+     *
+     * @return list<array{name: string, price: int}>
+     */
+    private function perfumes(Order $order): array
+    {
+        $order->loadMissing('items');
+        $products = Product::withTrashed()->whereIn('id', $order->items->pluck('product_id')->filter())->get()->keyBy('id');
+        $out = [];
+
+        foreach ($order->items as $item) {
+            if ($item->unit_price <= 0 || ! ($product = $products->get($item->product_id))) {
+                continue;
+            }
+
+            if ($product->kind === ProductKind::Perfume) {
+                for ($i = 0; $i < $item->quantity; $i++) {
+                    $out[] = ['name' => $item->product_name, 'price' => $item->unit_price];
+                }
+            } elseif ($product->kind === ProductKind::Pack && $item->variant_id) {
+                $parts = PackItem::query()->where('pack_variant_id', $item->variant_id)->with('component.product')->get();
+                $listTotal = (int) $parts->sum(fn (PackItem $p) => $p->component->price * $p->quantity);
+                if ($listTotal <= 0) {
+                    continue;
+                }
+                foreach ($parts as $part) {
+                    if ($part->component->product?->kind !== ProductKind::Perfume) {
+                        continue;
+                    }
+                    for ($i = 0; $i < $part->quantity * $item->quantity; $i++) {
+                        $out[] = ['name' => $part->component->product->name, 'price' => (int) round($part->component->price * $item->unit_price / $listTotal)];
+                    }
+                }
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -129,13 +163,10 @@ class LoyaltyService
             ->map(fn (LoyaltyReward $r) => ['id' => $r->id, 'average_price' => $r->average_price, 'gift_name' => $r->gift_name, 'gift_value' => $r->gift_value, 'given_at' => $r->given_at])->all();
     }
 
-    /** How many perfumes (at a real price) an order holds: what it would add to the count once completed. */
+    /** How many perfumes (at a real price, packs included) an order holds: what it would add to the count once completed. */
     public function perfumeUnits(Order $order): int
     {
-        $order->loadMissing('items');
-        $ids = Product::withTrashed()->whereIn('id', $order->items->pluck('product_id')->filter())->where('kind', ProductKind::Perfume)->pluck('id')->all();
-
-        return (int) $order->items->filter(fn ($i) => in_array($i->product_id, $ids, true) && $i->unit_price > 0)->sum('quantity');
+        return count($this->perfumes($order));
     }
 
     /**

@@ -135,3 +135,15 @@ it('starts a new count after each gift: 6 earns one, the gift does not count, 3 
     $this->postJson("/api/admin/customers/{$customer->id}/loyalty/redeem", ['variant_id' => $this->flacon->id])->assertOk();
     expect(app(LoyaltyService::class)->progress($customer)['given'])->toBe(2)->and(LoyaltyEntry::count())->toBe(12);
 });
+
+it('counts the perfumes inside a pack, each at its share of the pack price, and ignores the other items', function () {
+    $watch = makeCosmetic('Montre test', ['Noir' => [7000, 5]]);
+    $pack = makePack([[$this->v10, 2], [variantOf($watch, 'Noir'), 1]], 6000);        // 2 x 1000 (perfume) + 7000 (watch) = 9000 list, sold 6000
+
+    loyaltySale($this, [[$pack, 1]]);
+
+    $entries = LoyaltyEntry::orderBy('id')->get();
+    expect($entries)->toHaveCount(2)
+        ->and($entries->pluck('unit_price')->all())->toBe([667, 667])                  // 1000 x 6000 / 9000
+        ->and(loyaltyOf()['counted'])->toBe(2);
+});
