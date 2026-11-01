@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import { api } from '@/lib/api'
 import { clean } from './lib'
 import { prepareImage } from './imagePrep'
-import type { AdminProduct, BottleMovement, BottleSizeRow, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
+import type { AdminProduct, Loyalty, BottleMovement, BottleSizeRow, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
 
 /** Everything the admin shows may have changed after a write; "me" is left alone. */
 const refresh = (qc: QueryClient) => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'admin' && q.queryKey[1] !== 'me' })
@@ -295,4 +295,25 @@ export function useBottleWrite() {
     entry: useMutation({ mutationFn: (body: { ml: number; quantity: number; total_cost?: number; note?: string }) => api.post('/admin/bottles/entries', body), onSuccess: done }),
     adjust: useMutation({ mutationFn: (body: { ml: number; quantity: number; type: 'perte' | 'ajustement'; note: string }) => api.post('/admin/bottles/adjustments', body), onSuccess: done }),
   }
+}
+
+// ── loyalty ──────────────────────────────────────────────────────────────
+/** The customer behind a phone number (caisse): null while the number is too short or unknown. */
+export function useLoyaltyLookup(phone: string) {
+  const digits = phone.replace(/\D/g, '')
+
+  return useQuery({
+    queryKey: ['admin', 'loyalty', digits],
+    enabled: digits.length >= 9,
+    queryFn: () => api.get<{ data: { customer: { id: number; first_name: string; last_name: string } | null; loyalty: Loyalty | null } }>('/admin/loyalty', { params: { phone } }).then((r) => r.data.data),
+  })
+}
+
+export function useRedeemGift() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ customerId, variantId }: { customerId: number; variantId: number }) => api.post(`/admin/customers/${customerId}/loyalty/redeem`, { variant_id: variantId }),
+    onSuccess: () => refresh(qc),
+  })
 }

@@ -11,7 +11,9 @@ import { useSettings } from '@/shop/queries'
 import { EmptyState, Loading, PageHeader, Pagination, inputClass } from '../components/common'
 import { apiError } from '../lib'
 import { printTicket } from '../printHelper'
-import { useAdminProducts, usePosSale, useProductTypes, useTaxa } from '../queries'
+import { useAdminProducts, useLoyaltyLookup, usePosSale, useProductTypes, useTaxa } from '../queries'
+import { useIsOwner } from '../auth'
+import { GiftDialog, LoyaltyNote } from '../components/Loyalty'
 import type { AdminProduct, AdminVariant, Order, StockMode } from '../types'
 import { useDebounced } from '../useDebounced'
 
@@ -138,6 +140,9 @@ export default function Caisse() {
   const [received, setReceived] = useState('')
   const [client, setClient] = useState({ first_name: '', last_name: '', phone: '' })
   const [done, setDone] = useState<Order | null>(null)
+  const lookup = useLoyaltyLookup(useDebounced(client.phone, 500))
+  const owner = useIsOwner()
+  const [gift, setGift] = useState(false)
 
   const subtotal = lines.reduce((s, l) => s + priceOf(l) * l.qty, 0)
   // How much the cashier gave away by changing prices (shown, so it is never a surprise).
@@ -330,6 +335,14 @@ export default function Caisse() {
                 <input aria-label="Nom" placeholder="Nom" className={inputClass} value={client.last_name} onChange={(e) => setClient({ ...client, last_name: e.target.value })} />
                 <input aria-label="Téléphone" placeholder="Téléphone" inputMode="tel" className={`${inputClass} col-span-2`} value={client.phone} onChange={(e) => setClient({ ...client, phone: e.target.value })} />
               </div>
+              {lookup.data?.customer && lookup.data.loyalty && (
+                <div className="mt-3 rounded-md bg-secondary/60 p-3">
+                  <p className="mb-1 font-medium">{`${lookup.data.customer.first_name} ${lookup.data.customer.last_name}`}</p>
+                  <LoyaltyNote loyalty={lookup.data.loyalty} />
+                  {owner && lookup.data.loyalty.pending.length > 0 && <Button variant="outline" className="mt-2 h-9" onClick={() => setGift(true)}>Offrir le cadeau</Button>}
+                </div>
+              )}
+              {gift && lookup.data?.customer && lookup.data.loyalty && <GiftDialog customerId={lookup.data.customer.id} name={`${lookup.data.customer.first_name} ${lookup.data.customer.last_name}`} loyalty={lookup.data.loyalty} onClose={() => setGift(false)} />}
             </details>
           </fieldset>
 

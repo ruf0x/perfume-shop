@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
+import { GiftDialog, LoyaltyNote } from '../components/Loyalty'
 import { Textarea } from '@/components/ui/textarea'
 import { formatPhone, phoneHref } from '@/shop/format'
 import { EmptyState, ErrorState, Loading, PageHeader, Pagination, inputClass } from '../components/common'
@@ -19,6 +20,7 @@ export default function Customers() {
   const [sort, setSort] = useState<'created_at' | 'orders_count'>('created_at')
   const [page, setPage] = useState(1)
   const [noteFor, setNoteFor] = useState<Customer | null>(null)
+  const [giftFor, setGiftFor] = useState<Customer | null>(null)
   const [note, setNote] = useState('')
   const update = useUpdateCustomer()
   useEffect(() => setPage(1), [q, blacklisted, sort])
@@ -53,6 +55,12 @@ export default function Customers() {
                   <Link to={`/admin/commandes?customer_id=${c.id}`} className="font-medium underline underline-offset-4">{c.orders_count} commande{c.orders_count > 1 ? 's' : ''}</Link>
                   <span className="block text-muted-foreground">{c.delivered_count} livrée(s), {c.cancelled_count} annulée(s), {c.returned_count} retour(s)</span>
                 </p>
+                {c.loyalty && (
+                  <div className="md:w-1/4">
+                    <LoyaltyNote loyalty={c.loyalty} />
+                    {c.loyalty.pending.length > 0 && <button type="button" className="mt-1 text-sm font-medium underline underline-offset-4" onClick={() => setGiftFor(c)}>Offrir le cadeau</button>}
+                  </div>
+                )}
                 {c.note && <p className="max-w-[16rem] truncate text-sm text-muted-foreground" title={c.note}>{c.note}</p>}
                 <div className="flex items-center gap-4">
                   <button type="button" className="text-sm underline underline-offset-4" onClick={() => { setNoteFor(c); setNote(c.note ?? '') }}>Note</button>
@@ -64,6 +72,8 @@ export default function Customers() {
           <Pagination meta={query.data?.meta} onPage={setPage} />
         </>
       )}
+
+      {giftFor?.loyalty && <GiftDialog customerId={giftFor.id} name={`${giftFor.first_name} ${giftFor.last_name}`} loyalty={giftFor.loyalty} onClose={() => setGiftFor(null)} />}
 
       <Dialog open={!!noteFor} onOpenChange={(o) => !o && setNoteFor(null)}>
         <DialogContent className="sm:max-w-md">

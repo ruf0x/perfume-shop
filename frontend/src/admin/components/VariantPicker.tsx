@@ -13,14 +13,17 @@ interface VariantPickerProps {
   onPick: (variant: AdminVariant, product: AdminProduct) => void
   /** Packs can be sold at the caisse, but a pack cannot contain a pack. */
   includePacks?: boolean
+  /** Only these products / sizes are offered (e.g. sealed perfume flacons for a gift). */
+  kind?: string
+  variantFilter?: (variant: AdminVariant, product: AdminProduct) => boolean
   title?: string
 }
 
 /** Search a perfume or a cosmetic and choose one of its sizes / options. */
-export function VariantPicker({ open, onOpenChange, onPick, includePacks, title = 'Ajouter un article' }: VariantPickerProps) {
+export function VariantPicker({ open, onOpenChange, onPick, includePacks, kind, variantFilter, title = 'Ajouter un article' }: VariantPickerProps) {
   const [term, setTerm] = useState('')
   const q = useDebounced(term)
-  const { data, isPending } = useAdminProducts({ q: q || undefined, kind: includePacks ? undefined : 'perfume,standard', active: true }, 8)
+  const { data, isPending } = useAdminProducts({ q: q || undefined, kind: kind ?? (includePacks ? undefined : 'perfume,standard'), active: true }, 8)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,7 +52,7 @@ export function VariantPicker({ open, onOpenChange, onPick, includePacks, title 
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {p.variants
-                    ?.filter((v) => v.is_active)
+                    ?.filter((v) => v.is_active && (!variantFilter || variantFilter(v, p)))
                     .map((v) => (
                       <button
                         key={v.id}

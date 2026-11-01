@@ -631,6 +631,17 @@ export const AR: Record<string, string> = {
   'Correction': 'تصحيح',
   'Aucune bouteille suivie. Ajoutez vos premières bouteilles (par exemple 100 bouteilles de 10 ml) pour commencer le suivi.': 'لا توجد قوارير مُتتبَّعة. أضف أولى قواريرك (مثلاً 100 قارورة 10 مل) لبدء التتبع.',
 
+  // Loyalty
+  'Cadeau à offrir': 'هدية للتسليم',
+  'Offrir le cadeau': 'تسليم الهدية',
+  'Offrir ce flacon': 'تقديم هذه القارورة',
+  'Choisir le flacon à offrir': 'اختيار القارورة المُهداة',
+  'Choisissez le flacon à offrir.': 'اختر القارورة التي ستُهدى.',
+  'Flacon à offrir': 'القارورة المُهداة',
+  'Cadeau enregistré.': 'تم تسجيل الهدية.',
+  'Dans la valeur conseillée.': 'ضمن القيمة المقترحة.',
+  "Le flacon sort du stock et son prix d'achat compte dans le bénéfice.": 'تخرج القارورة من المخزون ويُحسب سعر شرائها ضمن الربح.',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',
@@ -642,10 +653,19 @@ export const AR: Record<string, string> = {
   'photo(s)': 'صورة',
   'ajoutez du stock': 'أضف مخزوناً',
   'barré': 'مشطوب',
+  's': '',
 }
 
 /** Words of a sentence whose other part is data (names, numbers). Longest match first is not needed: each is anchored. */
 export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) => string) => string]> = [
+  [/^Fidélité : (\d+) \/ (\d+) parfums achetés$/, (m) => `الولاء: ${m[1]} / ${m[2]} عطور مشتراة`],
+  [/^(\d+) cadeaux à offrir$/, (m) => `${m[1]} هدايا للتسليم`],
+  [/^Valeur conseillée du cadeau : (.+) \(moyenne des (\d+) parfums\)\.$/, (m, tr) => `القيمة المقترحة للهدية: ${tr(m[1])} (متوسط ${m[2]} عطور).`],
+  [/^Avec cette commande, ce client atteint (\d+) parfums : un cadeau l'attend\.$/, (m) => `بهذا الطلب يبلغ هذا الزبون ${m[1]} عطور: هدية في انتظاره.`],
+  [/^(\d+) cadeaux? déjà offerts?\.$/, (m) => `${m[1]} هدية سُلّمت سابقاً.`],
+  [/^Offrir le cadeau à (.+)$/, (m) => `تسليم الهدية إلى ${m[1]}`],
+  [/^Il a acheté (\d+) parfums\. Valeur conseillée : (.+) \(la moyenne de leurs prix\)\. Vous pouvez offrir un flacon plus cher\.$/, (m, tr) => `اشترى ${m[1]} عطور. القيمة المقترحة: ${tr(m[2])} (متوسط أسعارها). يمكنك إهداء قارورة أغلى.`],
+  [/^(.+) au-dessus de la valeur conseillée\.$/, (m, tr) => `${tr(m[1])} فوق القيمة المقترحة.`],
   [/^Perte ou correction, (\d*) ml$/, (m) => `خسارة أو تصحيح، ${m[1]} مل`],
   [/^(\d+) bouteille\(s\) de (\d+) ml$/, (m) => `${m[1]} قارورة من ${m[2]} مل`],
   [/^(En stock|Stock insuffisant) : (.+)$/, (m, tr) => `${m[1] === 'En stock' ? 'في المخزون' : 'مخزون غير كافٍ'}: ${tr(m[2])}`],

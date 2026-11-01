@@ -12,6 +12,8 @@ import { print } from '../printHelper'
 import { useOrder, useOrderAction, useUpdateOrder, type TransitionPayload } from '../queries'
 import type { Order, OrderAction } from '../types'
 import { AwaitingBadge, ConfirmDialog, ErrorState, Loading, STATUS_LABEL, StatusBadge, inputClass } from './common'
+import { useIsOwner } from '../auth'
+import { GiftDialog, LoyaltyNote } from './Loyalty'
 import { OrderEdit } from './OrderEdit'
 
 const MODE = { domicile: 'À domicile', stop_desk: 'Point relais', boutique: 'Retrait en boutique' } as const
@@ -52,6 +54,8 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
   const [tracking, setTracking] = useState('')
   const [restock, setRestock] = useState(false)
   const [note, setNote] = useState(order.admin_note ?? '')
+  const owner = useIsOwner()
+  const [gift, setGift] = useState(false)
 
   const c = order.customer
   const editable = order.status === 'en_attente' || order.status === 'confirmee'
@@ -101,6 +105,13 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
             {order.tracking_number && <Row label="Suivi">{order.delivery_company} {order.tracking_number}</Row>}
             {order.cancel_reason && <Row label="Motif d'annulation">{order.cancel_reason}</Row>}
           </dl>
+          {c.loyalty && c.id && (
+            <div className="mt-3 rounded-md border border-border bg-secondary/60 p-3">
+              <LoyaltyNote loyalty={c.loyalty} adds={c.loyalty.adds} />
+              {owner && c.loyalty.pending.length > 0 && <Button variant="outline" className="mt-2 h-9" onClick={() => setGift(true)}>Offrir le cadeau</Button>}
+            </div>
+          )}
+          {gift && c.loyalty && c.id && <GiftDialog customerId={c.id} name={name || 'ce client'} loyalty={c.loyalty} onClose={() => setGift(false)} />}
         </section>
 
         <section aria-label="Articles">

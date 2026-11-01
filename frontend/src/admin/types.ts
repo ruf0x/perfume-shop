@@ -45,7 +45,7 @@ export interface Order {
   status: OrderStatus
   status_label: string
   allowed_actions: OrderAction[]
-  customer: { id: number | null; first_name: string | null; last_name: string | null; phone: string | null; phone2: string | null }
+  customer: { id: number | null; first_name: string | null; last_name: string | null; phone: string | null; phone2: string | null; /** `adds` = perfumes this order would add to the count once completed. */ loyalty?: (Loyalty & { adds: number }) | null }
   wilaya?: { id: number; name: string } | null
   commune?: { id: number; name: string } | null
   address: string | null
@@ -240,6 +240,17 @@ export interface Movement {
   created_at: string
 }
 
+/** Where a customer stands in the loyalty programme (every N perfumes bought, a gift flacon). */
+export interface Loyalty {
+  every: number
+  /** Perfumes counted toward the next gift (0 to every - 1). */
+  counted: number
+  total: number
+  /** Gifts earned and not given yet; `average_price` is the value the gift should be about. */
+  pending: { id: number; average_price: number; earned_at: string }[]
+  given: number
+}
+
 export interface Customer {
   id: number
   phone: string
@@ -253,6 +264,7 @@ export interface Customer {
   returned_count: number
   is_blacklisted: boolean
   note: string | null
+  loyalty?: Loyalty | null
   created_at: string
 }
 
