@@ -8,7 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Public view of a variant: price and availability only. Stock quantities are never exposed.
+ * Public view of a variant: price and availability only. Stock quantities are never exposed (with backorder
+ * `max_qty` is a flat cap, not the stock).
  *
  * @mixin ProductVariant
  */
@@ -17,7 +18,7 @@ class ProductVariantResource extends JsonResource
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
-        $maxQty = app(StockService::class)->maxQty($this->resource);
+        $maxQty = app(StockService::class)->shopMaxQty($this->resource);
 
         return [
             'id' => $this->id,

@@ -14,6 +14,12 @@
 |           and the server refuses the website's sign-in and every browser-session call.
 |           The shop itself (catalogue, cart, orders) is not affected.
 |
+| backorder
+|   true  = the customer never sees the stock. A product is either listed or not (the low-stock thresholds of the
+|           settings decide), and when it is listed the customer can order any quantity (up to 50). The owner sees
+|           the stock left on each line of the order and decides: confirm, or keep the order aside until stock arrives.
+|   false = the shop caps the quantity at what is in stock and tells the customer when only a few are left.
+|
 | On a server the configuration is cached: after changing a value, send this file and run
 |   php artisan optimize:clear && php artisan optimize
 | (the website reads the value from /api/settings/public, so the frontend needs no rebuild).
@@ -23,5 +29,7 @@
 return [
 
     'web_admin' => true,
+
+    'backorder' => true,
 
 ];

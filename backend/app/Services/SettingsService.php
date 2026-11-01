@@ -70,6 +70,12 @@ class SettingsService
         return (int) $this->get('low_stock_threshold_qty');
     }
 
+    /** Whether customers can order beyond the stock without seeing it. A code switch (config/features.php). */
+    public function backorderEnabled(): bool
+    {
+        return (bool) config('features.backorder');
+    }
+
     /** Whether the admin can be used from the website. A code switch (config/features.php), not an admin setting. */
     public function webAdminEnabled(): bool
     {
