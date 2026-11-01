@@ -117,3 +117,21 @@ it('does nothing when the programme is off, and can count older orders afterward
     $this->artisan('loyalty:backfill')->assertSuccessful();      // safe to run again
     expect(LoyaltyEntry::count())->toBe(6);
 });
+
+it('starts a new count after each gift: 6 earns one, the gift does not count, 3 + 3 more earn the next', function () {
+    loyaltySale($this, [[$this->v10, 6]]);                                             // first gift earned
+    $customer = Customer::firstOrFail();
+    $this->postJson("/api/admin/customers/{$customer->id}/loyalty/redeem", ['variant_id' => $this->flacon->id])->assertOk();
+
+    loyaltySale($this, [[$this->v30, 3]]);                                             // a month later: 3 more
+    $p = app(LoyaltyService::class)->progress($customer);
+    expect($p['counted'])->toBe(3)->and($p['total'])->toBe(9)->and($p['pending'])->toBe([])->and($p['given'])->toBe(1);
+
+    loyaltySale($this, [[$this->v10, 3]]);                                             // 12 perfumes bought in all
+    $p = app(LoyaltyService::class)->progress($customer);
+    expect($p['counted'])->toBe(0)->and($p['total'])->toBe(12)->and($p['pending'])->toHaveCount(1)->and($p['given'])->toBe(1)
+        ->and($p['pending'][0]['average_price'])->toBe(1750);                          // (3 x 2500 + 3 x 1000) / 6: only the 6 new perfumes
+
+    $this->postJson("/api/admin/customers/{$customer->id}/loyalty/redeem", ['variant_id' => $this->flacon->id])->assertOk();
+    expect(app(LoyaltyService::class)->progress($customer)['given'])->toBe(2)->and(LoyaltyEntry::count())->toBe(12);
+});
