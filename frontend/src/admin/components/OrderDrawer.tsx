@@ -158,7 +158,7 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
 
         <section aria-label="Historique">
           <h3 className="mb-3 font-display text-lg">Historique</h3>
-          <ol className="space-y-3 border-l-2 border-border pl-4">
+          <ol className="space-y-3 border-l-2 border-border ps-4">
             {order.history?.map((h, i) => (
               <li key={i} className="text-sm">
                 <p className="font-medium">{h.from && h.from === h.to ? h.note : <>{h.from ? `${STATUS_LABEL[h.from]} → ` : ''}{STATUS_LABEL[h.to]}</>}</p>
@@ -232,7 +232,7 @@ export function OrderDrawer({ id, onClose }: { id: number | null; onClose: () =>
   return (
     <Sheet open={id !== null} onOpenChange={(o) => { if (!o) { setEditing(false); onClose() } }}>
       <SheetContent side="right" className="gap-0 p-0 data-[side=right]:w-full sm:data-[side=right]:max-w-xl">
-        <SheetHeader className="border-b border-border p-5 pr-12">
+        <SheetHeader className="border-b border-border p-5 pe-12">
           <SheetTitle className="flex flex-wrap items-center gap-3 font-display text-xl">
             <span className="tnum">{order?.reference ?? 'Commande'}</span>
             {order && <StatusBadge status={order.status} />}

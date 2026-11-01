@@ -194,7 +194,7 @@ export default function Orders() {
             {orders.map((o) => (
               <li key={o.id}>
                 <div className="rounded-lg border border-border bg-card p-4">
-                  <button type="button" onClick={() => openOrder(o)} className="block w-full text-left focus-visible:outline-2 focus-visible:outline-ring">
+                  <button type="button" onClick={() => openOrder(o)} className="block w-full text-start focus-visible:outline-2 focus-visible:outline-ring">
                     <div className="flex items-start justify-between gap-3">
                       <span className="tnum font-medium">{o.reference}</span>
                       <StatusBadge status={o.status} />
@@ -221,7 +221,7 @@ export default function Orders() {
           {/* larger screens: table */}
           <div className="hidden overflow-x-auto rounded-lg border border-border bg-card md:block">
             <table className="w-full text-sm">
-              <thead className="border-b border-border bg-secondary/50 text-left text-muted-foreground">
+              <thead className="border-b border-border bg-secondary/50 text-start text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-medium">Référence</th>
                   <th className="px-4 py-3 font-medium">
@@ -232,7 +232,7 @@ export default function Orders() {
                   <th className="px-4 py-3 font-medium">Client</th>
                   <th className="px-4 py-3 font-medium">Téléphone</th>
                   <th className="px-4 py-3 font-medium">Wilaya</th>
-                  <th className="px-4 py-3 text-right font-medium">
+                  <th className="px-4 py-3 text-end font-medium">
                     <button onClick={() => toggleSort('total')} className="hover:text-foreground">
                       Total{sortMark('total')}
                     </button>
@@ -247,7 +247,7 @@ export default function Orders() {
                       <button type="button" onClick={(e) => { e.stopPropagation(); openOrder(o) }} className="tnum font-medium whitespace-nowrap underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
                         {o.reference}
                       </button>
-                      {o.channel === 'pos' && <span className="ml-2 text-xs text-muted-foreground">caisse</span>}
+                      {o.channel === 'pos' && <span className="ms-2 text-xs text-muted-foreground">caisse</span>}
                     </td>
                     <td className="tnum px-4 py-3 whitespace-nowrap text-muted-foreground">{formatDateTime(o.created_at)}</td>
                     <td className="px-4 py-3">{[o.customer.first_name, o.customer.last_name].filter(Boolean).join(' ') || '—'}</td>
@@ -259,10 +259,10 @@ export default function Orders() {
                       ) : (
                         '—'
                       )}
-                      {o.call_attempts > 0 && <span className="ml-2 text-xs text-amber-800" title="Tentatives d'appel sans réponse">{o.call_attempts}×</span>}
+                      {o.call_attempts > 0 && <span className="ms-2 text-xs text-amber-800" title="Tentatives d'appel sans réponse">{o.call_attempts}×</span>}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{o.wilaya?.name ?? '—'}</td>
-                    <td className="tnum px-4 py-3 text-right font-medium whitespace-nowrap">{formatPrice(o.total)}</td>
+                    <td className="tnum px-4 py-3 text-end font-medium whitespace-nowrap">{formatPrice(o.total)}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={o.status} />
                     </td>

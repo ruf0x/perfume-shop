@@ -70,7 +70,7 @@ export function Header() {
         </button>
 
         <Link to="/" className="flex items-center gap-2.5 font-display text-lg font-medium tracking-tight focus-visible:outline-2 focus-visible:outline-ring sm:text-xl">
-          <img src="/brand/logo-mark.webp" alt="" width={256} height={179} className="h-9 w-auto" />
+          <img src="/brand/logo-mark.webp" alt="" width={221} height={256} className="h-10 w-auto" />
           <span className="leading-tight">{settings?.shop_name ?? t('brand.name')}</span>
         </Link>
 

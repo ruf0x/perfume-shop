@@ -62,7 +62,7 @@ function EntryDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
           {canMl && canUnit && (
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Type d'entrée">
               {([['ml', cosmetic ? 'Au millilitre' : 'À décanter (en ml)'], ['unit', cosmetic ? 'À l\'unité' : 'Flacons scellés']] as const).map(([v, l]) => (
-                <button key={v} type="button" role="radio" aria-checked={mode === v} onClick={() => setMode(v)} className={cn('rounded-md border px-3 py-2.5 text-left', mode === v ? 'border-primary bg-accent font-medium' : 'border-input')}>{l}</button>
+                <button key={v} type="button" role="radio" aria-checked={mode === v} onClick={() => setMode(v)} className={cn('rounded-md border px-3 py-2.5 text-start', mode === v ? 'border-primary bg-accent font-medium' : 'border-input')}>{l}</button>
               ))}
             </div>
           )}
@@ -124,7 +124,7 @@ function AdjustDialog({ row, onClose }: { row: StockRow; onClose: () => void }) 
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Type">
             {([['perte', 'Perte (renversé, testeur…)'], ['ajustement', 'Correction d’inventaire']] as const).map(([v, l]) => (
-              <button key={v} type="button" role="radio" aria-checked={type === v} onClick={() => setType(v)} className={cn('rounded-md border px-3 py-2.5 text-left', type === v ? 'border-primary bg-accent font-medium' : 'border-input')}>{l}</button>
+              <button key={v} type="button" role="radio" aria-checked={type === v} onClick={() => setType(v)} className={cn('rounded-md border px-3 py-2.5 text-start', type === v ? 'border-primary bg-accent font-medium' : 'border-input')}>{l}</button>
             ))}
           </div>
           {row.sealed.length > 0 && (
@@ -194,7 +194,7 @@ function Overview() {
           {pageRows.map((r) => (
             <li key={r.product_id} className="space-y-3 p-4 md:flex md:items-center md:gap-6 md:space-y-0">
               <div className="min-w-0 md:w-1/4">
-                <p className="truncate font-display text-lg leading-tight">{r.name}{r.kind === 'standard' && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">{r.product_type?.name ?? 'Standard'}</span>}</p>
+                <p className="truncate font-display text-lg leading-tight">{r.name}{r.kind === 'standard' && <span className="ms-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">{r.product_type?.name ?? 'Standard'}</span>}</p>
                 <p className="truncate text-sm text-muted-foreground">{r.brand ?? '—'}{!r.is_active && ', masqué'}</p>
               </div>
               <div className="tnum flex-1 text-sm">

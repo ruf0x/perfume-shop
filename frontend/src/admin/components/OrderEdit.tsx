@@ -80,7 +80,7 @@ export function OrderEdit({ order, onDone }: { order: Order; onDone: () => void 
         <h3 className="font-display text-lg">Client</h3>
         <div className="grid grid-cols-2 gap-3">
           <label className={label}><span className={hint}>Prénom</span><input className={inputClass} value={f.first_name} onChange={(e) => set('first_name', e.target.value)} /></label>
-          <label className={label}><span className={hint}>Nom</span><input className={inputClass} value={f.last_name} onChange={(e) => set('last_name', e.target.value)} /></label>
+          <label className={label}><span className={hint}>Nom de famille</span><input className={inputClass} value={f.last_name} onChange={(e) => set('last_name', e.target.value)} /></label>
           <label className={label}><span className={hint}>Téléphone</span><input className={inputClass} inputMode="tel" value={f.phone} onChange={(e) => set('phone', e.target.value)} /></label>
           <label className={label}><span className={hint}>Second téléphone</span><input className={inputClass} inputMode="tel" value={f.phone2} onChange={(e) => set('phone2', e.target.value)} /></label>
           <label className={label}>

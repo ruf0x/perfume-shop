@@ -32,8 +32,8 @@ export function VariantPicker({ open, onOpenChange, onPick, includePacks, title 
 
         <label className="relative block">
           <span className="sr-only">Rechercher un produit</span>
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <input autoFocus type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Nom ou marque" className={`${inputClass} pl-9`} />
+          <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <input autoFocus type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Nom ou marque" className={`${inputClass} ps-9`} />
         </label>
 
         {isPending ? (
@@ -58,7 +58,7 @@ export function VariantPicker({ open, onOpenChange, onPick, includePacks, title 
                           onPick(v, p)
                           onOpenChange(false)
                         }}
-                        className="rounded-md border border-input bg-card px-3 py-2 text-left text-sm hover:border-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                        className="rounded-md border border-input bg-card px-3 py-2 text-start text-sm hover:border-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
                       >
                         <span className="block font-medium">{v.label}</span>
                         <span className="tnum block text-muted-foreground">{formatPrice(v.price)}</span>

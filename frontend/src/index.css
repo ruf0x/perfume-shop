@@ -56,29 +56,29 @@
 }
 
 :root {
-    /* Shop palette: chalk paper, oud ink, cardamom green for actions, saffron only for liquid. */
-    --chalk: #fdf5f3;
-    --oud: #2e1f18;
-    --oud-foreground: #f1ede4;
-    --saffron: #d19a2b;
-    --background: #fdf5f3;
-    --foreground: #2e1f18;
+    /* Shop palette: white and grey: chalk paper, charcoal ink and actions, mid grey for liquid. */
+    --chalk: #f6f6f7;
+    --oud: #222426;
+    --oud-foreground: #f1f2f3;
+    --saffron: #8a8f96;
+    --background: #f6f6f7;
+    --foreground: #222426;
     --card: #ffffff;
-    --card-foreground: #2e1f18;
+    --card-foreground: #222426;
     --popover: #ffffff;
-    --popover-foreground: #2e1f18;
-    --primary: #7b592c;
-    --primary-foreground: #fffaf7;
-    --secondary: #f7e6e2;
-    --secondary-foreground: #2e1f18;
-    --muted: #f7e6e2;
-    --muted-foreground: #735f55;
-    --accent: #f6e4cf;
-    --accent-foreground: #5e4220;
+    --popover-foreground: #222426;
+    --primary: #3a3d42;
+    --primary-foreground: #fafafa;
+    --secondary: #ebecee;
+    --secondary-foreground: #222426;
+    --muted: #ebecee;
+    --muted-foreground: #6a6e74;
+    --accent: #e3e5e8;
+    --accent-foreground: #2d3034;
     --destructive: #a3282a;
-    --border: #ecd6d0;
-    --input: #dfc3bb;
-    --ring: #a37a3e;
+    --border: #dcdee1;
+    --input: #c9ccd0;
+    --ring: #7a7f86;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);

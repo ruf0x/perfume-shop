@@ -11,14 +11,10 @@ class SettingsService
 
     /** Defaults used until the owner saves a value. */
     public const DEFAULTS = [
-        'shop_name' => 'Arena Cosmétique',
+        'shop_name' => 'Roze Sham',
         'shop_phone' => null,
-        'shop_address' => 'MCR6+39H LPP Hayet Regency, Oran',
-        'socials' => [
-            'instagram' => 'https://www.instagram.com/arenecosmetique/',
-            'facebook' => 'https://web.facebook.com/people/Arena-cosm%C3%A9tique-Oran-hayate-regenci-lpp-Oran/61581182056275/',
-            'tiktok' => 'https://www.tiktok.com/@arenacosmetiq',
-        ],
+        'shop_address' => null,
+        'socials' => [],
         'show_unavailable' => false,
         'low_stock_threshold_ml' => 10,
         'low_stock_threshold_qty' => 3,

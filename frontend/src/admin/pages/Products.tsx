@@ -142,11 +142,11 @@ export default function Products({ kind }: { kind: 'goods' | 'pack' }) {
                   <ProductVisual image={p.image} name="" type={p.type?.slug} rayon={p.product_type?.slug} level={0.7} />
                 </button>
                 <Link to={`${base}/${p.id}`} className="min-w-0 flex-1 focus-visible:outline-2 focus-visible:outline-ring">
-                  <p className="truncate font-display text-lg leading-tight">{p.name}{showTypeBadge && p.product_type && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">{p.product_type.name}</span>}</p>
+                  <p className="truncate font-display text-lg leading-tight">{p.name}{showTypeBadge && p.product_type && <span className="ms-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">{p.product_type.name}</span>}</p>
                   <p className="truncate text-sm text-muted-foreground">{[p.brand?.name, p.type?.name].filter(Boolean).join(', ') || (isPack ? 'Pack' : 'Sans classement')}</p>
                   <p className="tnum mt-0.5 hidden truncate text-sm sm:block">{sizes(p)}</p>
                 </Link>
-                <div className="hidden w-36 text-right text-sm md:block"><Stock p={p} /></div>
+                <div className="hidden w-36 text-end text-sm md:block"><Stock p={p} /></div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <Switch checked={p.is_active} disabled={!owner || save.isPending} onCheckedChange={(v) => toggle(p, v)} aria-label={`${p.name} visible dans la boutique`} />
                   <span className="text-xs text-muted-foreground">{p.is_active ? 'Visible' : 'Masqué'}</span>

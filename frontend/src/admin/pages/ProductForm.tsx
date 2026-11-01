@@ -135,7 +135,7 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
           <li key={img.id} className="space-y-1.5">
             <div className="relative aspect-square overflow-hidden rounded-md bg-secondary">
               <img src={img.url} alt={`Photo ${i + 1} de ${product.name}`} className="size-full object-cover" loading="lazy" />
-              {i === 0 && <span className="absolute top-2 left-2 rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground">Principale</span>}
+              {i === 0 && <span className="absolute top-2 start-2 rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground">Principale</span>}
             </div>
             {!disabled && (
               <div className="flex items-center justify-between">
@@ -181,7 +181,7 @@ function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (fi
           <li key={`${file.name}-${i}`} className="space-y-1.5">
             <div className="relative aspect-square overflow-hidden rounded-md bg-secondary">
               <img src={previews[i]} alt={file.name} className="size-full object-cover" />
-              {i === 0 && <span className="absolute top-2 left-2 rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground">Principale</span>}
+              {i === 0 && <span className="absolute top-2 start-2 rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground">Principale</span>}
             </div>
             {!disabled && (
               <button type="button" onClick={() => onChange(files.filter((_, j) => j !== i))} className="flex h-9 w-full items-center justify-center gap-1.5 rounded text-sm text-muted-foreground hover:text-destructive">

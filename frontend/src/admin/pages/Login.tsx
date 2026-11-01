@@ -5,6 +5,7 @@ import { isDesktop } from '@/lib/api'
 import { useLogin, useMe } from '../auth'
 import { apiError } from '../lib'
 import { inputClass } from '../components/common'
+import { LangSwitch } from '../i18n/LangSwitch'
 
 export default function Login() {
   const { data: user } = useMe()
@@ -26,6 +27,9 @@ export default function Login() {
   return (
     <div className="flex min-h-svh items-center justify-center bg-secondary/50 p-4">
       <div className="w-full max-w-sm">
+        <div className="mb-6 flex justify-center">
+          <LangSwitch />
+        </div>
         <h1 className="mb-1 text-center text-3xl">Administration</h1>
         <p className="mb-6 text-center text-muted-foreground">Connectez-vous pour gérer la boutique.</p>
 

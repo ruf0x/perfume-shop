@@ -68,7 +68,7 @@ export default function ProductTypes() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display text-lg leading-tight">{it.name}</p>
                 <p className="tnum text-sm text-muted-foreground">
-                  <span className={cn('mr-2 rounded-full px-2 py-0.5 text-xs', it.profile === 'perfume' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground')}>{it.profile === 'perfume' ? 'Parfum' : 'Standard'}</span>
+                  <span className={cn('me-2 rounded-full px-2 py-0.5 text-xs', it.profile === 'perfume' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground')}>{it.profile === 'perfume' ? 'Parfum' : 'Standard'}</span>
                   {it.products_count} produit{it.products_count > 1 ? 's' : ''}, {it.categories_count} famille{it.categories_count > 1 ? 's' : ''} ou catégorie{it.categories_count > 1 ? 's' : ''}
                   {it.uses_gender && ', filtre Homme / Femme'}
                 </p>

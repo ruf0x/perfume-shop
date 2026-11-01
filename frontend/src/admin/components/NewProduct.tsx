@@ -51,7 +51,7 @@ export function NewProductButton({ className, label = 'Nouveau produit' }: { cla
                 <button
                   type="button"
                   onClick={() => navigate(`/admin/produits/nouveau?type=${t.id}`)}
-                  className="flex w-full items-center justify-between gap-3 rounded-md border border-input bg-card px-4 py-3 text-left hover:border-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                  className="flex w-full items-center justify-between gap-3 rounded-md border border-input bg-card px-4 py-3 text-start hover:border-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <span className="font-medium">{t.name}</span>
                   <span className="text-sm text-muted-foreground">{t.profile === 'perfume' ? 'Parfum' : 'Standard'}</span>

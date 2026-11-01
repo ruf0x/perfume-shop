@@ -71,7 +71,7 @@ function SizeDialog({ product, onClose, onPick }: { product: AdminProduct; onClo
             const s = variantState(product, v)
             return (
               <li key={v.id}>
-                <button type="button" disabled={!s.ok} onClick={() => onPick(v)} className="flex w-full items-center justify-between gap-4 rounded-md border border-input bg-card px-4 py-3 text-left hover:border-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input disabled:hover:bg-card">
+                <button type="button" disabled={!s.ok} onClick={() => onPick(v)} className="flex w-full items-center justify-between gap-4 rounded-md border border-input bg-card px-4 py-3 text-start hover:border-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input disabled:hover:bg-card">
                   <span><span className="block font-medium">{v.label}</span><span className="text-sm text-muted-foreground">{s.hint}</span></span>
                   <span className="tnum font-display text-xl">{formatPrice(v.price)}</span>
                 </button>
@@ -216,8 +216,8 @@ export default function Caisse() {
           <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_12rem]">
             <label className="relative block">
               <span className="sr-only">Rechercher un produit</span>
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <input ref={search} type="search" autoFocus value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Rechercher un produit ou un pack   (touche /)" className={`${inputClass} h-11 pl-9`} />
+              <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <input ref={search} type="search" autoFocus value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Rechercher un produit ou un pack   (touche /)" className={`${inputClass} h-11 ps-9`} />
             </label>
             <select className={`${inputClass} h-11`} aria-label="Famille ou catégorie" value={typeId ?? ''} onChange={(e) => setTypeId(e.target.value ? Number(e.target.value) : undefined)}>
               <option value="">Tout le catalogue</option>
@@ -234,10 +234,10 @@ export default function Caisse() {
               <ul className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4', products.isPlaceholderData && 'opacity-60')}>
                 {items.map((p) => (
                   <li key={p.id}>
-                    <button type="button" onClick={() => setPicked(p)} disabled={!p.available && p.kind !== 'pack' && p.stock_ml === 0 && !p.variants?.some((v) => v.stock_qty > 0)} className="group block w-full rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50">
+                    <button type="button" onClick={() => setPicked(p)} disabled={!p.available && p.kind !== 'pack' && p.stock_ml === 0 && !p.variants?.some((v) => v.stock_qty > 0)} className="group block w-full rounded-lg text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50">
                       <div className="relative aspect-square overflow-hidden rounded-lg bg-secondary">
                         <ProductVisual image={p.image} name={p.name} type={p.type?.slug} rayon={p.product_type?.slug} level={p.available ? 0.7 : 0.1} />
-                        {!p.available && <span className="absolute top-2 left-2 rounded bg-oud px-2 py-0.5 text-xs text-oud-foreground">Épuisé</span>}
+                        {!p.available && <span className="absolute top-2 start-2 rounded bg-oud px-2 py-0.5 text-xs text-oud-foreground">Épuisé</span>}
                       </div>
                       <p className="mt-2 truncate font-display text-base leading-tight group-hover:underline">{p.name}</p>
                       <p className="tnum text-sm text-muted-foreground">{p.kind === 'pack' ? 'Pack ' : 'dès '}{formatPrice(Math.min(...(p.variants?.filter((v) => v.is_active).map((v) => v.price) ?? [0])))}</p>

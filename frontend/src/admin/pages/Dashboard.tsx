@@ -67,9 +67,9 @@ function TopProducts({ rows }: { rows: Dashboard['top_products'] }) {
           </div>
           <div className="mt-1 flex items-center gap-2">
             <div className="h-2 min-w-0 flex-1 rounded-full bg-secondary">
-              <div className="h-2 rounded-r-[4px] rounded-l-none" style={{ width: `${Math.max(4, (r.quantity / max) * 100)}%`, background: ONLINE }} />
+              <div className="h-2 rounded-e-[4px] rounded-s-none" style={{ width: `${Math.max(4, (r.quantity / max) * 100)}%`, background: ONLINE }} />
             </div>
-            <span className="tnum w-10 shrink-0 text-right text-sm font-medium">× {r.quantity}</span>
+            <span className="tnum w-10 shrink-0 text-end text-sm font-medium">× {r.quantity}</span>
           </div>
         </li>
       ))}

@@ -6,6 +6,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { cn } from '@/lib/utils'
 import { isDesktop } from '@/lib/api'
 import { useLogout, useUser } from './auth'
+import { LangSwitch } from './i18n/LangSwitch'
+import { useLang } from './i18n/lang'
 
 interface NavItem {
   to: string
@@ -59,6 +61,9 @@ function SidebarFooter() {
   return (
     <div className="space-y-3 border-t border-border pt-4">
       <div className="px-3">
+        <LangSwitch />
+      </div>
+      <div className="px-3">
         <p className="truncate text-sm font-medium">{user.name}</p>
         <p className="text-xs text-muted-foreground">{user.role === 'owner' ? 'Propriétaire' : 'Équipe'}</p>
       </div>
@@ -71,7 +76,7 @@ function SidebarFooter() {
       <button
         type="button"
         onClick={() => logout.mutate(undefined, { onError: () => toast.error('Déconnexion impossible.') })}
-        className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-[0.95rem] text-foreground/80 hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring"
+        className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-start text-[0.95rem] text-foreground/80 hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring"
       >
         <LogOut className="size-[1.15rem]" aria-hidden />
         Se déconnecter
@@ -82,10 +87,11 @@ function SidebarFooter() {
 
 export default function AdminLayout() {
   const [open, setOpen] = useState(false)
+  const rtl = useLang() === 'ar'
 
   return (
     <div className="min-h-svh md:grid md:grid-cols-[15rem_1fr]">
-      <aside className="sticky top-0 hidden h-svh flex-col justify-between gap-6 border-r border-border bg-card p-4 md:flex">
+      <aside className="sticky top-0 hidden h-svh flex-col justify-between gap-6 border-e border-border bg-card p-4 md:flex">
         <div className="space-y-6">
           <Link to="/admin" className="flex items-center gap-2 px-3 pt-1 font-display text-xl">
             <Boxes className="size-5 text-primary" aria-hidden />
@@ -98,14 +104,14 @@ export default function AdminLayout() {
 
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur md:hidden">
-          <button type="button" className="-ml-2 flex size-10 items-center justify-center rounded-md hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring" onClick={() => setOpen(true)} aria-label="Ouvrir le menu">
+          <button type="button" className="-ms-2 flex size-10 items-center justify-center rounded-md hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring" onClick={() => setOpen(true)} aria-label="Ouvrir le menu">
             <Menu className="size-5" />
           </button>
           <span className="font-display text-lg">Administration</span>
         </header>
 
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent side="left" className="w-72 gap-0 p-0">
+          <SheetContent side={rtl ? 'right' : 'left'} className="w-72 gap-0 p-0">
             <SheetHeader className="border-b border-border p-5">
               <SheetTitle className="font-display text-xl">Administration</SheetTitle>
               <SheetDescription className="sr-only">Menu de l'administration</SheetDescription>
