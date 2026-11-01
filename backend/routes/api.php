@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BottleController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -89,6 +90,11 @@ Route::prefix('admin')->group(function () {
             Route::post('/brands', [BrandController::class, 'store']);
             Route::put('/brands/{brand}', [BrandController::class, 'update']);
             Route::delete('/brands/{brand}', [BrandController::class, 'destroy']);
+
+            Route::get('/bottles', [BottleController::class, 'index']);
+            Route::get('/bottles/movements', [BottleController::class, 'movements']);
+            Route::post('/bottles/entries', [BottleController::class, 'entry']);
+            Route::post('/bottles/adjustments', [BottleController::class, 'adjustment']);
 
             Route::post('/stock/entries', [StockController::class, 'entry']);
             Route::post('/stock/adjustments', [StockController::class, 'adjustment']);

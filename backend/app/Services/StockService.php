@@ -8,6 +8,7 @@ use App\Enums\StockMode;
 use App\Enums\StockMovementType;
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\ShopException;
+use App\Models\BottleSize;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -84,6 +85,14 @@ class StockService
             }
         }
 
+        $shortBottles = [];
+        foreach ($needs['bottles'] ?? [] as $ml => $count) {
+            $left = BottleSize::query()->where('ml', $ml)->value('qty');
+            if ($left !== null && (int) $left < $count) {
+                $shortBottles[$ml] = true;
+            }
+        }
+
         $lines = [];
         foreach ($perLine as $id => $entry) {
             if (isset($entry['keys'])) {
@@ -94,10 +103,15 @@ class StockService
             $item = $entry['item'];
             $variant = $item->variant;
             $ok = collect(array_keys($entry['own']['ml']))->every(fn ($p) => ! isset($shortMl[$p]))
-                && collect(array_keys($entry['own']['units']))->every(fn ($v) => ! isset($shortUnits[$v]));
+                && collect(array_keys($entry['own']['units']))->every(fn ($v) => ! isset($shortUnits[$v]))
+                && collect(array_keys($entry['own']['bottles'] ?? []))->every(fn ($m) => ! isset($shortBottles[$m]));
 
             if ($variant->stock_mode === StockMode::Pool) {
                 $left = (int) $variant->product->stock_ml.' ml';
+                $bottleLeft = BottleSize::query()->where('ml', $variant->ml)->value('qty');
+                if ($bottleLeft !== null) {
+                    $left .= ', '.(int) $bottleLeft.' bouteille(s) de '.$variant->ml.' ml';
+                }
             } elseif ($variant->stock_mode === StockMode::Unit) {
                 $left = (int) $variant->stock_qty.($variant->product->kind === ProductKind::Standard ? ' article(s)' : ' flacon(s)');
             } else {
@@ -113,6 +127,10 @@ class StockService
         foreach (array_keys($shortUnits) as $variantId) {
             $v = ProductVariant::query()->with('product')->find($variantId);
             $shortages[] = ['name' => "{$v->product->name} ({$v->label})", 'unit' => $v->product->kind === ProductKind::Standard ? 'article(s)' : 'flacon(s)', 'requested' => $needs['units'][$variantId], 'available' => (int) $v->stock_qty];
+        }
+
+        foreach (array_keys($shortBottles) as $ml) {
+            $shortages[] = ['name' => "Bouteilles de {$ml} ml", 'unit' => 'bouteille(s)', 'requested' => $needs['bottles'][$ml], 'available' => (int) BottleSize::query()->where('ml', $ml)->value('qty')];
         }
 
         return ['possible' => $shortages === [] && collect($lines)->every(fn ($l) => $l['ok']), 'shortages' => $shortages, 'lines' => $lines];
@@ -133,6 +151,12 @@ class StockService
         }
         foreach ($needs['units'] as $variantId => $units) {
             $limits[] = intdiv((int) ProductVariant::query()->whereKey($variantId)->value('stock_qty'), $units);
+        }
+        foreach ($needs['bottles'] ?? [] as $ml => $count) {
+            $left = BottleSize::query()->where('ml', $ml)->value('qty');
+            if ($left !== null) {
+                $limits[] = intdiv(max(0, (int) $left), $count);
+            }
         }
 
         return $limits === [] ? 0 : max(0, min($limits));
@@ -276,11 +300,18 @@ class StockService
 
             $products = $this->lockProducts(array_keys($needs['ml']));
             $variants = $this->lockVariants(array_keys($needs['units']));
+            $bottleService = app(BottleService::class);
+            $bottles = $bottleService->lockTracked(array_keys($needs['bottles'] ?? []));
 
             $shortages = [];
             foreach ($needs['ml'] as $productId => $ml) {
                 if ($products[$productId]->stock_ml < $ml) {
                     $shortages[] = ['name' => $products[$productId]->name, 'unit' => 'ml', 'requested' => $ml, 'available' => $products[$productId]->stock_ml];
+                }
+            }
+            foreach ($needs['bottles'] ?? [] as $ml => $count) {
+                if ($bottles->has($ml) && $bottles[$ml]->qty < $count) {
+                    $shortages[] = ['name' => "Bouteilles de {$ml} ml", 'unit' => 'bouteille(s)', 'requested' => $count, 'available' => $bottles[$ml]->qty];
                 }
             }
             foreach ($needs['units'] as $variantId => $units) {
@@ -303,6 +334,11 @@ class StockService
             foreach ($needs['units'] as $variantId => $units) {
                 $this->record($variants[$variantId]->product, $variants[$variantId], $type, 0, -$units, null, $order->id, $order->reference, $user);
                 $variants[$variantId]->decrement('stock_qty', $units);
+            }
+            foreach ($needs['bottles'] ?? [] as $ml => $count) {
+                if ($bottles->has($ml)) {
+                    $bottleService->consume($bottles[$ml], $count, $order, $user);
+                }
             }
 
             $order->forceFill(['stock_deducted' => true])->save();
@@ -346,6 +382,8 @@ class StockService
                     $variant->increment('stock_qty', -$n['qty']);
                 }
             }
+
+            app(BottleService::class)->restoreForOrder($order, $type, $user);
 
             $order->forceFill(['stock_deducted' => false])->save();
         });
@@ -464,6 +502,8 @@ class StockService
                     throw new ShopException("La variante « {$variant->label} » n'a pas de contenance (ml).");
                 }
                 $needs['ml'][$variant->product_id] = ($needs['ml'][$variant->product_id] ?? 0) + $variant->ml * $qty;
+                // Each decant goes in one empty bottle of its size (counted only for the sizes the shop tracks).
+                $needs['bottles'][$variant->ml] = ($needs['bottles'][$variant->ml] ?? 0) + $qty;
                 break;
 
             case StockMode::Unit:
