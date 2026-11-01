@@ -274,7 +274,15 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
   const packCost = f.components.length > 0 && f.components.every((c) => c.cost !== null) ? f.components.reduce((n, c) => n + (c.cost ?? 0) * c.quantity, 0) : null
   const setPackPrice = (v: string) => setF((s) => ({ ...s, packPrice: v, packGain: packCost && v !== '' ? derivedGain(v, String(packCost)) : s.packGain }))
   const setPackGain = (v: string) => setF((s) => ({ ...s, packGain: v, packPrice: packCost && v !== '' && Number(v) >= 0 ? String(priceFor(packCost, Number(v))) : s.packPrice }))
-  const fillCostsFromBulk = () => costPerMl !== null && set('variants', f.variants.map((r) => (Number(r.ml) > 0 ? withGain(r, { cost: String(Math.round(costPerMl * Number(r.ml))) }) : r)))
+  // The decants are priced per ml from this bottle; a sealed bottle of the same size takes the bottle's price; other sealed bottles (a 150 ml bought at another price) are typed by hand.
+  const fillCostsFromBulk = () =>
+    costPerMl !== null &&
+    set('variants', f.variants.map((r) => {
+      if (Number(r.ml) <= 0) return r
+      if (r.mode === 'pool') return withGain(r, { cost: String(Math.round(costPerMl * Number(r.ml))) })
+
+      return Number(r.ml) === Number(bulk.ml) ? withGain(r, { cost: String(Math.round(Number(bulk.price))) }) : r
+    }))
   const applyWantedGain = () => Number(wantedGain) >= 0 && wantedGain !== '' && set('variants', f.variants.map((r) => (r.cost !== '' && Number(r.cost) > 0 ? withGain(r, { price: String(roundUp50(Number(r.cost) * (1 + Number(wantedGain) / 100))) }) : r)))
   const moveRow = (i: number, d: number) => {
     const rows = [...f.variants]
@@ -434,6 +442,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                     <Field label="Contenance du flacon (ml)" className="w-40"><input type="number" min={1} inputMode="numeric" className={inputClass} value={bulk.ml} onChange={(e) => setBulk({ ...bulk, ml: e.target.value })} /></Field>
                     <Button type="button" variant="outline" className="h-10" disabled={costPerMl === null} onClick={fillCostsFromBulk}>Calculer le prix d'achat de chaque taille</Button>
                     {costPerMl !== null && <p className="tnum pb-2 text-muted-foreground">{`Soit ${formatPrice(Math.round(costPerMl * 100) / 100)} le ml.`}</p>}
+                    <p className="basis-full text-muted-foreground">Les tailles à décanter se calculent au ml à partir de ce flacon. Un flacon scellé de la même contenance prend son prix ; un autre flacon scellé (par exemple un 150 ml acheté à un autre prix) se saisit à la main sur sa ligne.</p>
                   </div>
                 )}
                 <div className="flex flex-wrap items-end gap-3">

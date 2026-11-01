@@ -569,6 +569,7 @@ export const AR: Record<string, string> = {
   "ml ; un produit à la pièce est signalé « stock faible » à": 'مل؛ ويُعلَّم المنتج بالقطعة «مخزون منخفض» عند',
 
   // Purchase prices and profit
+  'Les tailles à décanter se calculent au ml à partir de ce flacon. Un flacon scellé de la même contenance prend son prix ; un autre flacon scellé (par exemple un 150 ml acheté à un autre prix) se saisit à la main sur sa ligne.': 'أحجام التعبئة بالمل تُحسب بالمل انطلاقاً من هذه القارورة. القارورة المغلقة بنفس السعة تأخذ سعرها؛ أما قارورة مغلقة أخرى (مثل 150 مل اشتريتها بسعر آخر) فتُدخل سعرها يدوياً في سطرها.',
   'Bénéfice (%)': 'الربح (%)',
   "Le bénéfice du pack se calcule quand chaque produit du pack a un prix d'achat.": 'يُحسب ربح الباقة عندما يكون لكل منتج فيها سعر شراء.',
   'Cette semaine': 'هذا الأسبوع',
