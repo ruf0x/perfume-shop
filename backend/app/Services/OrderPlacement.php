@@ -142,6 +142,7 @@ class OrderPlacement
             $this->createItems($order, $quote);
             $this->stock->deductForOrder($order, $user);
             $this->logCreation($order, OrderStatus::VendueBoutique, $user, 'Vente en caisse');
+            app(LoyaltyService::class)->record($order);
 
             return $order->load('items');
         });

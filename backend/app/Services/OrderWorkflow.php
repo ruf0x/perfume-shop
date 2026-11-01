@@ -110,6 +110,10 @@ class OrderWorkflow
             $this->logHistory($order, $from, $to, $user, $note);
             $this->updateCustomerCounters($order, $to);
 
+            if (in_array($action, ['deliver', 'sell_in_store'], true)) {
+                app(LoyaltyService::class)->record($order);
+            }
+
             return $order->refresh();
         });
     }

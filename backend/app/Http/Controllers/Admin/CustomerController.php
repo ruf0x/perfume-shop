@@ -73,6 +73,7 @@ class CustomerController extends Controller
             'returned_count' => $c->returned_count,
             'is_blacklisted' => $c->is_blacklisted,
             'note' => $c->note,
+            'loyalty' => app(\App\Services\LoyaltyService::class)->progress($c),
             'created_at' => $c->created_at,
         ];
     }

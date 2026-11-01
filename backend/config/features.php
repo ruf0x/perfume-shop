@@ -20,6 +20,10 @@
 |           the stock left on each line of the order and decides: confirm, or keep the order aside until stock arrives.
 |   false = the shop caps the quantity at what is in stock and tells the customer when only a few are left.
 |
+| loyalty_every
+|   6    = every 6 perfumes a customer buys (any size, counted by phone number over all their orders) earn a gift
+|          flacon, about the value of the average price of those 6. null = the programme is off.
+|
 | On a server the configuration is cached: after changing a value, send this file and run
 |   php artisan optimize:clear && php artisan optimize
 | (the website reads the value from /api/settings/public, so the frontend needs no rebuild).
@@ -31,5 +35,8 @@ return [
     'web_admin' => true,
 
     'backorder' => true,
+
+    // Buy this many perfumes (over any number of orders), the next one is a gift. null = no loyalty programme.
+    'loyalty_every' => 6,
 
 ];

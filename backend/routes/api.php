@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BottleController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\LoyaltyController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PosController;
@@ -61,6 +62,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/orders/{order}/transition', [OrderController::class, 'transition']);
 
         Route::post('/pos/sales', [PosController::class, 'store']);
+        Route::get('/loyalty', [LoyaltyController::class, 'lookup']);
 
         Route::get('/products', [ProductController::class, 'index']);
         Route::get('/products/{product}', [ProductController::class, 'show']);
@@ -103,6 +105,8 @@ Route::prefix('admin')->group(function () {
             Route::get('/customers', [CustomerController::class, 'index']);
             Route::get('/customers/{customer}', [CustomerController::class, 'show']);
             Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
+            Route::get('/customers/{customer}/loyalty', [LoyaltyController::class, 'show']);
+            Route::post('/customers/{customer}/loyalty/redeem', [LoyaltyController::class, 'redeem']);
 
             Route::get('/settings', [SettingsController::class, 'show']);
             Route::put('/settings', [SettingsController::class, 'update']);

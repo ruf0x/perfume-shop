@@ -30,6 +30,13 @@ class OrderResource extends JsonResource
                 'last_name' => $this->last_name,
                 'phone' => $this->phone,
                 'phone2' => $this->phone2,
+                /** Loyalty count of the customer (null when the programme is off or the order has no customer); `adds` = perfumes this order would add once completed. */
+                'loyalty' => $this->when($this->customer_id && $this->relationLoaded('items'), function () {
+                    $service = app(\App\Services\LoyaltyService::class);
+                    $progress = $service->progress(\App\Models\Customer::query()->find($this->customer_id));
+
+                    return $progress ? $progress + ['adds' => $this->status->value === 'en_attente' || $this->status->value === 'confirmee' || $this->status->value === 'en_livraison' ? $service->perfumeUnits($this->resource) : 0] : null;
+                }),
             ],
             'wilaya' => $this->whenLoaded('wilaya', fn () => $this->wilaya ? ['id' => $this->wilaya->id, 'name' => $this->wilaya->name] : null),
             'commune' => $this->whenLoaded('commune', fn () => $this->commune ? ['id' => $this->commune->id, 'name' => $this->commune->name] : null),
