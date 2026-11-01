@@ -98,3 +98,17 @@ it('does not cut the best sellers list at ten', function () {
 
     expect($this->getJson('/api/admin/dashboard')->json('data.top_products'))->toHaveCount(12);
 });
+
+it('seeds demo purchase prices from the default gain of each family', function () {
+    $designer = makePerfume('Designer Test');                      // helper perfumes use the "Parfums" type without a category
+    $designer->update(['perfume_type_id' => \App\Models\PerfumeType::create(['product_type_id' => $designer->product_type_id, 'name' => 'Designer', 'slug' => 'designer'])->id]);
+    $niche = makePerfume('Niche Test');
+    $niche->update(['perfume_type_id' => \App\Models\PerfumeType::create(['product_type_id' => $niche->product_type_id, 'name' => 'Niche', 'slug' => 'niche'])->id]);
+    $cosmetic = makeCosmetic('Gel Test', ['250 ml' => [1200, 3]]);
+
+    (new \Database\Seeders\PurchaseCostSeeder)->run();
+
+    expect(variantOf($designer->fresh('variants'), '10 ml')->cost_price)->toBe(833)    // 1000 / 1.20
+        ->and(variantOf($niche->fresh('variants'), '10 ml')->cost_price)->toBe(769)    // 1000 / 1.30
+        ->and(variantOf($cosmetic->fresh('variants'), '250 ml')->cost_price)->toBe(1000); // 1200 / 1.20
+});
