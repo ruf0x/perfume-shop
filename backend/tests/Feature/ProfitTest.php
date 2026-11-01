@@ -75,3 +75,26 @@ it('costs a pack as the sum of its components, and nothing when one is unknown',
 
     expect($pack->fresh()->unitCost())->toBe(2200);
 });
+
+it('lists every size sold with its own profit, and no profit when a cost is missing', function () {
+    $v10 = variantOf($this->p, '10 ml');
+    $v20 = variantOf($this->p, '20 ml');
+    $v10->update(['cost_price' => 600]);
+
+    sellAtCaisse($this, [['variant_id' => $v10->id, 'quantity' => 2], ['variant_id' => $v20->id, 'quantity' => 1]]);
+
+    $rows = collect($this->getJson('/api/admin/dashboard')->json('data.top_products'))->keyBy('variant');
+
+    expect($rows)->toHaveCount(2)
+        ->and($rows['10 ml']['profit'])->toBe(800)      // 2 x (1000 - 600)
+        ->and($rows['20 ml']['profit'])->toBeNull();
+});
+
+it('does not cut the best sellers list at ten', function () {
+    for ($i = 1; $i <= 12; $i++) {
+        $product = makeCosmetic("Produit $i", ['Unique' => [500, 5]]);
+        sellAtCaisse($this, [['variant_id' => variantOf($product, 'Unique')->id, 'quantity' => 1]]);
+    }
+
+    expect($this->getJson('/api/admin/dashboard')->json('data.top_products'))->toHaveCount(12);
+});

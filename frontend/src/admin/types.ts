@@ -269,6 +269,6 @@ export interface Dashboard {
   /** Profit of the period, from the purchase prices of the items sold (orders without a known cost are left out). */
   profit: { amount: number; cost: number; revenue: number; percent: number | null; orders_counted: number; orders_without_cost: number }
   sales_by_day: DashboardDay[]
-  top_products: { product: string; variant: string; quantity: number; revenue: number }[]
+  top_products: { product: string; variant: string; quantity: number; revenue: number; profit: number | null }[]
   low_stock: { id: number; name: string; kind: 'perfume' | 'standard'; stock_ml: number; units: number }[]
 }

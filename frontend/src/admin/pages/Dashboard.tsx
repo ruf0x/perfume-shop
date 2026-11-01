@@ -68,13 +68,14 @@ function TopProducts({ rows }: { rows: Dashboard['top_products'] }) {
   const max = Math.max(...rows.map((r) => r.quantity))
 
   return (
-    <ol className="space-y-3">
+    <ol className="max-h-[26rem] space-y-3 overflow-y-auto pe-2">
       {rows.map((r) => (
         <li key={`${r.product}-${r.variant}`}>
           <div className="flex items-baseline justify-between gap-3 text-sm">
             <p className="min-w-0 truncate"><span className="font-medium">{r.product}</span> <span className="text-muted-foreground">{r.variant}</span></p>
             <p className="tnum shrink-0 text-muted-foreground">{formatPrice(r.revenue)}</p>
           </div>
+          <p className="tnum text-xs text-muted-foreground">{r.profit === null ? "Bénéfice : prix d'achat manquant" : `Bénéfice : ${formatPrice(r.profit)}`}</p>
           <div className="mt-1 flex items-center gap-2">
             <div className="h-2 min-w-0 flex-1 rounded-full bg-secondary">
               <div className="h-2 rounded-e-[4px] rounded-s-none" style={{ width: `${Math.max(4, (r.quantity / max) * 100)}%`, background: ONLINE }} />
@@ -191,7 +192,7 @@ export default function Dashboard() {
           </Card>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card title="Les plus vendus" hint="Quantités vendues par taille, sur la période."><TopProducts rows={d.top_products} /></Card>
+            <Card title="Les plus vendus" hint="Tous les produits vendus sur la période, par taille, avec leur bénéfice."><TopProducts rows={d.top_products} /></Card>
             <Card title="Stock faible" hint="Parfums et cosmétiques presque épuisés.">
               {d.low_stock.length === 0 ? (
                 <p className="py-6 text-center text-muted-foreground">Rien à réapprovisionner pour le moment.</p>

@@ -118,16 +118,27 @@ class DashboardService
         return $series;
     }
 
-    /** @return list<array{product: string, variant: string, quantity: int, revenue: int}> */
+    /**
+     * Every size sold in the range, best sellers first. `profit` is what it earned over its purchase price,
+     * null when some of the sold units had no purchase price entered.
+     *
+     * @return list<array{product: string, variant: string, quantity: int, revenue: int, profit: ?int}>
+     */
     private function topProducts(Carbon $start, Carbon $end, array $statuses): array
     {
         return DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->whereIn('orders.status', $statuses)->whereBetween('orders.completed_at', [$start, $end])
             ->groupBy('order_items.product_name', 'order_items.variant_label')
-            ->selectRaw('order_items.product_name as product, order_items.variant_label as variant, SUM(order_items.quantity) as quantity, SUM(order_items.line_total) as revenue')
-            ->orderByDesc('quantity')->orderByDesc('revenue')->limit(10)->get()
-            ->map(fn ($r) => ['product' => $r->product, 'variant' => $r->variant, 'quantity' => (int) $r->quantity, 'revenue' => (int) $r->revenue])
+            ->selectRaw('order_items.product_name as product, order_items.variant_label as variant, SUM(order_items.quantity) as quantity, SUM(order_items.line_total) as revenue, COUNT(*) as line_count, COUNT(order_items.unit_cost) as costed, SUM(order_items.unit_cost * order_items.quantity) as cost')
+            ->orderByDesc('quantity')->orderByDesc('revenue')->get()
+            ->map(fn ($r) => [
+                'product' => $r->product,
+                'variant' => $r->variant,
+                'quantity' => (int) $r->quantity,
+                'revenue' => (int) $r->revenue,
+                'profit' => (int) $r->costed === (int) $r->line_count ? (int) $r->revenue - (int) $r->cost : null,
+            ])
             ->all();
     }
 
