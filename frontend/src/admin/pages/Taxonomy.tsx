@@ -97,7 +97,7 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
           {groups.map((g) => (
             <section key={g.id} aria-label={g.title || undefined}>
               {g.title && <h2 className="mb-2 font-display text-xl">{g.title}</h2>}
-              <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">{g.items.map(row)}</ul>
+              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">{g.items.map(row)}</ul>
             </section>
           ))}
         </div>

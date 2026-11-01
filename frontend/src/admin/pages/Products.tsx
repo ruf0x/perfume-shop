@@ -135,7 +135,7 @@ export default function Products({ kind }: { kind: 'goods' | 'pack' }) {
         <EmptyState title={`Aucun ${noun}`} hint={params.toString() ? 'Aucun résultat avec ces filtres.' : `Créez votre premier ${noun} pour le voir dans la boutique.`} action={owner && !params.toString() ? (isPack ? <Link to={`${base}/nouveau`} className={linkButton()}>Créer un pack</Link> : <NewProductButton />) : undefined} />
       ) : (
         <>
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
             {items.map((p) => (
               <li key={p.id} className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
                 <button type="button" onClick={() => navigate(`${base}/${p.id}`)} className="size-16 shrink-0 overflow-hidden rounded-md bg-secondary focus-visible:outline-2 focus-visible:outline-ring" aria-label={`Ouvrir ${p.name}`}>

@@ -20,7 +20,7 @@ const SOCIALS = [
 
 function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-4 rounded-lg border border-border bg-card p-5">
+    <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
       <div><h2 className="font-display text-xl">{title}</h2>{hint && <p className="mt-0.5 text-sm text-muted-foreground">{hint}</p>}</div>
       {children}
     </section>
@@ -124,7 +124,7 @@ function DeliveryTab() {
     <div className="max-w-3xl">
       <p className="mb-4 text-sm text-muted-foreground">Tarifs en dinars. Un tarif s'enregistre quand vous quittez la case. Désactivez une wilaya pour ne plus y livrer.</p>
       <label className="mb-4 block space-y-1 text-sm"><span className="text-muted-foreground">Rechercher une wilaya</span><input type="search" className={`${inputClass} max-w-sm`} value={search} onChange={(e) => setSearch(e.target.value)} /></label>
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-secondary/50 text-start text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Wilaya</th><th className="px-4 py-3 text-end font-medium">À domicile</th><th className="px-4 py-3 text-end font-medium">Point relais</th><th className="px-4 py-3 text-center font-medium">Livrée</th></tr></thead>
           <tbody className="divide-y divide-border">
@@ -193,7 +193,7 @@ function TeamTab() {
   return (
     <div className="max-w-3xl">
       <div className="mb-4 flex justify-end"><Button className="h-10" onClick={() => setEditing('new')}><Plus className="size-4" aria-hidden />Nouveau compte</Button></div>
-      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+      <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
         {q.data.map((u) => (
           <li key={u.id} className="flex items-center gap-3 p-4">
             <div className="min-w-0 flex-1">

@@ -62,7 +62,7 @@ export default function ProductTypes() {
       ) : items.length === 0 ? (
         <EmptyState title="Aucun type de produit" hint="Créez votre premier type, par exemple « Parfums »." />
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
           {items.map((it) => (
             <li key={it.id} className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
               <div className="min-w-0 flex-1">

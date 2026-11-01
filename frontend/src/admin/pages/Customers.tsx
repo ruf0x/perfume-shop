@@ -55,7 +55,7 @@ export default function Customers() {
 
       {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun client" hint="Les clients apparaissent dès leur première commande." /> : (
         <>
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
             {rows.map((c) => (
               <li key={c.id} className="space-y-2 p-4 md:flex md:items-center md:gap-6 md:space-y-0">
                 <div className="min-w-0 md:w-1/4">

@@ -190,7 +190,7 @@ function Overview() {
       </section>
 
       {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun produit" hint={q || rayonId || typeId || status ? 'Aucun résultat avec ces filtres.' : 'Créez un produit pour gérer son stock.'} /> : (
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
           {pageRows.map((r) => (
             <li key={r.product_id} className="space-y-3 p-4 md:flex md:items-center md:gap-6 md:space-y-0">
               <div className="min-w-0 md:w-1/4">
@@ -261,7 +261,7 @@ function Movements() {
 
       {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun mouvement" /> : (
         <div className={cn(query.isPlaceholderData && 'opacity-60')}>
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
             {rows.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 p-3 text-sm sm:px-4">
                 <div className="min-w-0 flex-1 basis-56">

@@ -25,15 +25,16 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-secondary/50 p-4">
+    <div className="flex min-h-svh items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex justify-center">
           <LangSwitch />
         </div>
-        <h1 className="mb-1 text-center text-3xl">Administration</h1>
+        <img src="/brand/logo-mark.webp" alt="" width={221} height={256} className="mx-auto mb-4 h-20 w-auto" />
+        <h1 className="mb-1 text-center text-2xl font-semibold">Administration</h1>
         <p className="mb-6 text-center text-muted-foreground">Connectez-vous pour gérer la boutique.</p>
 
-        <form onSubmit={submit} className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm" noValidate>
+        <form onSubmit={submit} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm" noValidate>
           <div className="space-y-1.5">
             <label htmlFor="username" className="block text-sm font-medium">
               Identifiant

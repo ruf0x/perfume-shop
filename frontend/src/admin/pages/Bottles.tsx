@@ -18,7 +18,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="rounded-2xl border border-border bg-card p-4">
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className="tnum mt-1 font-sans text-2xl font-semibold">{value}</p>
       {sub && <p className="mt-1 text-sm text-muted-foreground">{sub}</p>}
@@ -92,7 +92,7 @@ export default function Bottles() {
       {sizes.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">Aucune bouteille suivie. Ajoutez vos premières bouteilles (par exemple 100 bouteilles de 10 ml) pour commencer le suivi.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-start text-muted-foreground">
               <tr>
@@ -142,7 +142,7 @@ export default function Bottles() {
         {history.data && history.data.data.length === 0 ? (
           <p className="py-6 text-center text-muted-foreground">Aucun mouvement</p>
         ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border bg-card text-sm">
+          <ul className="divide-y divide-border rounded-2xl border border-border bg-card text-sm">
             {history.data?.data.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
                 <span className="min-w-0">

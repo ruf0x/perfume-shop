@@ -115,7 +115,7 @@ function fromProduct(p?: AdminProduct): FormState {
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <section className="space-y-4 rounded-lg border border-border bg-card p-5">
+    <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
       <div>
         <h2 className="font-display text-xl">{title}</h2>
         {hint && <p className="mt-0.5 text-sm text-muted-foreground">{hint}</p>}

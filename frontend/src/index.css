@@ -4,6 +4,14 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/fraunces/wght.css";
 @import "@fontsource-variable/fraunces/wght-italic.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-700.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-700.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -61,7 +69,7 @@
     --oud: #222426;
     --oud-foreground: #f1f2f3;
     --saffron: #8a8f96;
-    --background: #f6f6f7;
+    --background: #f4f4f5;
     --foreground: #222426;
     --card: #ffffff;
     --card-foreground: #222426;
@@ -76,7 +84,7 @@
     --accent: #e3e5e8;
     --accent-foreground: #2d3034;
     --destructive: #a3282a;
-    --border: #dcdee1;
+    --border: #e6e7e9;
     --input: #c9ccd0;
     --ring: #7a7f86;
     --chart-1: oklch(0.87 0 0);
@@ -84,7 +92,7 @@
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --radius: 0.375rem;
+    --radius: 0.75rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);
@@ -147,6 +155,13 @@
     }
   /* Prices and quantities line up in columns. */
   .tnum { font-variant-numeric: tabular-nums; }
+
+  /*
+   * The admin in Arabic: one calm family for everything (the serif display face has no Arabic), and no letter
+   * spacing, which would break the joins between letters.
+   */
+  html[lang="ar"], html[lang="ar"] * { font-family: 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif; letter-spacing: 0; }
+  html[lang="ar"] h1, html[lang="ar"] h2, html[lang="ar"] h3 { font-weight: 600; }
 }
 
 /* The vial fills once when the hero loads; user-triggered changes use the normal transition. */

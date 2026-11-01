@@ -224,7 +224,7 @@ export default function Caisse() {
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <section aria-label="Produits" className="min-w-0">
-          <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_12rem]">
+          <div className="mb-4 grid gap-3 xl:grid-cols-[1fr_12rem]">
             <label className="relative block">
               <span className="sr-only">Rechercher un produit</span>
               <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -261,7 +261,7 @@ export default function Caisse() {
           )}
         </section>
 
-        <aside id="panier-caisse" aria-label="Vente en cours" className="h-fit space-y-5 rounded-lg border border-border bg-card p-5 lg:sticky lg:top-6">
+        <aside id="panier-caisse" aria-label="Vente en cours" className="h-fit space-y-5 rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-6">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl">Vente en cours</h2>
             {lines.length > 0 && <button type="button" onClick={() => setLines([])} className="flex items-center gap-1.5 rounded px-2 py-1 text-sm text-muted-foreground hover:text-destructive"><Trash2 className="size-4" aria-hidden />Vider</button>}

@@ -676,6 +676,8 @@ export const AR: Record<string, string> = {
   'Les commandes déjà passées gardent les informations avec lesquelles elles ont été faites.': 'تحتفظ الطلبات السابقة بالمعلومات التي أُنجزت بها.',
   'Une commande confirmée, expédiée ou livrée ne peut pas être supprimée : annulez-la d\'abord.': 'لا يمكن حذف طلب مؤكد أو مشحون أو مسلَّم: ألغِه أولاً.',
 
+  'Catalogue': 'الكتالوج',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',
@@ -711,8 +713,8 @@ export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) =
   [/^(\d+) article\(s\)$/, (m) => `${m[1]} قطعة`],
   [/^peut être assemblé (\d+) fois$/, (m) => `يمكن تجميعه ${m[1]} مرة`],
   [/^(.+) : (\d+) (.+) demandés, (\d+) en stock\.$/, (m, tr) => `${m[1]}: مطلوب ${m[2]} ${tr(m[3])}، المتوفر ${m[4]}.`],
-  [/^\((.+) % du prix d'achat\)$/, (m) => `(${m[1]} % من سعر الشراء)`],
-  [/^(.+) % du prix d'achat$/, (m) => `${m[1]} % من سعر الشراء`],
+  [/^\((.+) % du prix d'achat\)$/, (m) => `(⁦${m[1]} %⁩ من سعر الشراء)`],
+  [/^(.+) % du prix d'achat$/, (m) => `⁦${m[1]} %⁩ من سعر الشراء`],
   [/^(\d+) ventes? sans prix d'achat non comptées?$/, (m) => `${m[1]} مبيعات بدون سعر شراء غير محسوبة`],
   [/^Prix d'achat des produits : (.+)\. Bénéfice :$/, (m, tr) => `سعر شراء المنتجات: ${tr(m[1])}. الربح:`],
   [/^Prix d'achat des produits : (.+)\.$/, (m, tr) => `سعر شراء المنتجات: ${tr(m[1])}.`],

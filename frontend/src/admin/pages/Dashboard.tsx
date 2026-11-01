@@ -31,16 +31,18 @@ function rangeFor(preset: Preset, from?: string, to?: string) {
   return { from: isoDate(addDays(today, -((today.getDay() + 6) % 7))), to: t }
 }
 
-function Tile({ label, value, sub, to }: { label: string; value: string; sub?: string; to?: string }) {
+/** One figure of the strip: a label, the number, and one line of context. A link when it leads somewhere. */
+function Stat({ label, value, sub, to }: { label: string; value: string; sub?: string; to?: string }) {
   const body = (
     <>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 font-sans text-3xl font-semibold">{value}</p>
-      {sub && <p className="mt-1 text-sm text-muted-foreground">{sub}</p>}
+      <p className="tnum mt-1 text-2xl font-semibold">{value}</p>
+      {sub && <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{sub}</p>}
     </>
   )
-  const cls = 'rounded-lg border border-border bg-card p-4'
-  return to ? <Link to={to} className={cn(cls, 'block transition-colors hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-ring')}>{body}</Link> : <div className={cls}>{body}</div>
+  const cls = 'block p-5 [&:nth-child(n+3)]:border-t [&:nth-child(n+3)]:border-border sm:[&:nth-child(n+3)]:border-t-0 [&:nth-child(even)]:border-s [&:nth-child(even)]:border-border sm:[&:nth-child(even)]:border-s-0'
+
+  return to ? <Link to={to} className={cn(cls, 'transition-colors hover:bg-secondary/60 focus-visible:outline-2 focus-visible:outline-ring')}>{body}</Link> : <div className={cls}>{body}</div>
 }
 
 function profitNote(p: Dashboard['profit']) {
@@ -54,8 +56,8 @@ function profitNote(p: Dashboard['profit']) {
 
 function Card({ title, hint, children, className }: { title: string; hint?: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn('rounded-lg border border-border bg-card p-5', className)}>
-      <h2 className="font-display text-xl">{title}</h2>
+    <section className={cn('rounded-2xl border border-border bg-card p-6', className)}>
+      <h2 className="text-lg font-semibold">{title}</h2>
       {hint && <p className="mt-0.5 mb-3 text-sm text-muted-foreground">{hint}</p>}
       <div className={hint ? '' : 'mt-3'}>{children}</div>
     </section>
@@ -133,21 +135,24 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHeader title="Tableau de bord" description="Les ventes terminées (livrées ou vendues en boutique), en ligne et en caisse." />
-
-      <section aria-label="Période" className="mb-6 space-y-3">
-        <div role="radiogroup" aria-label="Période" className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-          {PRESETS.map(([k, label]) => (
-            <button key={k} role="radio" aria-checked={preset === k} onClick={() => setRange(k)} className={cn('shrink-0 rounded-md px-4 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring', preset === k ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/70')}>{label}</button>
-          ))}
-        </div>
-        {preset === 'custom' && (
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="space-y-1 text-sm"><span className="text-muted-foreground">Du</span><input type="date" className={cn(inputClass, 'w-44')} value={range.from} max={range.to} onChange={(e) => e.target.value && setParams({ range: 'custom', from: e.target.value, to: range.to }, { replace: true })} /></label>
-            <label className="space-y-1 text-sm"><span className="text-muted-foreground">Au</span><input type="date" className={cn(inputClass, 'w-44')} value={range.to} min={range.from} max={isoDate(new Date())} onChange={(e) => e.target.value && setParams({ range: 'custom', from: range.from, to: e.target.value }, { replace: true })} /></label>
+      <PageHeader
+        title="Tableau de bord"
+        description="Les ventes terminées (livrées ou vendues en boutique), en ligne et en caisse."
+        actions={
+          <div role="radiogroup" aria-label="Période" className="flex max-w-full gap-1 overflow-x-auto rounded-xl bg-secondary p-1">
+            {PRESETS.map(([k, label]) => (
+              <button key={k} role="radio" aria-checked={preset === k} onClick={() => setRange(k)} className={cn('shrink-0 rounded-lg px-3.5 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring', preset === k ? 'bg-card font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground')}>{label}</button>
+            ))}
           </div>
-        )}
-      </section>
+        }
+      />
+
+      {preset === 'custom' && (
+        <div className="-mt-3 mb-6 flex flex-wrap items-end gap-3">
+          <label className="space-y-1 text-sm"><span className="text-muted-foreground">Du</span><input type="date" className={cn(inputClass, 'w-44')} value={range.from} max={range.to} onChange={(e) => e.target.value && setParams({ range: 'custom', from: e.target.value, to: range.to }, { replace: true })} /></label>
+          <label className="space-y-1 text-sm"><span className="text-muted-foreground">Au</span><input type="date" className={cn(inputClass, 'w-44')} value={range.to} min={range.from} max={isoDate(new Date())} onChange={(e) => e.target.value && setParams({ range: 'custom', from: range.from, to: e.target.value }, { replace: true })} /></label>
+        </div>
+      )}
 
       {query.isError ? (
         <ErrorState onRetry={() => query.refetch()} message={apiError(query.error, 'Impossible de charger le tableau de bord.')} />
@@ -155,31 +160,35 @@ export default function Dashboard() {
         <Loading />
       ) : (
         <div className={cn('space-y-6 transition-opacity', query.isPlaceholderData && 'opacity-60')}>
-          <div className="grid gap-4 lg:grid-cols-[1.4fr_2fr]">
-            <section className="rounded-lg border border-border bg-card p-5" aria-label="Chiffre d'affaires">
+          <section className="grid overflow-hidden rounded-2xl border border-border bg-card md:grid-cols-[1.35fr_1fr]" aria-label="Chiffre d'affaires">
+            <div className="p-6">
               <p className="text-sm text-muted-foreground">Chiffre d'affaires</p>
-              <p className="mt-1 font-sans text-5xl font-semibold">{formatPrice(d.revenue)}</p>
-              <ul className="mt-4 space-y-1.5 text-sm">
-                <li className="flex items-center justify-between"><span className="flex items-center gap-2"><span className="size-3 rounded-sm" style={{ background: ONLINE }} aria-hidden />Boutique en ligne</span><span className="tnum font-medium">{formatPrice(d.revenue_online)}</span></li>
-                <li className="flex items-center justify-between"><span className="flex items-center gap-2"><span className="size-3 rounded-sm" style={{ background: POS }} aria-hidden />Caisse</span><span className="tnum font-medium">{formatPrice(d.revenue_pos)}</span></li>
+              <p className="tnum mt-1 text-4xl font-semibold sm:text-5xl">{formatPrice(d.revenue)}</p>
+              <ul className="mt-5 space-y-2 text-sm">
+                <li className="flex items-center justify-between gap-3"><span className="flex items-center gap-2"><span className="size-2.5 rounded-full" style={{ background: ONLINE }} aria-hidden />Boutique en ligne</span><span className="tnum font-medium">{formatPrice(d.revenue_online)}</span></li>
+                <li className="flex items-center justify-between gap-3"><span className="flex items-center gap-2"><span className="size-2.5 rounded-full" style={{ background: POS }} aria-hidden />Caisse</span><span className="tnum font-medium">{formatPrice(d.revenue_pos)}</span></li>
               </ul>
-              {d.profit.orders_counted > 0 && (
-                <p className="mt-4 flex items-baseline justify-between gap-3 border-t border-border pt-3">
-                  <span className="font-medium">Bénéfice</span>
-                  <span className="tnum text-2xl font-semibold">{formatPrice(d.profit.amount)}{d.profit.percent !== null && <span className="ms-2 text-base font-normal text-muted-foreground">{`(${d.profit.percent > 0 ? '+' : ''}${String(d.profit.percent).replace('.', ',')} %)`}</span>}</span>
-                </p>
-              )}
-            </section>
-
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <Tile label="Commandes reçues" value={String(d.orders_count)} sub={`${d.online_orders_count} en ligne, ${d.pos_orders_count} en caisse`} />
-              <Tile label="À appeler" value={String(d.pending_count)} sub="en attente de confirmation" to="/admin/commandes?status=en_attente" />
-              <Tile label="En livraison" value={String(d.in_delivery_count)} sub="colis en route" to="/admin/commandes?status=en_livraison" />
-              <Tile label="Taux d'annulation" value={`${String(d.cancel_rate).replace('.', ',')} %`} sub="commandes en ligne" />
-              <Tile label="Bénéfice" value={d.profit.orders_counted > 0 ? formatPrice(d.profit.amount) : '—'} sub={profitNote(d.profit)} />
-              <Tile label="Panier moyen" value={sold > 0 ? formatPrice(avgBasket) : '—'} sub={`${sold} vente${sold > 1 ? 's' : ''} terminée${sold > 1 ? 's' : ''}`} />
             </div>
-          </div>
+            <div className="border-t border-border bg-secondary/50 p-6 md:border-s md:border-t-0">
+              <p className="text-sm text-muted-foreground">Bénéfice</p>
+              {d.profit.orders_counted > 0 ? (
+                <>
+                  <p className="tnum mt-1 text-3xl font-semibold sm:text-4xl">{formatPrice(d.profit.amount)}</p>
+                  {d.profit.percent !== null && <p className="tnum mt-1 text-sm text-muted-foreground">{`${d.profit.percent > 0 ? '+' : ''}${String(d.profit.percent).replace('.', ',')} % du prix d'achat`}</p>}
+                  {d.profit.orders_without_cost > 0 && <p className="mt-3 text-sm text-muted-foreground">{`${d.profit.orders_without_cost} vente${d.profit.orders_without_cost > 1 ? 's' : ''} sans prix d'achat non comptée${d.profit.orders_without_cost > 1 ? 's' : ''}`}</p>}
+                </>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">{profitNote(d.profit)}</p>
+              )}
+            </div>
+          </section>
+
+          <section className="grid grid-cols-2 divide-border overflow-hidden rounded-2xl border border-border bg-card sm:grid-cols-4 sm:divide-x sm:rtl:divide-x-reverse" aria-label="En un coup d'œil">
+            <Stat label="Commandes reçues" value={String(d.orders_count)} sub={`${d.online_orders_count} en ligne, ${d.pos_orders_count} en caisse`} />
+            <Stat label="À appeler" value={String(d.pending_count)} sub="en attente de confirmation" to="/admin/commandes?status=en_attente" />
+            <Stat label="En livraison" value={String(d.in_delivery_count)} sub="colis en route" to="/admin/commandes?status=en_livraison" />
+            <Stat label="Panier moyen" value={sold > 0 ? formatPrice(avgBasket) : '—'} sub={`${sold} vente${sold > 1 ? 's' : ''} terminée${sold > 1 ? 's' : ''}`} />
+          </section>
 
           <Card title="Ventes par jour" hint="Chiffre d'affaires des ventes terminées, jour par jour.">
             {d.sales_by_day.length <= 1 ? (
