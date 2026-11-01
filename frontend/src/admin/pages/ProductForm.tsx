@@ -267,22 +267,11 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
   }
   const setRow = (i: number, patch: Partial<Row>) => set('variants', f.variants.map((r, j) => (j === i ? withGain(r, patch) : r)))
   const addRow = (p?: (typeof PRESETS)[number]) => set('variants', [...f.variants, { key: newKey(), label: p?.label ?? '', ml: p ? String(p.ml) : '', price: '', compare: '', cost: '', gain: '', mode: p?.mode ?? (isCosmetic ? 'unit' : 'pool'), active: true, stock_qty: 0 }])
-  // Purchase helpers (not saved): a bottle bought in bulk, and the gain wanted.
-  const [bulk, setBulk] = useState({ price: '', ml: '' })
+  // Purchase helper (not saved): the gain wanted on every size.
   const [wantedGain, setWantedGain] = useState('')
-  const costPerMl = Number(bulk.price) > 0 && Number(bulk.ml) > 0 ? Number(bulk.price) / Number(bulk.ml) : null
   const packCost = f.components.length > 0 && f.components.every((c) => c.cost !== null) ? f.components.reduce((n, c) => n + (c.cost ?? 0) * c.quantity, 0) : null
   const setPackPrice = (v: string) => setF((s) => ({ ...s, packPrice: v, packGain: packCost && v !== '' ? derivedGain(v, String(packCost)) : s.packGain }))
   const setPackGain = (v: string) => setF((s) => ({ ...s, packGain: v, packPrice: packCost && v !== '' && Number(v) >= 0 ? String(priceFor(packCost, Number(v))) : s.packPrice }))
-  // The decants are priced per ml from this bottle; a sealed bottle of the same size takes the bottle's price; other sealed bottles (a 150 ml bought at another price) are typed by hand.
-  const fillCostsFromBulk = () =>
-    costPerMl !== null &&
-    set('variants', f.variants.map((r) => {
-      if (Number(r.ml) <= 0) return r
-      if (r.mode === 'pool') return withGain(r, { cost: String(Math.round(costPerMl * Number(r.ml))) })
-
-      return Number(r.ml) === Number(bulk.ml) ? withGain(r, { cost: String(Math.round(Number(bulk.price))) }) : r
-    }))
   const applyWantedGain = () => Number(wantedGain) >= 0 && wantedGain !== '' && set('variants', f.variants.map((r) => (r.cost !== '' && Number(r.cost) > 0 ? withGain(r, { price: String(roundUp50(Number(r.cost) * (1 + Number(wantedGain) / 100))) }) : r)))
   const moveRow = (i: number, d: number) => {
     const rows = [...f.variants]
@@ -435,16 +424,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
             >
               {err('variants') && <p role="alert" className="text-sm text-destructive">{err('variants')}</p>}
               <div className="space-y-3 rounded-md bg-secondary/60 p-3 text-sm">
-                <p className="font-medium">Achat en gros et bénéfice <span className="font-normal text-muted-foreground">(facultatif, visible par vous seulement)</span></p>
-                {!isCosmetic && (
-                  <div className="flex flex-wrap items-end gap-3">
-                    <Field label="Flacon acheté (DA)" className="w-36"><input type="number" min={0} inputMode="numeric" className={inputClass} value={bulk.price} onChange={(e) => setBulk({ ...bulk, price: e.target.value })} /></Field>
-                    <Field label="Contenance du flacon (ml)" className="w-40"><input type="number" min={1} inputMode="numeric" className={inputClass} value={bulk.ml} onChange={(e) => setBulk({ ...bulk, ml: e.target.value })} /></Field>
-                    <Button type="button" variant="outline" className="h-10" disabled={costPerMl === null} onClick={fillCostsFromBulk}>Calculer le prix d'achat de chaque taille</Button>
-                    {costPerMl !== null && <p className="tnum pb-2 text-muted-foreground">{`Soit ${formatPrice(Math.round(costPerMl * 100) / 100)} le ml.`}</p>}
-                    <p className="basis-full text-muted-foreground">Les tailles à décanter se calculent au ml à partir de ce flacon. Un flacon scellé de la même contenance prend son prix ; un autre flacon scellé (par exemple un 150 ml acheté à un autre prix) se saisit à la main sur sa ligne.</p>
-                  </div>
-                )}
+                <p className="font-medium">Bénéfice sur toutes les tailles <span className="font-normal text-muted-foreground">(facultatif, visible par vous seulement)</span></p>
                 <div className="flex flex-wrap items-end gap-3">
                   <Field label="Bénéfice voulu (%)" className="w-36"><input type="number" min={0} inputMode="decimal" className={inputClass} value={wantedGain} onChange={(e) => setWantedGain(e.target.value)} placeholder="20" /></Field>
                   <Button type="button" variant="outline" className="h-10" disabled={wantedGain === '' || !f.variants.some((r) => Number(r.cost) > 0)} onClick={applyWantedGain}>Calculer les prix de vente</Button>

@@ -578,7 +578,7 @@ export const AR: Record<string, string> = {
   'Bénéfice :': 'الربح:',
   "Renseignez les prix d'achat dans les produits": 'أدخل أسعار الشراء في المنتجات',
   "Prix d'achat (DA)": 'سعر الشراء (دج)',
-  "Achat en gros et bénéfice": 'الشراء بالجملة والربح',
+  "Bénéfice sur toutes les tailles": 'الربح على كل الأحجام',
   '(facultatif, visible par vous seulement)': '(اختياري، ظاهر لك وحدك)',
   'Flacon acheté (DA)': 'سعر القارورة المشتراة (دج)',
   'Contenance du flacon (ml)': 'سعة القارورة (مل)',
