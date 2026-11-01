@@ -1488,6 +1488,101 @@
                 "security": []
             }
         },
+        "/admin/customers/search": {
+            "get": {
+                "operationId": "customer.search",
+                "summary": "Find a client while typing (name or phone), for the caisse and the order screens. Owner and staff.\nReturns up to 8, with the place they live so the form can be filled in",
+                "tags": [
+                    "Customer"
+                ],
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 60
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "first_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "last_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "phone": {
+                                                        "type": "string"
+                                                    },
+                                                    "wilaya_id": {
+                                                        "type": [
+                                                            "integer",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "commune_id": {
+                                                        "type": [
+                                                            "integer",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "wilaya": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "orders_count": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "first_name",
+                                                    "last_name",
+                                                    "phone",
+                                                    "wilaya_id",
+                                                    "commune_id",
+                                                    "wilaya",
+                                                    "orders_count"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/admin/customers": {
             "get": {
                 "operationId": "customer.index",
@@ -4805,6 +4900,28 @@
                                                 "show_unavailable": {
                                                     "type": "string"
                                                 },
+                                                "default_location": {
+                                                    "type": "object",
+                                                    "description": "Where a new client is placed unless told otherwise (Oran, Oran).",
+                                                    "properties": {
+                                                        "wilaya_id": {
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "commune_id": {
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "wilaya_id",
+                                                        "commune_id"
+                                                    ]
+                                                },
                                                 "web_admin_enabled": {
                                                     "type": "string",
                                                     "description": "When false the website's /admin page only says to use the desktop app."
@@ -4818,6 +4935,7 @@
                                                 "store_pickup_enabled",
                                                 "free_delivery_over",
                                                 "show_unavailable",
+                                                "default_location",
                                                 "web_admin_enabled"
                                             ]
                                         }
@@ -7648,6 +7766,7 @@
                             "string",
                             "null"
                         ],
+                        "description": "A client is optional, but once one is given the three are needed: the client is created from them.",
                         "maxLength": 80
                     },
                     "last_name": {
@@ -7663,6 +7782,19 @@
                             "null"
                         ],
                         "maxLength": 20
+                    },
+                    "wilaya_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "Where the client lives; Oran / Oran (config/shop.php) when left out."
+                    },
+                    "commune_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
                     }
                 },
                 "required": [

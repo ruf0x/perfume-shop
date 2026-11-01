@@ -39,6 +39,34 @@ class CustomerController extends Controller
         ]);
     }
 
+    /**
+     * Find a client while typing (name or phone), for the caisse and the order screens. Owner and staff.
+     * Returns up to 8, with the place they live so the form can be filled in.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $v = $request->validate(['q' => ['required', 'string', 'min:2', 'max:60']]);
+        $term = $v['q'];
+
+        $rows = Customer::query()->with('wilaya:id,name')
+            ->where(fn ($w) => $w->where('phone', 'like', "%{$term}%")
+                ->orWhere('first_name', 'like', "%{$term}%")
+                ->orWhere('last_name', 'like', "%{$term}%")
+                ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%{$term}%"]))
+            ->orderByDesc('orders_count')->limit(8)->get();
+
+        return response()->json(['data' => $rows->map(fn (Customer $c) => [
+            'id' => $c->id,
+            'first_name' => $c->first_name,
+            'last_name' => $c->last_name,
+            'phone' => $c->phone,
+            'wilaya_id' => $c->wilaya_id,
+            'commune_id' => $c->commune_id,
+            'wilaya' => $c->wilaya?->name,
+            'orders_count' => $c->orders_count,
+        ])->values()]);
+    }
+
     public function show(Customer $customer): JsonResponse
     {
         return response()->json(['data' => $this->present($customer->load('wilaya:id,name'))]);

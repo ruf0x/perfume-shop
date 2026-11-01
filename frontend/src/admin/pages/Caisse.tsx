@@ -13,6 +13,7 @@ import { apiError } from '../lib'
 import { printTicket } from '../printHelper'
 import { useAdminProducts, useLoyaltyLookup, usePosSale, useProductTypes, useTaxa } from '../queries'
 import { useIsOwner } from '../auth'
+import { ClientPicker, emptyClient, type ClientFields } from '../components/ClientPicker'
 import { GiftDialog, LoyaltyNote } from '../components/Loyalty'
 import type { AdminProduct, AdminVariant, Order, StockMode } from '../types'
 import { useDebounced } from '../useDebounced'
@@ -138,7 +139,7 @@ export default function Caisse() {
   const [discountValue, setDiscountValue] = useState('')
   const [payment, setPayment] = useState<Payment>('especes')
   const [received, setReceived] = useState('')
-  const [client, setClient] = useState({ first_name: '', last_name: '', phone: '' })
+  const [client, setClient] = useState<ClientFields>(emptyClient)
   const [done, setDone] = useState<Order | null>(null)
   const lookup = useLoyaltyLookup(useDebounced(client.phone, 500))
   const owner = useIsOwner()
@@ -154,7 +155,10 @@ export default function Caisse() {
   const cash = received === '' ? total : Number(received) || 0
   const change = cash - total
   const count = lines.reduce((n, l) => n + l.qty, 0)
-  const canSell = lines.length > 0 && (payment !== 'especes' || cash >= total) && !sale.isPending
+  // A client is optional, but once started it needs the first name, last name and phone.
+  const clientTyped = client.first_name.trim() !== '' || client.last_name.trim() !== '' || client.phone.trim() !== ''
+  const clientOk = !clientTyped || (client.first_name.trim() !== '' && client.last_name.trim() !== '' && client.phone.trim() !== '')
+  const canSell = lines.length > 0 && clientOk && (payment !== 'especes' || cash >= total) && !sale.isPending
 
   const add = (p: AdminProduct, v: AdminVariant) => {
     const base: Line = { variantId: v.id, productId: p.id, name: p.name, label: v.label, listPrice: v.price, priceText: String(v.price), qty: 1, mode: v.stock_mode, ml: v.ml, poolStock: p.stock_ml, unitStock: v.stock_qty }
@@ -170,7 +174,7 @@ export default function Caisse() {
     setLines([])
     setDiscountValue('')
     setReceived('')
-    setClient({ first_name: '', last_name: '', phone: '' })
+    setClient(emptyClient)
     setPayment('especes')
     setDone(null)
     setTimeout(() => search.current?.focus(), 50)
@@ -187,6 +191,8 @@ export default function Caisse() {
         first_name: client.first_name.trim() || undefined,
         last_name: client.last_name.trim() || undefined,
         phone: client.phone.trim() || undefined,
+        wilaya_id: client.wilaya_id || undefined,
+        commune_id: client.commune_id || undefined,
       },
       { onSuccess: setDone, onError: (e) => toast.error(apiError(e)) },
     )
@@ -330,11 +336,7 @@ export default function Caisse() {
 
             <details className="rounded-md border border-border p-3 text-sm">
               <summary className="cursor-pointer text-muted-foreground">Ajouter le client (facultatif)</summary>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <input aria-label="Prénom" placeholder="Prénom" className={inputClass} value={client.first_name} onChange={(e) => setClient({ ...client, first_name: e.target.value })} />
-                <input aria-label="Nom" placeholder="Nom" className={inputClass} value={client.last_name} onChange={(e) => setClient({ ...client, last_name: e.target.value })} />
-                <input aria-label="Téléphone" placeholder="Téléphone" inputMode="tel" className={`${inputClass} col-span-2`} value={client.phone} onChange={(e) => setClient({ ...client, phone: e.target.value })} />
-              </div>
+              <div className="mt-3"><ClientPicker value={client} onChange={setClient} /></div>
               {lookup.data?.customer && lookup.data.loyalty && (
                 <div className="mt-3 rounded-md bg-secondary/60 p-3">
                   <p className="mb-1 font-medium">{`${lookup.data.customer.first_name} ${lookup.data.customer.last_name}`}</p>

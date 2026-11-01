@@ -92,3 +92,64 @@ it('lets the owner fix the client of a delivered order, and writes it in the his
 
     expect($order->fresh()->history()->where('note', 'Informations modifiées')->exists())->toBeTrue();
 });
+
+// ───────────────────────────── adding a client ─────────────────────────────
+
+it('searches the clients by name or phone, for the staff too', function () {
+    caisseSale($this, 1, ['phone' => '0550123456', 'first_name' => 'Amel', 'last_name' => 'Benali']);
+    caisseSale($this, 1, ['phone' => '0661000111', 'first_name' => 'Karim', 'last_name' => 'Saidi']);
+
+    expect($this->getJson('/api/admin/customers/search?q=amel')->assertOk()->json('data'))->toHaveCount(1);
+    expect($this->getJson('/api/admin/customers/search?q=Amel Ben')->json('data.0.phone'))->not->toBeNull();
+    expect($this->getJson('/api/admin/customers/search?q=0661')->json('data.0.first_name'))->toBe('Karim');
+    $this->getJson('/api/admin/customers/search?q=a')->assertUnprocessable();
+
+    $staff = \App\Models\User::create(['name' => 'Staff', 'username' => 'staff1', 'password' => 'secret-pass', 'role' => \App\Enums\UserRole::Staff]);
+    $this->actingAs($staff)->getJson('/api/admin/customers/search?q=karim')->assertOk()->assertJsonCount(1, 'data');
+});
+
+it('needs the first name, last name and phone together to create a client at the caisse', function () {
+    $sale = fn (array $client) => $this->postJson('/api/admin/pos/sales', ['lines' => lines([[$this->v10, 1]]), 'payment_method' => 'especes', 'amount_received' => 5000] + $client);
+
+    $sale(['phone' => '0550123456'])->assertUnprocessable()->assertJsonValidationErrors(['first_name', 'last_name']);
+    $sale(['first_name' => 'Amel', 'last_name' => 'Benali'])->assertUnprocessable()->assertJsonValidationErrors(['phone']);
+    $sale([])->assertCreated();                                                       // no client at all is fine
+    $sale(['phone' => '0550123456', 'first_name' => 'Amel', 'last_name' => 'Benali'])->assertCreated();
+});
+
+it('places a new client in Oran, Oran unless the sale says otherwise', function () {
+    $oran = \App\Models\Wilaya::query()->find(31) ?? makeWilaya(31);
+    $commune = \App\Models\Commune::firstOrCreate(['wilaya_id' => 31, 'name' => 'Oran']);
+    $other = makeWilaya(16);
+    $alger = \App\Models\Commune::firstOrCreate(['wilaya_id' => 16, 'name' => 'Alger Centre']);
+
+    caisseSale($this, 1, ['phone' => '0550123456', 'first_name' => 'Amel', 'last_name' => 'Benali']);
+    $amel = Customer::where('first_name', 'Amel')->firstOrFail();
+    expect($amel->wilaya_id)->toBe(31)->and($amel->commune_id)->toBe($commune->id);
+
+    caisseSale($this, 1, ['phone' => '0661000111', 'first_name' => 'Karim', 'last_name' => 'Saidi', 'wilaya_id' => 16, 'commune_id' => $alger->id]);
+    expect(Customer::where('first_name', 'Karim')->first()->wilaya_id)->toBe(16);
+
+    caisseSale($this, 1, ['phone' => '0661000111', 'first_name' => 'Karim', 'last_name' => 'Saidi']);   // a known client keeps their place
+    expect(Customer::where('first_name', 'Karim')->first()->wilaya_id)->toBe(16);
+
+    expect(fn () => caisseSale($this, 1, ['phone' => '0770000222', 'first_name' => 'X', 'last_name' => 'Y', 'wilaya_id' => 31, 'commune_id' => $alger->id]))->toThrow(\App\Exceptions\ShopException::class);
+});
+
+it('creates a new client from a finished sale only with a name, and places them in Oran', function () {
+    \App\Models\Wilaya::query()->find(31) ?? makeWilaya(31);
+    \App\Models\Commune::firstOrCreate(['wilaya_id' => 31, 'name' => 'Oran']);
+    $sale = caisseSale($this, 1);
+
+    $this->putJson("/api/admin/orders/{$sale->id}", ['phone' => '0550123456'])->assertUnprocessable();          // no name: not enough to create a client
+    $this->putJson("/api/admin/orders/{$sale->id}", ['phone' => '0550123456', 'first_name' => 'Amel', 'last_name' => 'Benali'])->assertOk();
+
+    expect(Customer::firstOrFail()->wilaya_id)->toBe(31);
+});
+
+it('tells the shop where a new client is placed by default', function () {
+    \App\Models\Wilaya::query()->find(31) ?? makeWilaya(31);
+    $commune = \App\Models\Commune::firstOrCreate(['wilaya_id' => 31, 'name' => 'Oran']);
+
+    $this->getJson('/api/settings/public')->assertOk()->assertJsonPath('data.default_location.wilaya_id', 31)->assertJsonPath('data.default_location.commune_id', $commune->id);
+});

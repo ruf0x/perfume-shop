@@ -648,6 +648,13 @@ export const AR: Record<string, string> = {
   'Les articles, la remise et la livraison ne se modifient plus une fois la commande expédiée, vendue ou annulée. Vous pouvez corriger le client et le mode de paiement.': 'لا تُعدَّل المنتجات والتخفيض والتوصيل بعد شحن الطلب أو بيعه أو إلغائه. يمكنك تصحيح الزبون وطريقة الدفع.',
   "Ajoutez son téléphone pour l'enregistrer comme client (ses parfums comptent alors pour la fidélité).": 'أضف هاتفه لتسجيله كزبون (فتُحتسب عطوره عندئذٍ في برنامج الولاء).',
 
+  // Client picker
+  'Rechercher un client': 'بحث عن زبون',
+  'Rechercher un client (nom ou téléphone)': 'بحث عن زبون (الاسم أو الهاتف)',
+  'Aucun client trouvé : remplissez les champs ci-dessous pour le créer.': 'لم يُعثر على زبون: املأ الحقول أدناه لإنشائه.',
+  'Pour enregistrer le client, indiquez son prénom, son nom et son téléphone.': 'لتسجيل الزبون، أدخل اسمه الأول ولقبه وهاتفه.',
+  "Un nouveau client sera créé avec ces informations (s'il n'existe pas déjà avec ce numéro).": 'سيُنشأ زبون جديد بهذه المعلومات (إن لم يكن موجوداً بهذا الرقم).',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',
@@ -664,6 +671,7 @@ export const AR: Record<string, string> = {
 
 /** Words of a sentence whose other part is data (names, numbers). Longest match first is not needed: each is anchored. */
 export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) => string) => string]> = [
+  [/^Client existant : (.+), (\d+) commandes?\.$/, (m) => `زبون موجود: ${m[1]}، ${m[2]} طلب.`],
   [/^Fidélité : (\d+) \/ (\d+) parfums achetés$/, (m) => `الولاء: ${m[1]} / ${m[2]} عطور مشتراة`],
   [/^(\d+) cadeaux à offrir$/, (m) => `${m[1]} هدايا للتسليم`],
   [/^Valeur conseillée du cadeau : (.+) \(moyenne des (\d+) parfums\)\.$/, (m, tr) => `القيمة المقترحة للهدية: ${tr(m[1])} (متوسط ${m[2]} عطور).`],

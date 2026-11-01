@@ -12,6 +12,7 @@ use App\Models\Commune;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\User;
+use App\Support\DefaultLocation;
 use App\Support\Phone;
 use App\Support\Quote;
 use App\Support\QuoteLine;
@@ -116,7 +117,8 @@ class OrderPlacement
 
             $customer = null;
             if ($phone) {
-                $customer = $this->upsertCustomer($phone, $data['first_name'] ?? 'Client', $data['last_name'] ?? 'Boutique');
+                [$wilayaId, $communeId] = $this->clientLocation($phone, $data);
+                $customer = $this->upsertCustomer($phone, $data['first_name'] ?? 'Client', $data['last_name'] ?? 'Boutique', $wilayaId, $communeId);
                 $customer->increment('orders_count');
             }
 
@@ -203,6 +205,28 @@ class OrderPlacement
                 'line_total' => $line->lineTotal,
             ]);
         }
+    }
+
+    /**
+     * Wilaya and commune of a client added at the caisse: what was given, else (for a new client) the shop's own
+     * (Oran, Oran). A known client keeps the place we already have for them.
+     *
+     * @return array{0: ?int, 1: ?int}
+     */
+    private function clientLocation(string $phone, array $data): array
+    {
+        $existing = Customer::query()->where('phone', $phone)->first();
+        $wilayaId = $data['wilaya_id'] ?? null;
+        $communeId = $data['commune_id'] ?? null;
+
+        if ($wilayaId === null && $communeId === null) {
+            return $existing?->wilaya_id ? [null, null] : [DefaultLocation::wilayaId(), DefaultLocation::communeId()];
+        }
+        if ($communeId && ! Commune::query()->whereKey($communeId)->where('wilaya_id', $wilayaId)->exists()) {
+            throw new ShopException("Cette commune n'appartient pas à la wilaya choisie.");
+        }
+
+        return [$wilayaId, $communeId];
     }
 
     private function upsertCustomer(string $phone, string $firstName, string $lastName, ?int $wilayaId = null, ?int $communeId = null, ?string $address = null): Customer

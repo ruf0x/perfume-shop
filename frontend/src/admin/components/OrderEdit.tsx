@@ -8,6 +8,7 @@ import { QtyStepper } from '@/shop/components/QtyStepper'
 import { apiError } from '../lib'
 import { useUpdateOrder } from '../queries'
 import type { Order } from '../types'
+import { ClientPicker } from './ClientPicker'
 import { inputClass } from './common'
 import { VariantPicker } from './VariantPicker'
 
@@ -62,6 +63,8 @@ export function OrderEdit({ order, onDone }: { order: Order; onDone: () => void 
 
   const save = () => {
     if (!full) {
+      const typed = [f.first_name, f.last_name, f.phone].some((v) => v.trim() !== '')
+      if (isPos && typed && [f.first_name, f.last_name, f.phone].some((v) => v.trim() === '')) return toast.error('Pour enregistrer le client, indiquez son prénom, son nom et son téléphone.')
       // Only what can still change; empty fields are left out (a caisse sale may have no client yet).
       const body: Record<string, unknown> = { id: order.id }
       for (const [k, v] of Object.entries({ first_name: f.first_name, last_name: f.last_name, phone: f.phone, phone2: f.phone2 })) if (v.trim() !== '') body[k] = v.trim()
@@ -100,6 +103,12 @@ export function OrderEdit({ order, onDone }: { order: Order; onDone: () => void 
     <div className="space-y-6">
       <section className="space-y-3">
         <h3 className="font-display text-lg">Client</h3>
+        {!full && isPos ? (
+          <ClientPicker
+            value={{ first_name: f.first_name, last_name: f.last_name, phone: f.phone, wilaya_id: f.wilaya_id, commune_id: f.commune_id }}
+            onChange={(c) => setF((s) => ({ ...s, ...c }))}
+          />
+        ) : (
         <div className="grid grid-cols-2 gap-3">
           <label className={label}><span className={hint}>Prénom</span><input className={inputClass} value={f.first_name} onChange={(e) => set('first_name', e.target.value)} /></label>
           <label className={label}><span className={hint}>Nom de famille</span><input className={inputClass} value={f.last_name} onChange={(e) => set('last_name', e.target.value)} /></label>
@@ -129,6 +138,7 @@ export function OrderEdit({ order, onDone }: { order: Order; onDone: () => void 
           </label>
           <label className={`${label} col-span-2`}><span className={hint}>Adresse</span><input className={inputClass} value={f.address} onChange={(e) => set('address', e.target.value)} /></label>
         </div>
+        )}
       </section>
 
       {!full && (

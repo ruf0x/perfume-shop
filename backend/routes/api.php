@@ -63,6 +63,7 @@ Route::prefix('admin')->group(function () {
 
         Route::post('/pos/sales', [PosController::class, 'store']);
         Route::get('/loyalty', [LoyaltyController::class, 'lookup']);
+        Route::get('/customers/search', [CustomerController::class, 'search']);
 
         Route::get('/products', [ProductController::class, 'index']);
         Route::get('/products/{product}', [ProductController::class, 'show']);

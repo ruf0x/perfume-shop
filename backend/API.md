@@ -34,7 +34,7 @@ Send it on every admin request as `Authorization: Bearer <token>`.
 
 The desktop app signs in with `POST /admin/desktop/login` (`{ "username", "password" }`) and gets `{ token, expires_at, user }`; the token lasts 30 days. Send it as `Authorization: Bearer <token>`; no cookie and no CSRF header. `POST /admin/logout` with the token deletes it. The app's origin is `app://local` (allowed by CORS).
 
-**Administration on the website.** It is a switch in the code, `config/features.php` (`'web_admin' => false`), chosen per shop when it is delivered; it cannot be changed through the API. While it is off, the website's cookie sign-in and every call that comes from a browser session answer `403 { "code": "web_admin_disabled" }`; calls with a Bearer token (the desktop app) keep working, and the shop itself is unaffected. `GET /settings/public` exposes `web_admin_enabled`. This closes the web admin, it is not a firewall: the token sign-in stays reachable and is protected by the password and the login throttle.
+**Administration on the website.** It is a switch in the code, `config/features.php` (`'web_admin' => false`), chosen per shop when it is delivered; it cannot be changed through the API. While it is off, the website's cookie sign-in and every call that comes from a browser session answer `403 { "code": "web_admin_disabled" }`; calls with a Bearer token (the desktop app) keep working, and the shop itself is unaffected. `GET /settings/public` exposes `web_admin_enabled`. It also exposes `default_location` (`wilaya_id`, `commune_id`: where a new client is placed unless told otherwise). This closes the web admin, it is not a firewall: the token sign-in stays reachable and is protected by the password and the login throttle.
 
 ### The cookie flow (what the React app does)
 
@@ -102,7 +102,8 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | GET | `/orders/{id}` | ✅ | Detail: client, items, totals, history, `allowed_actions`, `awaiting_stock`, and for a pending order `stock_check` (`possible`, `shortages`, and per item `item_id`, `ok`, `left`, `max_qty`: what the stock can cover) |
 | PUT | `/orders/{id}` | ✅ | Edit an order. Pending / confirmed: everything (client info, `lines`, `delivery_fee`, `discount`, `delivery_mode`, `admin_note`, `awaiting_stock`: put the order aside until stock arrives, it stays pending). Any other status (shipped, delivered, sold in shop, cancelled, returned): only the client (names, phones, address, wilaya / commune), `admin_note`, and for a caisse sale `payment_method` + `amount_received`; sending `lines`, `discount` or fees is refused. Adding or changing the phone links the order to that customer (created if new), moving its counters and loyalty perfumes |
 | POST | `/orders/{id}/transition` | ✅ | Workflow action (below) |
-| POST | `/pos/sales` | ✅ | Caisse sale |
+| POST | `/pos/sales` | ✅ | Caisse sale. A client is optional but needs `first_name`, `last_name` and `phone` together (the client is created, or found by phone); `wilaya_id` / `commune_id` place them, Oran / Oran (`config/shop.php`) when left out for a new client |
+| GET | `/customers/search` | ✅ | `?q=` (2+ characters): up to 8 clients by name or phone, with their wilaya / commune, to fill the client form. Owner and staff |
 | GET | `/products`, `/products/{id}` | ✅ | Catalogue with stock and hidden items. Filters: `q, kind (comma-separated), product_type_id, type_id, active, low_stock` |
 | GET | `/types`, `/brands` | ✅ | With product counts |
 | GET | `/stock`, `/stock/movements` | ✅ | Overview (`q, status ok/low/out`) and ledger (`product_id, variant_id, order_id, type, from, to`) |

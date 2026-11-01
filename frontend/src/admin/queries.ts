@@ -262,6 +262,8 @@ export interface PosSalePayload {
   first_name?: string
   last_name?: string
   phone?: string
+  wilaya_id?: number
+  commune_id?: number
 }
 
 export function usePosSale() {
@@ -315,5 +317,25 @@ export function useRedeemGift() {
   return useMutation({
     mutationFn: ({ customerId, variantId }: { customerId: number; variantId: number }) => api.post(`/admin/customers/${customerId}/loyalty/redeem`, { variant_id: variantId }),
     onSuccess: () => refresh(qc),
+  })
+}
+
+/** Find a client while typing (name or phone): up to 8, with the place they live. */
+export interface CustomerHit {
+  id: number
+  first_name: string
+  last_name: string
+  phone: string
+  wilaya_id: number | null
+  commune_id: number | null
+  wilaya: string | null
+  orders_count: number
+}
+
+export function useCustomerSearch(q: string) {
+  return useQuery({
+    queryKey: ['admin', 'customers', 'search', q],
+    enabled: q.trim().length >= 2,
+    queryFn: () => api.get<{ data: CustomerHit[] }>('/admin/customers/search', { params: { q: q.trim() } }).then((r) => r.data.data),
   })
 }

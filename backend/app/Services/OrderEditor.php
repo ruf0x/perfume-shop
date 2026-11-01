@@ -12,6 +12,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Support\DefaultLocation;
 use App\Support\Phone;
 use Illuminate\Support\Facades\DB;
 
@@ -129,7 +130,15 @@ class OrderEditor
         }
 
         $target = Customer::query()->firstOrNew(['phone' => $order->phone]);
-        $target->fill($names + ['first_name' => $target->first_name ?? 'Client', 'last_name' => $target->last_name ?? 'Boutique'])->save();
+        if (! $target->exists) {
+            if (blank($order->first_name) || blank($order->last_name)) {
+                throw new ShopException('Indiquez le prénom, le nom et le téléphone du client.');
+            }
+            // A new client lives where the order says, else in the shop's own wilaya and commune (Oran, Oran).
+            $place = $order->wilaya_id ? ['wilaya_id' => $order->wilaya_id, 'commune_id' => $order->commune_id] : ['wilaya_id' => DefaultLocation::wilayaId(), 'commune_id' => DefaultLocation::communeId()];
+            $target->fill($place);
+        }
+        $target->fill($names)->save();
 
         $loyalty = app(LoyaltyService::class);
         if ($current) {
