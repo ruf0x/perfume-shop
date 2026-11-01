@@ -2753,6 +2753,167 @@
                 "security": []
             }
         },
+        "/admin/imports/templates/{format}": {
+            "get": {
+                "operationId": "import.template",
+                "summary": "The CSV model to fill in (UTF-8, `;` separated, opens in Excel): `perfumes` or `options`",
+                "tags": [
+                    "Import"
+                ],
+                "parameters": [
+                    {
+                        "name": "format",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "text/csv; charset=UTF-8": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Content-Disposition": {
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "attachment; filename=modele-autres-produits.csv"
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/admin/imports/products": {
+            "post": {
+                "operationId": "import.products",
+                "summary": "Add products from a CSV file. Without `commit` it only checks the file and says what would happen (nothing is\nsaved); with `commit=1` it imports. Existing products are skipped, never changed; a product with a problem is\nskipped with its line numbers and the others are imported",
+                "tags": [
+                    "Import"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "contentMediaType": "application/octet-stream",
+                                        "description": "Maximum file size: 2048 kilobytes."
+                                    },
+                                    "format": {
+                                        "type": "string",
+                                        "description": "`perfumes` (one row per perfume, sizes as columns) or `options` (one row per option of a product).",
+                                        "enum": [
+                                            "perfumes",
+                                            "options"
+                                        ]
+                                    },
+                                    "commit": {
+                                        "type": [
+                                            "boolean",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "file",
+                                    "format"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "format": {
+                                                    "type": "string"
+                                                },
+                                                "committed": {
+                                                    "type": "boolean"
+                                                },
+                                                "rows": {
+                                                    "type": "integer"
+                                                },
+                                                "created": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0
+                                                },
+                                                "skipped": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0
+                                                },
+                                                "errors": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "format",
+                                                "committed",
+                                                "rows",
+                                                "created",
+                                                "skipped",
+                                                "errors"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/admin/loyalty": {
             "get": {
                 "operationId": "loyalty.lookup",

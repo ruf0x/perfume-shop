@@ -354,3 +354,34 @@ export function useDeleteCustomer() {
   const qc = useQueryClient()
   return useMutation({ mutationFn: (id: number) => api.delete(`/admin/customers/${id}`), onSuccess: () => refresh(qc) })
 }
+
+// ── CSV import ───────────────────────────────────────────────────────────
+export type ImportFormat = 'perfumes' | 'options'
+
+export interface ImportReport {
+  format: ImportFormat
+  committed: boolean
+  rows: number
+  created: { line: number; name: string; brand: string | null; type: string; family: string | null; variants: { label: string; price: number }[]; stock_ml: number; stock_units: number }[]
+  skipped: { line: number; name: string; message: string }[]
+  errors: { line: number; name: string | null; message: string }[]
+}
+
+/** Checks a CSV (`commit: false`, nothing is saved) or imports it (`commit: true`). */
+export function useImportProducts() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ file, format, commit }: { file: File; format: ImportFormat; commit: boolean }) => {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('format', format)
+      body.append('commit', commit ? '1' : '0')
+
+      return api.post<{ data: ImportReport }>('/admin/imports/products', body).then((r) => r.data.data)
+    },
+    onSuccess: (report) => report.committed && refresh(qc),
+  })
+}
+
+export const downloadImportTemplate = (format: ImportFormat) => api.get(`/admin/imports/templates/${format}`, { responseType: 'blob' }).then((r) => r.data as Blob)

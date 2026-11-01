@@ -1,4 +1,4 @@
-import { Award, ClipboardList, FlaskConical, Gift, Layers, LayoutDashboard, LogOut, Menu, Package, Receipt, Settings as SettingsIcon, Store, Tags, Users, Warehouse, type LucideIcon } from 'lucide-react'
+import { Award, ClipboardList, FlaskConical, Gift, Layers, LayoutDashboard, LogOut, Menu, Package, Receipt, Settings as SettingsIcon, Store, Tags, Upload, Users, Warehouse, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { toast } from 'sonner'
@@ -37,6 +37,7 @@ const GROUPS: { title?: string; items: NavItem[] }[] = [
       { to: '/admin/packs', label: 'Packs', icon: Gift },
       { to: '/admin/stock', label: 'Stock', icon: Warehouse },
       { to: '/admin/bouteilles', label: 'Bouteilles', icon: FlaskConical, ownerOnly: true },
+      { to: '/admin/importer', label: 'Importer', icon: Upload, ownerOnly: true },
     ],
   },
   {

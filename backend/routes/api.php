@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BottleController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LoyaltyController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
@@ -93,6 +94,9 @@ Route::prefix('admin')->group(function () {
             Route::post('/brands', [BrandController::class, 'store']);
             Route::put('/brands/{brand}', [BrandController::class, 'update']);
             Route::delete('/brands/{brand}', [BrandController::class, 'destroy']);
+
+            Route::get('/imports/templates/{format}', [ImportController::class, 'template']);
+            Route::post('/imports/products', [ImportController::class, 'products']);
 
             Route::get('/bottles', [BottleController::class, 'index']);
             Route::get('/bottles/movements', [BottleController::class, 'movements']);
