@@ -1,0 +1,8 @@
+﻿type;categorie;marque;nom;description;genre;option;prix;ancien_prix;achat;stock;actif
+Cosmétiques;Soin du corps;Nivea;Savon;;;Rose;300;;250;20;oui
+Cosmétiques;Soin du corps;Nivea;Savon;;;Rose;300;;250;20;oui
+Bijoux;;;Collier;;;Or;5000;;4000;3;oui
+Parfums;;Dior;Eau fraîche;;;100 ml;12000;;10000;2;oui
+Cosmétiques;Maquillage;Maybelline;Crayon yeux;;;Noir;;;;5;oui
+Cosmétiques;Maquillage;Maybelline;Fond de teint;Couvrance moyenne;;Beige;2200;;1800;6;oui
+Cosmétiques;Maquillage;Maybelline;Fond de teint;;;Sable;2200;;1800;4;oui

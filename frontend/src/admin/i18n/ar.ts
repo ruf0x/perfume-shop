@@ -679,6 +679,7 @@ export const AR: Record<string, string> = {
   'Catalogue': 'الكتالوج',
 
   // CSV import
+  "Exemple d'une ligne, sous la ligne des titres :": 'مثال عن سطر واحد، تحت سطر العناوين:',
   'Importer': 'استيراد',
   'Importer des produits': 'استيراد المنتجات',
   "Ajoutez plusieurs produits d'un coup à partir d'un fichier CSV (Excel). Le fichier est vérifié avant d'importer : rien n'est enregistré tant que vous ne confirmez pas.": 'أضف عدة منتجات دفعة واحدة من ملف CSV (إكسل). يُفحص الملف قبل الاستيراد: لا يُحفظ شيء ما لم تؤكّد.',

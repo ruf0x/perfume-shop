@@ -1,0 +1,8 @@
+﻿nom;marque;famille;genre;prix_10ml;prix_20ml;prix_flacon_100ml;stock_ml;stock_flacon_100ml
+Parfum correct;Dior;Designer;homme;1500;2800;14000;200;2
+;Dior;Designer;homme;1500;2800;14000;100;
+Prix faux;Chanel;Designer;homme;abc;2800;14000;100;
+Sans aucun prix;Chanel;Designer;femme;;;;100;
+Genre inconnu;Lancôme;Designer;robot;1500;2800;14000;100;
+Autre bon parfum;;Création maison;mixte;1 200;2200;;150;
+Parfum correct;Dior;Designer;homme;1500;2800;14000;200;2

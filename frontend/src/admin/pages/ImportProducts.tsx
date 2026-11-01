@@ -9,18 +9,22 @@ import { PageHeader } from '../components/common'
 import { apiError, downloadBlob } from '../lib'
 import { downloadImportTemplate, useImportProducts, type ImportFormat } from '../queries'
 
-const FORMATS: { id: ImportFormat; title: string; text: string; columns: string }[] = [
+const FORMATS: { id: ImportFormat; title: string; text: string; columns: string; header: string; example: string }[] = [
   {
     id: 'perfumes',
     title: 'Parfums',
     text: 'Une ligne par parfum. Les tailles sont des colonnes : prix_10ml, prix_20ml, prix_flacon_100ml…',
     columns: 'nom, marque, famille, genre, description, notes_tete, notes_coeur, notes_fond, inspire_de, prix_10ml, prix_20ml, prix_30ml, prix_flacon_100ml, achat_10ml…, stock_ml, stock_flacon_100ml, actif',
+    header: 'nom;marque;famille;genre;description;notes_tete;notes_coeur;notes_fond;inspire_de;prix_10ml;prix_20ml;prix_30ml;prix_flacon_100ml;achat_10ml;achat_20ml;achat_30ml;achat_flacon_100ml;stock_ml;stock_flacon_100ml;actif',
+    example: 'Sauvage;Dior;Designer;homme;Frais et épicé;Bergamote;Poivre;Ambroxan;;1500;2800;4000;14000;1250;2333;3333;11667;400;3;oui',
   },
   {
     id: 'options',
     title: 'Autres produits',
     text: 'Cosmétiques, montres, lunettes… Une ligne par option (taille, teinte, couleur) : les lignes du même produit se regroupent.',
     columns: 'type, categorie, marque, nom, description, genre, option, prix, ancien_prix, achat, stock, actif',
+    header: 'type;categorie;marque;nom;description;genre;option;prix;ancien_prix;achat;stock;actif',
+    example: 'Cosmétiques;Maquillage;Maybelline;Rouge à lèvres mat;Tenue longue durée;;Rose nude;1400;1600;1167;10;oui',
   },
 ]
 
@@ -67,6 +71,9 @@ export default function ImportProducts() {
 
       <details className="mb-6 rounded-2xl border border-border bg-card p-5 text-sm">
         <summary className="cursor-pointer font-medium">Comment remplir le fichier</summary>
+        <p className="mt-3 text-muted-foreground">Exemple d'une ligne, sous la ligne des titres :</p>
+        <pre dir="ltr" className="mt-2 overflow-x-auto rounded-lg bg-secondary p-3 text-xs leading-relaxed" data-no-translate>{`${chosen.header}
+${chosen.example}`}</pre>
         <ul className="mt-3 list-disc space-y-1.5 ps-5 text-muted-foreground">
           <li>Gardez la première ligne (les titres) telle quelle ; ajoutez un produit par ligne en dessous.</li>
           <li className="tnum">{`Colonnes : ${chosen.columns}.`}</li>

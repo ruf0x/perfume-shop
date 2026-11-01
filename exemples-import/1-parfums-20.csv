@@ -1,0 +1,21 @@
+﻿nom;marque;famille;genre;description;notes_tete;notes_coeur;notes_fond;inspire_de;prix_10ml;prix_20ml;prix_30ml;prix_flacon_100ml;achat_10ml;achat_20ml;achat_30ml;achat_flacon_100ml;stock_ml;stock_flacon_100ml;actif
+Sauvage;Dior;Designer;homme;Frais et épicé;Bergamote;Poivre;Ambroxan;;1500;2800;4000;14000;1250;2333;3333;11667;400;3;oui
+Bleu de Chanel;Chanel;Designer;homme;Boisé aromatique;Agrumes;Gingembre;Cèdre;;1600;2950;4200;14700;1333;2458;3500;12250;300;2;oui
+La Vie Est Belle;Lancôme;Designer;femme;Gourmand et lumineux;Poire;Iris;Praliné;;1500;2800;4000;14000;1250;2333;3333;11667;500;4;oui
+Black Opium;Yves Saint Laurent;Designer;femme;Café et vanille;Café;Jasmin;Vanille;;1650;3100;4400;15400;1375;2583;3667;12833;150;1;oui
+Aventus;Creed;Niche;homme;Fruité et fumé;Ananas;Bouleau;Musc;;2800;5200;7500;28000;2154;4000;5769;21538;200;1;oui
+Baccarat Rouge 540;Maison Francis Kurkdjian;Niche;mixte;Ambré floral;Safran;Jasmin;Ambre;;3100;5700;8250;30800;2385;4385;6346;23692;300;2;oui
+Layton;Parfums de Marly;Niche;homme;Épicé vanillé;Pomme;Lavande;Vanille;;2650;4950;7100;26600;2038;3808;5462;20462;100;;oui
+Oud Wood;Tom Ford;Niche;mixte;Boisé oriental;Bois de rose;Oud;Ambre;;2950;5450;7900;29400;2269;4192;6077;22615;250;1;oui
+Khamrah;Lattafa;Arabe;mixte;Épicé et sucré;Cannelle;Dattes;Praliné;;900;1700;2400;8000;783;1478;2087;6957;600;5;oui
+Hawas;Rasasi;Arabe;homme;Aquatique fruité;Pomme;Cannelle;Ambre;;900;1700;2400;8000;783;1478;2087;6957;450;3;oui
+Amber Oud Gold Edition;Al Haramain;Arabe;mixte;Ambré boisé;Bergamote;Rose;Oud;;1000;1850;2650;8800;870;1609;2304;7652;350;2;oui
+Asad;Lattafa;Arabe;homme;Épicé vanillé;Poivre noir;Tabac;Vanille;;850;1600;2300;7600;739;1391;2000;6609;400;3;oui
+Club de Nuit Intense Man;Armaf;Dupe;homme;Citrus fumé;Citron;Ananas;Musc;Inspiré de Aventus – Creed;850;1600;2200;6800;739;1391;1913;5913;300;4;oui
+Sable Doré;Maison Alhambra;Dupe;mixte;Boisé ambré;Bois de rose;Oud;Ambre;Inspiré de Oud Wood – Tom Ford;800;1500;2100;6500;696;1304;1826;5652;200;1;oui
+Rose Éclat;Maison Alhambra;Dupe;femme;Gourmand floral;Poire;Iris;Praliné;Inspiré de La Vie Est Belle – Lancôme;750;1400;2000;6200;652;1217;1739;5391;250;2;oui
+Noir Absolu;Armaf;Dupe;homme;Frais épicé;Bergamote;Poivre;Ambroxan;Inspiré de Sauvage – Dior;700;1350;1900;5850;609;1174;1652;5087;350;3;oui
+Oud Rayan;;Création maison;mixte;Notre oud signature;Safran;Oud;Musc;;1200;2300;3250;10800;1043;2000;2826;9391;300;2;oui
+Rose de Damas;;Création maison;femme;Rose fraîche;Rose;Pivoine;Musc blanc;;1000;1900;2700;9000;870;1652;2348;7826;200;1;oui
+Musc Blanc;;Création maison;mixte;Doux et propre;Coton;Musc;Santal;;900;1700;2450;8100;783;1478;2130;7043;400;3;oui
+Ambre Sham;;Création maison;homme;Ambre chaud;Cardamome;Ambre;Vanille;;1100;2100;2950;9900;957;1826;2565;8609;250;2;oui
