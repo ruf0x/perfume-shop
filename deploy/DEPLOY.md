@@ -1,12 +1,12 @@
-# Mise en ligne d'Arena Cosmétique (cPanel)
+# Mise en ligne d'Roze Sham (cPanel)
 
-Hébergement : plan Starter-20 (cPanel 138, en anglais, LiteSpeed), compte `arenac41`, domaine `arena-cosmetique.com`.
+Hébergement : plan Starter-20 (cPanel 138, en anglais, LiteSpeed), compte `<compte-cpanel>`, domaine `votre-domaine.com`.
 Les noms de menus ci-dessous sont ceux de **votre** cPanel (anglais). Utilisez la barre **Search Tools** en haut pour les retrouver.
 
 | Adresse | Contenu | Dossier sur le serveur |
 |---|---|---|
-| `https://arena-cosmetique.com` | la boutique et `/admin` | `public_html/` |
-| `https://api.arena-cosmetique.com` | l'API Laravel | `laravel/public/` (le code est **hors** de `public_html`) |
+| `https://votre-domaine.com` | la boutique et `/admin` | `public_html/` |
+| `https://api.votre-domaine.com` | l'API Laravel | `laravel/public/` (le code est **hors** de `public_html`) |
 
 Les mots de passe ne sont écrits nulle part dans ce dépôt. Ne les mettez jamais dans Git.
 
@@ -17,7 +17,7 @@ Les mots de passe ne sont écrits nulle part dans ce dépôt. Ne les mettez jama
 À la racine du projet, dans PowerShell :
 
 ```powershell
-.\deploy\build-frontend.ps1 -ApiUrl https://api.arena-cosmetique.com
+.\deploy\build-frontend.ps1 -ApiUrl https://api.votre-domaine.com
 .\deploy\package-backend.ps1 -WithVendor
 ```
 
@@ -41,26 +41,26 @@ Aucun des deux ne contient votre `.env`, vos tests ni vos photos de test.
 ## 3. Sous-domaine de l'API : « Domains »
 
 **Domains → Create A New Domain** :
-- Domain : `api.arena-cosmetique.com`
+- Domain : `api.votre-domaine.com`
 - **Décochez** « Share document root » si la case existe.
 - Document Root : `laravel/public`
 
-Si cPanel ajoute `public_html/` devant, ouvrez **Manage** sur ce domaine et corrigez la racine : elle doit être `/home/arenac41/laravel/public` (et non `public_html/api`). Le dossier `laravel` sera créé à l'étape 6.
+Si cPanel ajoute `public_html/` devant, ouvrez **Manage** sur ce domaine et corrigez la racine : elle doit être `/home/<compte-cpanel>/laravel/public` (et non `public_html/api`). Le dossier `laravel` sera créé à l'étape 6.
 
 ## 4. Certificats SSL
 
-Votre domaine principal montre déjà **SSL : Active**. Pour `api` et `www` : **Security → SSL/TLS Certificates** (ou cherchez « SSL/TLS Status ») → lancez **Run AutoSSL**, puis vérifiez que `api.arena-cosmetique.com` a un cadenas. Le `.htaccess` de la boutique force le HTTPS : sans certificat, le site serait inaccessible.
+Votre domaine principal montre déjà **SSL : Active**. Pour `api` et `www` : **Security → SSL/TLS Certificates** (ou cherchez « SSL/TLS Status ») → lancez **Run AutoSSL**, puis vérifiez que `api.votre-domaine.com` a un cadenas. Le `.htaccess` de la boutique force le HTTPS : sans certificat, le site serait inaccessible.
 
 ## 5. Base de données : « Database Wizard »
 
 **Databases → Database Wizard** :
-1. Nom de la base : `arena` (devient `arenac41_arena`).
-2. Utilisateur : `arena` (devient `arenac41_arena`), mot de passe long (notez-le pour le `.env`).
+1. Nom de la base : `arena` (devient `<compte>_roze`).
+2. Utilisateur : `arena` (devient `<compte>_roze`), mot de passe long (notez-le pour le `.env`).
 3. Privilèges : **ALL PRIVILEGES**.
 
 ## 6. Envoyer l'API : « File Manager »
 
-1. Racine `/home/arenac41` → **+ Folder** : `laravel`, puis `backups`.
+1. Racine `/home/<compte-cpanel>` → **+ Folder** : `laravel`, puis `backups`.
 2. Dans `laravel/` : **Upload** `backend-...-with-vendor.zip`, clic droit → **Extract**, puis supprimez le zip.
 3. Vérifiez que `laravel/artisan`, `laravel/vendor/` et `laravel/public/index.php` existent (pas de dossier `backend` en trop).
 4. Dans `laravel/` : **+ File** `.env`, puis **Edit** : collez `deploy/env.production.example` en remplaçant les `<...>` (mot de passe de la base, mot de passe admin).
@@ -76,7 +76,7 @@ Votre cPanel **n'a pas d'icône « Terminal »**. Deux solutions :
 2. Dans le terminal de votre PC (ce mot de passe, vous le tapez vous-même) :
 
 ```bash
-ssh arenac41@157.90.66.113
+ssh <compte-cpanel>@157.90.66.113
 ```
 (ajoutez `-p PORT` si le port n'est pas 22)
 
@@ -101,7 +101,7 @@ $PHP artisan storage:link
 **Advanced → Cron Jobs → Add New Cron Job**, réglée pour s'exécuter dans 2 minutes (mettez l'heure et la minute à venir, le reste en `*`) :
 
 ```
-cd /home/arenac41/laravel && /opt/alt/php84/usr/bin/php artisan migrate --force > /home/arenac41/setup.log 2>&1
+cd /home/<compte-cpanel>/laravel && /opt/alt/php84/usr/bin/php artisan migrate --force > /home/<compte-cpanel>/setup.log 2>&1
 ```
 
 Ouvrez ensuite `setup.log` dans File Manager pour lire le résultat, puis **supprimez** cette ligne cron. Recommencez pour chaque commande de la liste ci-dessus (`key:generate --force`, `migrate --force`, `db:seed --force`, `storage:link`). Si `/opt/alt/php84/usr/bin/php` n'existe pas, `setup.log` le dira : envoyez-moi le message.
@@ -125,10 +125,10 @@ $PHP artisan optimize
 **Advanced → Cron Jobs → Add New Cron Job**, **chaque minute** (`* * * * *`) :
 
 ```
-/opt/alt/php84/usr/bin/php /home/arenac41/laravel/artisan schedule:run >> /dev/null 2>&1
+/opt/alt/php84/usr/bin/php /home/<compte-cpanel>/laravel/artisan schedule:run >> /dev/null 2>&1
 ```
 
-Laravel décide seul ce qui doit tourner : la sauvegarde de la base a lieu **le dimanche à 3 h** dans `/home/arenac41/backups` (8 copies gardées). Testez-la une fois à la main (SSH) :
+Laravel décide seul ce qui doit tourner : la sauvegarde de la base a lieu **le dimanche à 3 h** dans `/home/<compte-cpanel>/backups` (8 copies gardées). Testez-la une fois à la main (SSH) :
 
 ```bash
 $PHP artisan db:backup
@@ -145,14 +145,14 @@ Téléchargez de temps en temps ces fichiers sur votre PC. L'hébergeur a aussi 
 
 ## 11. Vérifier
 
-1. `https://api.arena-cosmetique.com/api/settings/public` → du JSON avec « Arena Cosmétique ».
-2. `https://arena-cosmetique.com` → la boutique s'affiche. Rechargez sur `/boutique` : pas d'erreur 404.
-3. `https://arena-cosmetique.com/admin` → page de connexion. Connectez-vous (`admin` + le mot de passe du `.env`).
+1. `https://api.votre-domaine.com/api/settings/public` → du JSON avec « Roze Sham ».
+2. `https://votre-domaine.com` → la boutique s'affiche. Rechargez sur `/boutique` : pas d'erreur 404.
+3. `https://votre-domaine.com/admin` → page de connexion. Connectez-vous (`admin` + le mot de passe du `.env`).
 4. Dans l'admin :
    - **Paramètres** : ajoutez le **téléphone** de la boutique et vérifiez les frais de livraison par wilaya.
    - **Produits** : créez un parfum de test avec une photo, vérifiez qu'il apparaît dans la boutique, puis supprimez-le.
    - Passez **une commande de test** depuis la boutique, confirmez-la dans l'admin, puis annulez-la.
-5. Vérifiez que `https://api.arena-cosmetique.com/.env` et `https://api.arena-cosmetique.com/docs/api` donnent une erreur (jamais le contenu).
+5. Vérifiez que `https://api.votre-domaine.com/.env` et `https://api.votre-domaine.com/docs/api` donnent une erreur (jamais le contenu).
 
 ## 12. Mettre à jour plus tard
 
@@ -170,7 +170,7 @@ $PHP artisan optimize:clear && $PHP artisan optimize
 | Symptôme | Cause probable |
 |---|---|
 | Erreur 500 sur l'API | Voir `laravel/storage/logs/laravel-AAAA-MM-JJ.log`. Souvent : mauvaise version de PHP (pas 8.4), extension manquante, `.env` absent ou permissions de `storage`. |
-| « API injoignable » ou erreur 419 à la connexion | `SESSION_DOMAIN` doit être `.arena-cosmetique.com`, `SANCTUM_STATEFUL_DOMAINS` et `CORS_ALLOWED_ORIGINS` doivent contenir le domaine exact. Après modification : `$PHP artisan optimize:clear && $PHP artisan optimize`. |
+| « API injoignable » ou erreur 419 à la connexion | `SESSION_DOMAIN` doit être `.votre-domaine.com`, `SANCTUM_STATEFUL_DOMAINS` et `CORS_ALLOWED_ORIGINS` doivent contenir le domaine exact. Après modification : `$PHP artisan optimize:clear && $PHP artisan optimize`. |
 | Page blanche ou 404 au rechargement | `public_html/.htaccess` manquant (fichier caché). |
 | Photos qui ne s'affichent pas | `storage:link` pas fait, ou `APP_URL` incorrect. |
 | Photos qui ne se téléversent pas | `upload_max_filesize` / `post_max_size` trop bas (étape 2, onglet Options). |
@@ -182,13 +182,13 @@ $PHP artisan optimize:clear && $PHP artisan optimize
 
 À faire quand vous envoyez la nouvelle version de l'API. La base du serveur est migrée toute seule : vos parfums, leurs familles et leurs marques sont conservés (ils passent dans un type « Parfums »).
 
-1. **Sauvegardez la base d'abord.** Cron Jobs, une ligne « Once Per Minute », puis supprimez-la après une minute. Téléchargez le fichier créé dans `/home/arenac41/backups` :
+1. **Sauvegardez la base d'abord.** Cron Jobs, une ligne « Once Per Minute », puis supprimez-la après une minute. Téléchargez le fichier créé dans `/home/<compte-cpanel>/backups` :
 
 ```
-(cd /home/arenac41/laravel && /opt/alt/php84/usr/bin/php artisan db:backup) > /home/arenac41/setup.log 2>&1
+(cd /home/<compte-cpanel>/laravel && /opt/alt/php84/usr/bin/php artisan db:backup) > /home/<compte-cpanel>/setup.log 2>&1
 ```
 
-2. **Ajoutez une ligne dans `laravel/.env`** (File Manager, Edit) : les types que vend Arena. Sans elle, les types « Montres » et « Lunettes » seraient créés aussi.
+2. **Ajoutez une ligne dans `laravel/.env`** (File Manager, Edit) : les types que vend la boutique. Sans elle, les types « Montres » et « Lunettes » seraient créés aussi.
 
 ```
 SHOP_TYPES=parfums,cosmetiques
@@ -198,12 +198,12 @@ SHOP_TYPES=parfums,cosmetiques
 4. **Lancez la mise à jour** (Cron Jobs, une ligne à usage unique, puis lisez `setup.log` et supprimez la ligne) :
 
 ```
-(cd /home/arenac41/laravel && /opt/alt/php84/usr/bin/php artisan migrate --force && /opt/alt/php84/usr/bin/php artisan db:seed --class=ProductTypeSeeder --force && /opt/alt/php84/usr/bin/php artisan optimize:clear && /opt/alt/php84/usr/bin/php artisan optimize) > /home/arenac41/setup.log 2>&1
+(cd /home/<compte-cpanel>/laravel && /opt/alt/php84/usr/bin/php artisan migrate --force && /opt/alt/php84/usr/bin/php artisan db:seed --class=ProductTypeSeeder --force && /opt/alt/php84/usr/bin/php artisan optimize:clear && /opt/alt/php84/usr/bin/php artisan optimize) > /home/<compte-cpanel>/setup.log 2>&1
 ```
 
    Le log doit montrer quatre `DONE` de migrations puis les caches (config, events, routes, views) en `DONE`.
 5. **Envoyez le zip de la boutique** dans `public_html/` (Upload, Extract en écrasant), comme à l'étape 10.
-6. **Vérifiez** : `https://api.arena-cosmetique.com/api/product-types` répond avec « Parfums » et « Cosmétiques », puis `https://arena-cosmetique.com/admin` fonctionne.
+6. **Vérifiez** : `https://api.votre-domaine.com/api/product-types` répond avec « Parfums » et « Cosmétiques », puis `https://votre-domaine.com/admin` fonctionne.
 
 ### Administration sur le site web, oui ou non
 
@@ -211,4 +211,4 @@ C'est une ligne dans `laravel/config/features.php` : `'web_admin' => true,` (le 
 
 ### Application de bureau
 
-L'installateur `desktop\dist\Administration-Boutique-Setup-1.0.0.exe` est déjà réglé sur `https://api.arena-cosmetique.com` : il s'ouvre directement sur la connexion. Elle lit et écrit les mêmes données que le site, **par l'API** (jamais directement dans MySQL). Ne servez pas la base à distance : ne l'ouvrez pas à internet dans cPanel (« Remote Database Access »).
+L'installateur `desktop\dist\Administration-Boutique-Setup-1.0.0.exe` est déjà réglé sur `https://api.votre-domaine.com` : il s'ouvre directement sur la connexion. Elle lit et écrit les mêmes données que le site, **par l'API** (jamais directement dans MySQL). Ne servez pas la base à distance : ne l'ouvrez pas à internet dans cPanel (« Remote Database Access »).

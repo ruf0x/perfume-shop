@@ -130,6 +130,8 @@ class OrderEditor
                 'variant_label' => $kept?->variant_label ?? $variant->label,
                 'ml' => $variant->ml,
                 'unit_price' => $unitPrice,
+                // An existing line keeps the cost it was sold with; a new line takes today's.
+                'unit_cost' => $kept ? $kept->unit_cost : $variant->unitCost(),
                 'quantity' => $quantity,
                 'line_total' => $unitPrice * $quantity,
             ]);

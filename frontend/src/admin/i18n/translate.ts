@@ -17,6 +17,9 @@ function translateCore(core: string): string {
     if (m) return build(m, translateCore)
   }
 
+  // Several sentences joined with a dot (the dashboard's profit note).
+  if (key.includes(' · ')) return key.split(' · ').map(translateCore).join(' · ')
+
   // Money and volumes inside a longer text ("1 500 DA", "30 ml").
   return core.replace(/\bDA\b/g, AR.DA).replace(/\bml\b/g, AR.ml)
 }

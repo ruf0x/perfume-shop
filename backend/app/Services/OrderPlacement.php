@@ -178,6 +178,7 @@ class OrderPlacement
                 'unit_price' => $line->unitPrice,
                 // The catalogue price at the time of the sale: it differs from unit_price when the cashier negotiated.
                 'list_price' => $line->variant->price,
+                'unit_cost' => $line->variant->unitCost(),
                 'quantity' => $line->quantity,
                 'line_total' => $line->lineTotal,
             ]);

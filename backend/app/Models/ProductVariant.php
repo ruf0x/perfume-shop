@@ -22,6 +22,7 @@ class ProductVariant extends Model
             'ml' => 'integer',
             'price' => 'integer',
             'compare_at_price' => 'integer',
+            'cost_price' => 'integer',
             'stock_mode' => StockMode::class,
             'stock_qty' => 'integer',
             'is_active' => 'boolean',
@@ -31,6 +32,28 @@ class ProductVariant extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * What one unit of this variant costs the shop. A pack costs the sum of its components; null when any cost is unknown.
+     */
+    public function unitCost(): ?int
+    {
+        if ($this->stock_mode !== StockMode::Pack) {
+            return $this->cost_price;
+        }
+
+        $total = 0;
+        $items = $this->packItems()->with('component')->get();
+        foreach ($items as $item) {
+            $cost = $item->component?->cost_price;
+            if ($cost === null) {
+                return null;
+            }
+            $total += $cost * $item->quantity;
+        }
+
+        return $items->isEmpty() ? null : $total;
     }
 
     /** Components of this variant when it is a pack. */

@@ -126,7 +126,7 @@ class ProductService
         $keep = [];
 
         foreach ($rows as $i => $row) {
-            $attributes = Arr::only($row, ['label', 'ml', 'price', 'compare_at_price', 'sku', 'is_active']) + ['sort_order' => $row['sort_order'] ?? $i];
+            $attributes = Arr::only($row, ['label', 'ml', 'price', 'compare_at_price', 'cost_price', 'sku', 'is_active']) + ['sort_order' => $row['sort_order'] ?? $i];
             $attributes['stock_mode'] = StockMode::from($row['stock_mode']);
 
             if (! empty($row['id'])) {

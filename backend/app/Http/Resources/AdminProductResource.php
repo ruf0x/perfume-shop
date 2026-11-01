@@ -48,6 +48,8 @@ class AdminProductResource extends JsonResource
                 'ml' => $v->ml,
                 'price' => $v->price,
                 'compare_at_price' => $v->compare_at_price,
+                /** What the shop paid for one unit (null = not entered); for a pack, the sum of its components. Admin only. */
+                'cost_price' => $v->unitCost(),
                 'stock_mode' => $v->stock_mode,
                 /** Units in stock (`unit` variants only): sealed bottles, nail kits, shades... */
                 'stock_qty' => $v->stock_qty,

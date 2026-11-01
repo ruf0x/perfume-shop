@@ -15,6 +15,7 @@ class OrderItem extends Model
             'ml' => 'integer',
             'unit_price' => 'integer',
             'list_price' => 'integer',
+            'unit_cost' => 'integer',
             'quantity' => 'integer',
             'line_total' => 'integer',
         ];

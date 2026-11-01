@@ -113,9 +113,7 @@ export const AR: Record<string, string> = {
   // Dashboard
   'Aujourd\'hui': 'اليوم',
   'Hier': 'أمس',
-  '7 jours': '7 أيام',
-  '30 jours': '30 يوماً',
-  'Ce mois': 'هذا الشهر',
+    'Ce mois': 'هذا الشهر',
   "Chiffre d'affaires": 'رقم الأعمال',
   "Chiffre d'affaires des ventes terminées, jour par jour.": 'رقم أعمال المبيعات المنجزة، يوماً بيوم.',
   'Commandes reçues': 'الطلبات المستلمة',
@@ -144,7 +142,6 @@ export const AR: Record<string, string> = {
   'Aucune vente sur cette période.': 'لا توجد مبيعات في هذه الفترة.',
   'Aucune vente terminée sur cette période.': 'لا توجد مبيعات منجزة في هذه الفترة.',
   "Les ventes terminées (livrées ou vendues en boutique), en ligne et en caisse.": 'المبيعات المنجزة (المسلَّمة أو المباعة في المتجر)، عبر الإنترنت وفي الصندوق.',
-  'Une seule journée sélectionnée : les chiffres sont ci-dessus. Choisissez « 7 jours » ou plus pour voir l\'évolution.': 'تم اختيار يوم واحد: الأرقام أعلاه. اختر «7 أيام» أو أكثر لرؤية التطور.',
   'Comment se vendent ses produits ?': 'كيف تُباع منتجاته؟',
   'Quantités vendues par taille, sur la période.': 'الكميات المباعة حسب الحجم خلال الفترة.',
 
@@ -571,6 +568,24 @@ export const AR: Record<string, string> = {
   'Parfums et cosmétiques': 'عطور ومستحضرات تجميل',
   "ml ; un produit à la pièce est signalé « stock faible » à": 'مل؛ ويُعلَّم المنتج بالقطعة «مخزون منخفض» عند',
 
+  // Purchase prices and profit
+  'Cette semaine': 'هذا الأسبوع',
+  'Cette année': 'هذه السنة',
+  'Bénéfice': 'الربح',
+  'Bénéfice :': 'الربح:',
+  "Renseignez les prix d'achat dans les produits": 'أدخل أسعار الشراء في المنتجات',
+  "Prix d'achat (DA)": 'سعر الشراء (دج)',
+  "Achat en gros et bénéfice": 'الشراء بالجملة والربح',
+  '(facultatif, visible par vous seulement)': '(اختياري، ظاهر لك وحدك)',
+  'Flacon acheté (DA)': 'سعر القارورة المشتراة (دج)',
+  'Contenance du flacon (ml)': 'سعة القارورة (مل)',
+  "Calculer le prix d'achat de chaque taille": 'حساب سعر شراء كل حجم',
+  'Bénéfice voulu (%)': 'الربح المطلوب (%)',
+  'Calculer les prix de vente': 'حساب أسعار البيع',
+  "Prix de vente = prix d'achat + ce pourcentage, arrondi aux 50 DA supérieurs. Vous pouvez ensuite corriger chaque prix.": 'سعر البيع = سعر الشراء + هذه النسبة، مقرَّباً إلى أعلى 50 دج. يمكنك بعدها تصحيح كل سعر.',
+  "Calculé avec les prix d'achat enregistrés ; enregistrez le pack après avoir changé son contenu pour le mettre à jour.": 'محسوب بأسعار الشراء المسجّلة؛ احفظ الباقة بعد تغيير محتواها لتحديثه.',
+  "Une seule journée sélectionnée : les chiffres sont ci-dessus. Choisissez « Cette semaine » ou plus pour voir l'évolution.": 'تم اختيار يوم واحد: الأرقام أعلاه. اختر «هذا الأسبوع» أو أكثر لرؤية التطور.',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',
@@ -586,6 +601,11 @@ export const AR: Record<string, string> = {
 
 /** Words of a sentence whose other part is data (names, numbers). Longest match first is not needed: each is anchored. */
 export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) => string) => string]> = [
+  [/^\((.+) % du prix d'achat\)$/, (m) => `(${m[1]} % من سعر الشراء)`],
+  [/^(.+) % du prix d'achat$/, (m) => `${m[1]} % من سعر الشراء`],
+  [/^(\d+) ventes? sans prix d'achat non comptées?$/, (m) => `${m[1]} مبيعات بدون سعر شراء غير محسوبة`],
+  [/^Prix d'achat des produits : (.+)\. Bénéfice :$/, (m, tr) => `سعر شراء المنتجات: ${tr(m[1])}. الربح:`],
+  [/^Soit (.+) le ml\.$/, (m, tr) => `أي ${tr(m[1])} للمل.`],
   [/^(\d+) en ligne, (\d+) en caisse$/, (m) => `${m[1]} عبر الإنترنت، ${m[2]} في الصندوق`],
   [/^(\d+) restants?$/, (m) => `${m[1]} متبقٍّ`],
   [/^(.+), client depuis (.+)$/, (m) => `${m[1]}، زبون منذ ${m[2]}`],

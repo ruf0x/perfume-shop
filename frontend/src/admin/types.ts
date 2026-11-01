@@ -113,6 +113,8 @@ export interface AdminVariant {
   ml: number | null
   price: number
   compare_at_price: number | null
+  /** What the shop paid for one unit (a pack: the sum of its components); null = not entered. */
+  cost_price: number | null
   stock_mode: StockMode
   stock_qty: number
   sku: string | null
@@ -264,6 +266,8 @@ export interface Dashboard {
   pending_count: number
   in_delivery_count: number
   cancel_rate: number
+  /** Profit of the period, from the purchase prices of the items sold (orders without a known cost are left out). */
+  profit: { amount: number; cost: number; revenue: number; percent: number | null; orders_counted: number; orders_without_cost: number }
   sales_by_day: DashboardDay[]
   top_products: { product: string; variant: string; quantity: number; revenue: number }[]
   low_stock: { id: number; name: string; kind: 'perfume' | 'standard'; stock_ml: number; units: number }[]

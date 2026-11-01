@@ -12,9 +12,9 @@ import type { Dashboard } from '../types'
 
 const PRESETS = [
   ['today', "Aujourd'hui"],
-  ['7d', '7 jours'],
-  ['30d', '30 jours'],
+  ['week', 'Cette semaine'],
   ['month', 'Ce mois'],
+  ['year', 'Cette année'],
   ['custom', 'Période libre'],
 ] as const
 
@@ -24,10 +24,11 @@ function rangeFor(preset: Preset, from?: string, to?: string) {
   const today = new Date()
   const t = isoDate(today)
   if (preset === 'today') return { from: t, to: t }
-  if (preset === '30d') return { from: isoDate(addDays(today, -29)), to: t }
   if (preset === 'month') return { from: isoDate(new Date(today.getFullYear(), today.getMonth(), 1)), to: t }
+  if (preset === 'year') return { from: isoDate(new Date(today.getFullYear(), 0, 1)), to: t }
   if (preset === 'custom' && from && to) return { from, to }
-  return { from: isoDate(addDays(today, -6)), to: t } // 7d
+  // The week starts on Monday, like the weekly grouping of the chart.
+  return { from: isoDate(addDays(today, -((today.getDay() + 6) % 7))), to: t }
 }
 
 function Tile({ label, value, sub, to }: { label: string; value: string; sub?: string; to?: string }) {
@@ -40,6 +41,15 @@ function Tile({ label, value, sub, to }: { label: string; value: string; sub?: s
   )
   const cls = 'rounded-lg border border-border bg-card p-4'
   return to ? <Link to={to} className={cn(cls, 'block transition-colors hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-ring')}>{body}</Link> : <div className={cls}>{body}</div>
+}
+
+function profitNote(p: Dashboard['profit']) {
+  const parts: string[] = []
+  if (p.percent !== null) parts.push(`${p.percent > 0 ? '+' : ''}${String(p.percent).replace('.', ',')} % du prix d'achat`)
+  if (p.orders_without_cost > 0) parts.push(`${p.orders_without_cost} vente${p.orders_without_cost > 1 ? 's' : ''} sans prix d'achat non comptée${p.orders_without_cost > 1 ? 's' : ''}`)
+  if (parts.length === 0) parts.push("Renseignez les prix d'achat dans les produits")
+
+  return parts.join(' · ')
 }
 
 function Card({ title, hint, children, className }: { title: string; hint?: string; children: React.ReactNode; className?: string }) {
@@ -109,13 +119,13 @@ function PendingOrders() {
 
 export default function Dashboard() {
   const [params, setParams] = useSearchParams()
-  const preset = (PRESETS.find(([k]) => k === params.get('range'))?.[0] ?? '7d') as Preset
+  const preset = (PRESETS.find(([k]) => k === params.get('range'))?.[0] ?? 'week') as Preset
   const range = useMemo(() => rangeFor(preset, params.get('from') ?? undefined, params.get('to') ?? undefined), [preset, params])
   const query = useDashboard(range.from, range.to)
   const d = query.data
 
   const setRange = (next: Preset) =>
-    setParams(next === '7d' ? {} : next === 'custom' ? { range: 'custom', from: range.from, to: range.to } : { range: next }, { replace: true })
+    setParams(next === 'week' ? {} : next === 'custom' ? { range: 'custom', from: range.from, to: range.to } : { range: next }, { replace: true })
 
   const sold = d?.sales_by_day.reduce((n, day) => n + day.orders, 0) ?? 0
   const avgBasket = d && sold > 0 ? Math.round(d.revenue / sold) : 0
@@ -159,13 +169,14 @@ export default function Dashboard() {
               <Tile label="À appeler" value={String(d.pending_count)} sub="en attente de confirmation" to="/admin/commandes?status=en_attente" />
               <Tile label="En livraison" value={String(d.in_delivery_count)} sub="colis en route" to="/admin/commandes?status=en_livraison" />
               <Tile label="Taux d'annulation" value={`${String(d.cancel_rate).replace('.', ',')} %`} sub="commandes en ligne" />
+              <Tile label="Bénéfice" value={d.profit.orders_counted > 0 ? formatPrice(d.profit.amount) : '—'} sub={profitNote(d.profit)} />
               <Tile label="Panier moyen" value={sold > 0 ? formatPrice(avgBasket) : '—'} sub={`${sold} vente${sold > 1 ? 's' : ''} terminée${sold > 1 ? 's' : ''}`} />
             </div>
           </div>
 
           <Card title="Ventes par jour" hint="Chiffre d'affaires des ventes terminées, jour par jour.">
             {d.sales_by_day.length <= 1 ? (
-              <p className="py-8 text-center text-muted-foreground">Une seule journée sélectionnée : les chiffres sont ci-dessus. Choisissez « 7 jours » ou plus pour voir l'évolution.</p>
+              <p className="py-8 text-center text-muted-foreground">Une seule journée sélectionnée : les chiffres sont ci-dessus. Choisissez « Cette semaine » ou plus pour voir l'évolution.</p>
             ) : d.revenue === 0 ? (
               <p className="py-8 text-center text-muted-foreground">Aucune vente terminée sur cette période.</p>
             ) : (

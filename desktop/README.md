@@ -6,7 +6,7 @@ Ce sont les mêmes écrans que sur le site : le même code est embarqué dans l'
 ## Utiliser l'application
 
 1. Installez `Administration-Boutique-Setup-1.0.0.exe` (fabriqué avec `npm run dist`, voir plus bas).
-2. Au premier lancement, indiquez l'adresse du serveur de la boutique, par exemple `https://api.arena-cosmetique.com`. Elle est vérifiée, puis mémorisée.
+2. Au premier lancement, indiquez l'adresse du serveur de la boutique, par exemple `https://api.votre-domaine.com`. Elle est vérifiée, puis mémorisée.
 3. Connectez-vous avec le même identifiant et le même mot de passe que sur le site.
 
 Ce qu'il faut savoir :
