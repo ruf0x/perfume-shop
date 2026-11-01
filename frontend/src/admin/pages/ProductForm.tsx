@@ -26,6 +26,8 @@ interface Row {
   price: string
   compare: string
   cost: string
+  /** Gain on the purchase price, in percent: typed here, or worked out from price and cost. */
+  gain: string
   mode: Exclude<StockMode, 'pack'>
   active: boolean
   stock_qty: number
@@ -36,6 +38,7 @@ interface Component {
   product: string
   label: string
   quantity: number
+  cost: number | null
 }
 
 interface FormState {
@@ -57,8 +60,7 @@ interface FormState {
   packPrice: string
   packCompare: string
   components: Component[]
-  /** Cost of the pack as saved (sum of its components' purchase prices), null when unknown. */
-  packCost: number | null
+  packGain: string
 }
 
 const PRESETS: { label: string; ml: number; mode: Row['mode'] }[] = [
@@ -74,6 +76,15 @@ const gainOf = (price: number, cost: number) => (cost > 0 ? ((price - cost) / co
 const pct = (v: number) => `${v > 0 ? '+' : ''}${(Math.round(v * 10) / 10).toString().replace('.', ',')} %`
 /** A price rounded up to the next 50 DA, so that the suggested prices look like real prices. */
 const roundUp50 = (v: number) => Math.ceil(v / 50) * 50
+
+/** The gain shown for a price and a cost typed as text ('' when either is missing). */
+const derivedGain = (price: string, cost: string) => {
+  const g = price !== '' && Number(cost) > 0 ? gainOf(Number(price), Number(cost)) : null
+
+  return g === null ? '' : String(Math.round(g * 10) / 10)
+}
+/** The price that gives a gain on a cost, to the dinar. */
+const priceFor = (cost: number, gain: number) => Math.round(cost * (1 + gain / 100))
 
 let seq = 0
 const newKey = () => `row-${++seq}`
@@ -94,11 +105,11 @@ function fromProduct(p?: AdminProduct): FormState {
     notes_base: p?.notes_base ?? '',
     is_active: p?.is_active ?? true,
     is_featured: p?.is_featured ?? false,
-    variants: p && p.kind !== 'pack' ? (p.variants ?? []).map((v) => ({ key: newKey(), id: v.id, label: v.label, ml: String(v.ml ?? ''), price: String(v.price), compare: v.compare_at_price ? String(v.compare_at_price) : '', cost: v.cost_price !== null && v.cost_price !== undefined ? String(v.cost_price) : '', mode: v.stock_mode === 'unit' ? 'unit' : 'pool', active: v.is_active, stock_qty: v.stock_qty })) : [],
+    variants: p && p.kind !== 'pack' ? (p.variants ?? []).map((v) => ({ key: newKey(), id: v.id, label: v.label, ml: String(v.ml ?? ''), price: String(v.price), compare: v.compare_at_price ? String(v.compare_at_price) : '', cost: v.cost_price !== null && v.cost_price !== undefined ? String(v.cost_price) : '', gain: derivedGain(String(v.price), v.cost_price != null ? String(v.cost_price) : ''), mode: v.stock_mode === 'unit' ? 'unit' : 'pool', active: v.is_active, stock_qty: v.stock_qty })) : [],
     packPrice: pack ? String(pack.price) : '',
-    packCost: pack?.cost_price ?? null,
+    packGain: pack && pack.cost_price ? derivedGain(String(pack.price), String(pack.cost_price)) : '',
     packCompare: pack?.compare_at_price ? String(pack.compare_at_price) : '',
-    components: pack?.components?.map((c) => ({ variant_id: c.variant_id, product: c.product, label: c.label, quantity: c.quantity })) ?? [],
+    components: pack?.components?.map((c) => ({ variant_id: c.variant_id, product: c.product, label: c.label, quantity: c.quantity, cost: c.cost_price })) ?? [],
   }
 }
 
@@ -246,14 +257,25 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((s) => ({ ...s, [k]: v }))
   const err = (k: string) => errors[k]
 
-  const setRow = (i: number, patch: Partial<Row>) => set('variants', f.variants.map((r, j) => (j === i ? { ...r, ...patch } : r)))
-  const addRow = (p?: (typeof PRESETS)[number]) => set('variants', [...f.variants, { key: newKey(), label: p?.label ?? '', ml: p ? String(p.ml) : '', price: '', compare: '', cost: '', mode: p?.mode ?? (isCosmetic ? 'unit' : 'pool'), active: true, stock_qty: 0 }])
+  // Price, cost and gain depend on each other: change one and the others follow (the gain wins when it is the one typed).
+  const withGain = (r: Row, patch: Partial<Row>): Row => {
+    const next = { ...r, ...patch }
+    if ('gain' in patch) return next.gain !== '' && Number(next.cost) > 0 && Number(next.gain) >= 0 ? { ...next, price: String(priceFor(Number(next.cost), Number(next.gain))) } : next
+    if ('price' in patch || 'cost' in patch) return { ...next, gain: derivedGain(next.price, next.cost) }
+
+    return next
+  }
+  const setRow = (i: number, patch: Partial<Row>) => set('variants', f.variants.map((r, j) => (j === i ? withGain(r, patch) : r)))
+  const addRow = (p?: (typeof PRESETS)[number]) => set('variants', [...f.variants, { key: newKey(), label: p?.label ?? '', ml: p ? String(p.ml) : '', price: '', compare: '', cost: '', gain: '', mode: p?.mode ?? (isCosmetic ? 'unit' : 'pool'), active: true, stock_qty: 0 }])
   // Purchase helpers (not saved): a bottle bought in bulk, and the gain wanted.
   const [bulk, setBulk] = useState({ price: '', ml: '' })
   const [wantedGain, setWantedGain] = useState('')
   const costPerMl = Number(bulk.price) > 0 && Number(bulk.ml) > 0 ? Number(bulk.price) / Number(bulk.ml) : null
-  const fillCostsFromBulk = () => costPerMl !== null && set('variants', f.variants.map((r) => (Number(r.ml) > 0 ? { ...r, cost: String(Math.round(costPerMl * Number(r.ml))) } : r)))
-  const applyWantedGain = () => Number(wantedGain) >= 0 && wantedGain !== '' && set('variants', f.variants.map((r) => (r.cost !== '' && Number(r.cost) > 0 ? { ...r, price: String(roundUp50(Number(r.cost) * (1 + Number(wantedGain) / 100))) } : r)))
+  const packCost = f.components.length > 0 && f.components.every((c) => c.cost !== null) ? f.components.reduce((n, c) => n + (c.cost ?? 0) * c.quantity, 0) : null
+  const setPackPrice = (v: string) => setF((s) => ({ ...s, packPrice: v, packGain: packCost && v !== '' ? derivedGain(v, String(packCost)) : s.packGain }))
+  const setPackGain = (v: string) => setF((s) => ({ ...s, packGain: v, packPrice: packCost && v !== '' && Number(v) >= 0 ? String(priceFor(packCost, Number(v))) : s.packPrice }))
+  const fillCostsFromBulk = () => costPerMl !== null && set('variants', f.variants.map((r) => (Number(r.ml) > 0 ? withGain(r, { cost: String(Math.round(costPerMl * Number(r.ml))) }) : r)))
+  const applyWantedGain = () => Number(wantedGain) >= 0 && wantedGain !== '' && set('variants', f.variants.map((r) => (r.cost !== '' && Number(r.cost) > 0 ? withGain(r, { price: String(roundUp50(Number(r.cost) * (1 + Number(wantedGain) / 100))) }) : r)))
   const moveRow = (i: number, d: number) => {
     const rows = [...f.variants]
     ;[rows[i], rows[i + d]] = [rows[i + d], rows[i]]
@@ -424,12 +446,13 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                 {f.variants.map((r, i) => (
                   <li key={r.key} className="rounded-md border border-border p-3">
                     <div className="grid grid-cols-6 gap-3">
-                      <Field label="Nom" error={err(`variants.${i}.label`)} className="col-span-6 sm:col-span-2"><input className={inputClass} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} placeholder={isCosmetic ? '250 ml, Rose nude, Boîte de 24' : '20 ml'} /></Field>
+                      <Field label="Nom" error={err(`variants.${i}.label`)} className="col-span-6 sm:col-span-3"><input className={inputClass} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} placeholder={isCosmetic ? '250 ml, Rose nude, Boîte de 24' : '20 ml'} /></Field>
                       <Field label={isCosmetic && r.mode === 'unit' ? 'Contenance (ml), facultatif' : 'Contenance (ml)'} error={err(`variants.${i}.ml`)} className="col-span-2 sm:col-span-1"><input type="number" min={1} inputMode="numeric" className={inputClass} value={r.ml} onChange={(e) => setRow(i, { ml: e.target.value })} /></Field>
                       <Field label="Prix (DA)" error={err(`variants.${i}.price`)} className="col-span-2 sm:col-span-1"><input type="number" min={0} inputMode="numeric" className={inputClass} value={r.price} onChange={(e) => setRow(i, { price: e.target.value })} /></Field>
                       <Field label="Ancien prix" className="col-span-2 sm:col-span-1"><input type="number" min={0} inputMode="numeric" className={inputClass} value={r.compare} onChange={(e) => setRow(i, { compare: e.target.value })} placeholder="barré" /></Field>
-                      <Field label="Prix d'achat (DA)" className="col-span-2 sm:col-span-1"><input type="number" min={0} inputMode="numeric" className={inputClass} value={r.cost} onChange={(e) => setRow(i, { cost: e.target.value })} /></Field>
-                      <Field label="Type de stock" className="col-span-6 sm:col-span-3">
+                      <Field label="Prix d'achat (DA)" className="col-span-3 sm:col-span-1"><input type="number" min={0} inputMode="numeric" className={inputClass} value={r.cost} onChange={(e) => setRow(i, { cost: e.target.value })} /></Field>
+                      <Field label="Bénéfice (%)" className="col-span-3 sm:col-span-1"><input type="number" min={0} step="0.1" inputMode="decimal" className={inputClass} value={r.gain} disabled={!(Number(r.cost) > 0)} onChange={(e) => setRow(i, { gain: e.target.value })} /></Field>
+                      <Field label="Type de stock" className="col-span-6 sm:col-span-2">
                         <select className={inputClass} value={r.mode} onChange={(e) => setRow(i, { mode: e.target.value as Row['mode'] })} disabled={r.stock_qty > 0}>
                           {isCosmetic ? (
                             <>
@@ -444,7 +467,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                           )}
                         </select>
                       </Field>
-                      <div className="col-span-6 flex items-end justify-between gap-2 sm:col-span-3">
+                      <div className="col-span-6 flex items-end justify-between gap-2 sm:col-span-2">
                         <label className="flex items-center gap-2 pb-2 text-sm"><Switch checked={r.active} onCheckedChange={(v) => setRow(i, { active: v })} />Vendue</label>
                         <span className="flex">
                           <button type="button" disabled={i === 0} onClick={() => moveRow(i, -1)} className="flex size-10 items-center justify-center rounded hover:bg-secondary disabled:opacity-30" aria-label="Monter"><ArrowUp className="size-4" /></button>
@@ -473,16 +496,23 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
           ) : (
             <Section title="Contenu et prix du pack" hint="Choisissez les produits (parfums, cosmétiques) et leurs tailles ou options qui composent le pack.">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Prix du pack (DA)" error={err('pack.price')}><input type="number" min={0} inputMode="numeric" className={inputClass} value={f.packPrice} onChange={(e) => set('packPrice', e.target.value)} /></Field>
+                <Field label="Prix du pack (DA)" error={err('pack.price')}><input type="number" min={0} inputMode="numeric" className={inputClass} value={f.packPrice} onChange={(e) => setPackPrice(e.target.value)} /></Field>
                 <Field label="Ancien prix (barré)"><input type="number" min={0} inputMode="numeric" className={inputClass} value={f.packCompare} onChange={(e) => set('packCompare', e.target.value)} /></Field>
               </div>
-              {f.packCost !== null && f.packPrice !== '' && (
-                <p className="tnum text-sm">
-                  {`Prix d'achat des produits : ${formatPrice(f.packCost)}. Bénéfice :`} <strong className={Number(f.packPrice) < f.packCost ? 'text-destructive' : ''}>{formatPrice(Number(f.packPrice) - f.packCost)}</strong>
-                  {gainOf(Number(f.packPrice), f.packCost) !== null && <span className="text-muted-foreground">{` (${pct(gainOf(Number(f.packPrice), f.packCost)!)} du prix d'achat)`}</span>}
-                  <span className="block text-xs text-muted-foreground">Calculé avec les prix d'achat enregistrés ; enregistrez le pack après avoir changé son contenu pour le mettre à jour.</span>
-                </p>
-              )}
+              {packCost !== null ? (
+                <div className="space-y-2 rounded-md bg-secondary/60 p-3 text-sm">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <p className="tnum pb-2">{`Prix d'achat des produits : ${formatPrice(packCost)}.`}</p>
+                    <Field label="Bénéfice (%)" className="w-32"><input type="number" min={0} step="0.1" inputMode="decimal" className={inputClass} value={f.packGain} onChange={(e) => setPackGain(e.target.value)} /></Field>
+                  </div>
+                  {f.packPrice !== '' && (
+                    <p className="tnum">
+                      Bénéfice : <strong className={Number(f.packPrice) < packCost ? 'text-destructive' : ''}>{formatPrice(Number(f.packPrice) - packCost)}</strong>
+                      {gainOf(Number(f.packPrice), packCost) !== null && <span className="text-muted-foreground">{` (${pct(gainOf(Number(f.packPrice), packCost)!)} du prix d'achat)`}</span>}
+                    </p>
+                  )}
+                </div>
+              ) : f.components.length > 0 && <p className="text-sm text-muted-foreground">Le bénéfice du pack se calcule quand chaque produit du pack a un prix d'achat.</p>}
               {err('pack.components') && <p role="alert" className="text-sm text-destructive">{err('pack.components')}</p>}
               <ul className="divide-y divide-border rounded-md border border-border">
                 {f.components.map((c, i) => (
@@ -496,7 +526,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                 ))}
               </ul>
               <Button type="button" variant="outline" className="h-10" onClick={() => setPicker(true)}><Plus className="size-4" aria-hidden />Ajouter un produit</Button>
-              <VariantPicker open={picker} onOpenChange={setPicker} title="Ajouter au pack" onPick={(v, p) => set('components', f.components.some((c) => c.variant_id === v.id) ? f.components.map((c) => (c.variant_id === v.id ? { ...c, quantity: c.quantity + 1 } : c)) : [...f.components, { variant_id: v.id, product: p.name, label: v.label, quantity: 1 }])} />
+              <VariantPicker open={picker} onOpenChange={setPicker} title="Ajouter au pack" onPick={(v, p) => set('components', f.components.some((c) => c.variant_id === v.id) ? f.components.map((c) => (c.variant_id === v.id ? { ...c, quantity: c.quantity + 1 } : c)) : [...f.components, { variant_id: v.id, product: p.name, label: v.label, quantity: 1, cost: v.cost_price }])} />
             </Section>
           )}
 

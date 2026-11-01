@@ -569,6 +569,8 @@ export const AR: Record<string, string> = {
   "ml ; un produit à la pièce est signalé « stock faible » à": 'مل؛ ويُعلَّم المنتج بالقطعة «مخزون منخفض» عند',
 
   // Purchase prices and profit
+  'Bénéfice (%)': 'الربح (%)',
+  "Le bénéfice du pack se calcule quand chaque produit du pack a un prix d'achat.": 'يُحسب ربح الباقة عندما يكون لكل منتج فيها سعر شراء.',
   'Cette semaine': 'هذا الأسبوع',
   'Cette année': 'هذه السنة',
   'Bénéfice': 'الربح',
@@ -605,6 +607,8 @@ export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) =
   [/^(.+) % du prix d'achat$/, (m) => `${m[1]} % من سعر الشراء`],
   [/^(\d+) ventes? sans prix d'achat non comptées?$/, (m) => `${m[1]} مبيعات بدون سعر شراء غير محسوبة`],
   [/^Prix d'achat des produits : (.+)\. Bénéfice :$/, (m, tr) => `سعر شراء المنتجات: ${tr(m[1])}. الربح:`],
+  [/^Prix d'achat des produits : (.+)\.$/, (m, tr) => `سعر شراء المنتجات: ${tr(m[1])}.`],
+  [/^\(([+-]?[\d,]+) %\)$/, (m) => `(${m[1]} %)`],
   [/^Soit (.+) le ml\.$/, (m, tr) => `أي ${tr(m[1])} للمل.`],
   [/^(\d+) en ligne, (\d+) en caisse$/, (m) => `${m[1]} عبر الإنترنت، ${m[2]} في الصندوق`],
   [/^(\d+) restants?$/, (m) => `${m[1]} متبقٍّ`],

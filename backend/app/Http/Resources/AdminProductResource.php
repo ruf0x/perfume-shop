@@ -61,6 +61,7 @@ class AdminProductResource extends JsonResource
                         'variant_id' => $item->component_variant_id,
                         'product' => $item->component->product->name,
                         'label' => $item->component->label,
+                        'cost_price' => $item->component->cost_price,
                         'quantity' => $item->quantity,
                     ])->values()
                     : null,

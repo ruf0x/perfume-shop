@@ -162,6 +162,12 @@ export default function Dashboard() {
                 <li className="flex items-center justify-between"><span className="flex items-center gap-2"><span className="size-3 rounded-sm" style={{ background: ONLINE }} aria-hidden />Boutique en ligne</span><span className="tnum font-medium">{formatPrice(d.revenue_online)}</span></li>
                 <li className="flex items-center justify-between"><span className="flex items-center gap-2"><span className="size-3 rounded-sm" style={{ background: POS }} aria-hidden />Caisse</span><span className="tnum font-medium">{formatPrice(d.revenue_pos)}</span></li>
               </ul>
+              {d.profit.orders_counted > 0 && (
+                <p className="mt-4 flex items-baseline justify-between gap-3 border-t border-border pt-3">
+                  <span className="font-medium">Bénéfice</span>
+                  <span className="tnum text-2xl font-semibold">{formatPrice(d.profit.amount)}{d.profit.percent !== null && <span className="ms-2 text-base font-normal text-muted-foreground">{`(${d.profit.percent > 0 ? '+' : ''}${String(d.profit.percent).replace('.', ',')} %)`}</span>}</span>
+                </p>
+              )}
             </section>
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

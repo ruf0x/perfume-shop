@@ -120,7 +120,7 @@ export interface AdminVariant {
   sku: string | null
   is_active: boolean
   sort_order: number
-  components: { variant_id: number; product: string; label: string; quantity: number }[] | null
+  components: { variant_id: number; product: string; label: string; quantity: number; cost_price: number | null }[] | null
 }
 
 /** How a product works: `perfume` (decants, notes), `standard` (options counted in pieces) or a `pack`. */
