@@ -436,6 +436,10 @@
                                                     "id": {
                                                         "type": "integer"
                                                     },
+                                                    "editable": {
+                                                        "type": "boolean",
+                                                        "description": "Entered by hand (an entry, a loss, a recount): it can be edited or deleted."
+                                                    },
                                                     "ml": {
                                                         "type": "integer"
                                                     },
@@ -476,6 +480,7 @@
                                                 },
                                                 "required": [
                                                     "id",
+                                                    "editable",
                                                     "ml",
                                                     "type",
                                                     "qty_change",
@@ -690,6 +695,270 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/admin/bottles/movements/{movement}": {
+            "put": {
+                "operationId": "bottle.updateMovement",
+                "summary": "Correct an entry, a loss or a recount made by hand: `quantity` (signed like the movement), `total_cost` (entries), `note`",
+                "tags": [
+                    "Bottle"
+                ],
+                "parameters": [
+                    {
+                        "name": "movement",
+                        "in": "path",
+                        "required": true,
+                        "description": "The movement ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "quantity": {
+                                        "type": "integer",
+                                        "minimum": -100000,
+                                        "maximum": 100000
+                                    },
+                                    "total_cost": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
+                                        "minimum": 0
+                                    },
+                                    "note": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 255
+                                    }
+                                },
+                                "required": [
+                                    "quantity"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "qty": {}
+                                            },
+                                            "required": [
+                                                "qty"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "bottle.destroyMovement",
+                "summary": "Delete a movement made by hand",
+                "tags": [
+                    "Bottle"
+                ],
+                "parameters": [
+                    {
+                        "name": "movement",
+                        "in": "path",
+                        "required": true,
+                        "description": "The movement ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Mouvement supprim\u00e9."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/admin/bottles/{size}": {
+            "put": {
+                "operationId": "bottle.updateSize",
+                "summary": "Rename a size",
+                "tags": [
+                    "Bottle"
+                ],
+                "parameters": [
+                    {
+                        "name": "size",
+                        "in": "path",
+                        "required": true,
+                        "description": "The size ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "ml": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 1000
+                                    }
+                                },
+                                "required": [
+                                    "ml"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "ml": {
+                                                    "type": "integer"
+                                                },
+                                                "qty": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "ml",
+                                                "qty"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "bottle.destroySize",
+                "summary": "Stop tracking a size (its history is deleted)",
+                "tags": [
+                    "Bottle"
+                ],
+                "parameters": [
+                    {
+                        "name": "size",
+                        "in": "path",
+                        "required": true,
+                        "description": "The size ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Taille supprim\u00e9e."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -1672,6 +1941,18 @@
                                                             "null"
                                                         ]
                                                     },
+                                                    "wilaya_id": {
+                                                        "type": [
+                                                            "integer",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "commune_id": {
+                                                        "type": [
+                                                            "integer",
+                                                            "null"
+                                                        ]
+                                                    },
                                                     "address": {
                                                         "type": [
                                                             "string",
@@ -1716,6 +1997,8 @@
                                                     "first_name",
                                                     "last_name",
                                                     "wilaya",
+                                                    "wilaya_id",
+                                                    "commune_id",
                                                     "address",
                                                     "orders_count",
                                                     "delivered_count",
@@ -1815,6 +2098,18 @@
                                                         "null"
                                                     ]
                                                 },
+                                                "wilaya_id": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "commune_id": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
                                                 "address": {
                                                     "type": [
                                                         "string",
@@ -1859,6 +2154,8 @@
                                                 "first_name",
                                                 "last_name",
                                                 "wilaya",
+                                                "wilaya_id",
+                                                "commune_id",
                                                 "address",
                                                 "orders_count",
                                                 "delivered_count",
@@ -1926,6 +2223,29 @@
                                     "last_name": {
                                         "type": "string",
                                         "maxLength": 80
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "maxLength": 20
+                                    },
+                                    "wilaya_id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "commune_id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "address": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 255
                                     }
                                 }
                             }
@@ -1958,6 +2278,18 @@
                                                 "wilaya": {
                                                     "type": [
                                                         "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "wilaya_id": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "commune_id": {
+                                                    "type": [
+                                                        "integer",
                                                         "null"
                                                     ]
                                                 },
@@ -2005,6 +2337,8 @@
                                                 "first_name",
                                                 "last_name",
                                                 "wilaya",
+                                                "wilaya_id",
+                                                "commune_id",
                                                 "address",
                                                 "orders_count",
                                                 "delivered_count",
@@ -2026,6 +2360,51 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "customer.destroy",
+                "summary": "Delete a client. Their orders stay (they carry the name and phone they were made with) but are no longer\nattached to a client; their loyalty count and gifts are deleted with them",
+                "tags": [
+                    "Customer"
+                ],
+                "parameters": [
+                    {
+                        "name": "customer",
+                        "in": "path",
+                        "required": true,
+                        "description": "The customer ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Client supprim\u00e9."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
@@ -3451,6 +3830,51 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "order.destroy",
+                "summary": "Delete an order made by mistake (owner only). Pending, cancelled, returned orders and caisse sales; the others must be cancelled first",
+                "tags": [
+                    "Order"
+                ],
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "description": "The order ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Commande supprim\u00e9e."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
             }

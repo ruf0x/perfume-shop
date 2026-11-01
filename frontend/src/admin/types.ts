@@ -127,6 +127,8 @@ export interface BottleSizeRow {
 
 export interface BottleMovement {
   id: number
+  /** Entered by hand (an entry, a loss, a recount): it can be edited or deleted. */
+  editable: boolean
   ml: number
   type: string
   qty_change: number
@@ -257,6 +259,8 @@ export interface Customer {
   first_name: string
   last_name: string
   wilaya: string | null
+  wilaya_id: number | null
+  commune_id: number | null
   address: string | null
   orders_count: number
   delivered_count: number

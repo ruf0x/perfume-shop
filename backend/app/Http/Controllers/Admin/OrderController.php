@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Illuminate\Http\JsonResponse;
+use App\Services\OrderDeleter;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\OrderIndexRequest;
@@ -62,6 +64,14 @@ class OrderController extends Controller
     public function update(UpdateOrderRequest $request, Order $order, OrderEditor $editor): OrderResource
     {
         return new OrderResource($this->loaded($editor->update($order, $request->validated(), $request->user())));
+    }
+
+    /** Delete an order made by mistake (owner only). Pending, cancelled, returned orders and caisse sales; the others must be cancelled first. */
+    public function destroy(Request $request, Order $order, OrderDeleter $deleter): JsonResponse
+    {
+        $deleter->delete($order, $request->user());
+
+        return response()->json(['message' => 'Commande supprimée.']);
     }
 
     /** Move an order through the workflow (confirm, cancel, ship, deliver, return...). */

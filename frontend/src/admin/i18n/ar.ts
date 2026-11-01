@@ -655,6 +655,27 @@ export const AR: Record<string, string> = {
   'Pour enregistrer le client, indiquez son prénom, son nom et son téléphone.': 'لتسجيل الزبون، أدخل اسمه الأول ولقبه وهاتفه.',
   "Un nouveau client sera créé avec ces informations (s'il n'existe pas déjà avec ce numéro).": 'سيُنشأ زبون جديد بهذه المعلومات (إن لم يكن موجوداً بهذا الرقم).',
 
+  // Edit / delete
+  'Supprimer la commande': 'حذف الطلب',
+  'Commande supprimée.': 'تم حذف الطلب.',
+  'Client supprimé.': 'تم حذف الزبون.',
+  'Taille supprimée.': 'تم حذف الحجم.',
+  'Taille modifiée.': 'تم تعديل الحجم.',
+  'Mouvement supprimé.': 'تم حذف الحركة.',
+  'Mouvement modifié.': 'تم تعديل الحركة.',
+  'Modifier la taille': 'تعديل الحجم',
+  'Corrigez la contenance si vous vous êtes trompé (100 au lieu de 10, par exemple).': 'صحّح السعة إن أخطأت (100 بدل 10 مثلاً).',
+  'Supprimer ce mouvement ?': 'حذف هذه الحركة؟',
+  'Son effet est retiré du nombre de bouteilles. Impossible si ces bouteilles ont déjà servi.': 'يُسحب أثرها من عدد القوارير. غير ممكن إن كانت هذه القوارير قد استُعملت.',
+  "Le suivi de cette taille s'arrête et son historique est effacé. Les décants de cette taille ne seront plus limités par les bouteilles.": 'يتوقف تتبع هذا الحجم ويُمحى سجله. لن تتقيّد عطور هذا الحجم بالقوارير بعد الآن.',
+  'Le nombre de bouteilles suit la correction. Il ne peut pas passer sous zéro.': 'يتبع عدد القوارير هذا التصحيح. لا يمكن أن ينزل تحت الصفر.',
+  'Coût total (DA)': 'التكلفة الإجمالية (دج)',
+  'Cette vente en caisse sera supprimée : le stock et les bouteilles utilisés sont remis, et ses parfums ne comptent plus pour la fidélité du client.': 'سيُحذف هذا البيع في الصندوق: يُعاد المخزون والقوارير المستعملة، ولا تُحتسب عطوره في ولاء الزبون.',
+  'Cette commande sera supprimée définitivement.': 'سيُحذف هذا الطلب نهائياً.',
+  'Ses commandes restent, mais ne sont plus rattachées à un client. Son suivi de fidélité et ses cadeaux sont supprimés.': 'تبقى طلباته لكنها لا تُنسب لأي زبون. ويُحذف تتبّع ولائه وهداياه.',
+  'Les commandes déjà passées gardent les informations avec lesquelles elles ont été faites.': 'تحتفظ الطلبات السابقة بالمعلومات التي أُنجزت بها.',
+  'Une commande confirmée, expédiée ou livrée ne peut pas être supprimée : annulez-la d\'abord.': 'لا يمكن حذف طلب مؤكد أو مشحون أو مسلَّم: ألغِه أولاً.',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',
@@ -671,6 +692,9 @@ export const AR: Record<string, string> = {
 
 /** Words of a sentence whose other part is data (names, numbers). Longest match first is not needed: each is anchored. */
 export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) => string) => string]> = [
+  [/^Supprimer ([^«"].*) \?$/, (m) => `حذف ${m[1]}؟`],
+  [/^Supprimer les bouteilles de (\d*) ml \?$/, (m) => `حذف قوارير ${m[1]} مل؟`],
+  [/^Modifier ce mouvement, (\d*) ml$/, (m) => `تعديل هذه الحركة، ${m[1]} مل`],
   [/^Client existant : (.+), (\d+) commandes?\.$/, (m) => `زبون موجود: ${m[1]}، ${m[2]} طلب.`],
   [/^Fidélité : (\d+) \/ (\d+) parfums achetés$/, (m) => `الولاء: ${m[1]} / ${m[2]} عطور مشتراة`],
   [/^(\d+) cadeaux à offrir$/, (m) => `${m[1]} هدايا للتسليم`],

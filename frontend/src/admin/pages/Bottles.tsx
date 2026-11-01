@@ -30,7 +30,11 @@ export default function Bottles() {
   const query = useBottles()
   const [filter, setFilter] = useState<number | undefined>()
   const history = useBottleMovements(filter)
-  const { entry, adjust } = useBottleWrite()
+  const { entry, adjust, renameSize, deleteSize, updateMovement, deleteMovement } = useBottleWrite()
+  const [renaming, setRenaming] = useState<{ id: number; ml: string } | null>(null)
+  const [removing, setRemoving] = useState<{ id: number; ml: number } | null>(null)
+  const [editing, setEditing] = useState<{ id: number; type: string; ml: number; quantity: string; cost: string; note: string } | null>(null)
+  const [deletingMove, setDeletingMove] = useState<number | null>(null)
   const [adding, setAdding] = useState<{ ml: string } | null>(null)
   const [fixing, setFixing] = useState<number | null>(null)
   const [qty, setQty] = useState('')
@@ -116,6 +120,8 @@ export default function Bottles() {
                     <span className="flex justify-end gap-2">
                       <Button variant="outline" className="h-9" onClick={() => setAdding({ ml: String(s.ml) })}>Ajouter</Button>
                       <Button variant="outline" className="h-9" onClick={() => setFixing(s.ml)}>Perte / correction</Button>
+                      <Button variant="outline" className="h-9" onClick={() => setRenaming({ id: s.id, ml: String(s.ml) })}>Modifier</Button>
+                      <Button variant="outline" className="h-9 text-destructive hover:text-destructive" onClick={() => setRemoving({ id: s.id, ml: s.ml })} aria-label={`Supprimer ${s.ml} ml`}>Supprimer</Button>
                     </span>
                   </td>
                 </tr>
@@ -144,15 +150,39 @@ export default function Bottles() {
                   <span className="text-muted-foreground">{` · ${m.ml} ml${m.order ? ` · ${m.order}` : ''}${m.note ? ` · ${m.note}` : ''}`}</span>
                   <span className="block text-xs text-muted-foreground">{`${formatDateTime(m.created_at)}${m.user ? `, ${m.user}` : ''}`}</span>
                 </span>
-                <span className="tnum shrink-0 text-end">
-                  <strong className={m.qty_change < 0 ? 'text-destructive' : ''}>{m.qty_change > 0 ? `+${m.qty_change}` : m.qty_change}</strong>
-                  {m.total_cost !== null && <span className="block text-xs text-muted-foreground">{formatPrice(m.total_cost)}</span>}
+                <span className="flex shrink-0 items-center gap-4">
+                  {m.editable && (
+                    <span className="flex gap-3 text-xs">
+                      <button type="button" className="underline underline-offset-4" onClick={() => setEditing({ id: m.id, type: m.type, ml: m.ml, quantity: String(m.qty_change), cost: m.total_cost !== null ? String(m.total_cost) : '', note: m.note ?? '' })}>Modifier</button>
+                      <button type="button" className="text-destructive underline underline-offset-4" onClick={() => setDeletingMove(m.id)}>Supprimer</button>
+                    </span>
+                  )}
+                  <span className="tnum text-end">
+                    <strong className={m.qty_change < 0 ? 'text-destructive' : ''}>{m.qty_change > 0 ? `+${m.qty_change}` : m.qty_change}</strong>
+                    {m.total_cost !== null && <span className="block text-xs text-muted-foreground">{formatPrice(m.total_cost)}</span>}
+                  </span>
                 </span>
               </li>
             ))}
           </ul>
         )}
       </section>
+
+      <ConfirmDialog open={renaming !== null} onOpenChange={(o) => !o && setRenaming(null)} title="Modifier la taille" description="Corrigez la contenance si vous vous êtes trompé (100 au lieu de 10, par exemple)." confirmLabel="Enregistrer" loading={renameSize.isPending} onConfirm={() => renaming && renameSize.mutate({ id: renaming.id, ml: Number(renaming.ml) }, { onSuccess: () => { toast.success('Taille modifiée.'); setRenaming(null) }, onError: (e) => toast.error(apiError(e)) })}>
+        <label className="block space-y-1 text-sm"><span className="text-muted-foreground">Taille (ml)</span><input type="number" min={1} className={inputClass} value={renaming?.ml ?? ''} onChange={(e) => setRenaming(renaming && { ...renaming, ml: e.target.value })} /></label>
+      </ConfirmDialog>
+
+      <ConfirmDialog open={removing !== null} onOpenChange={(o) => !o && setRemoving(null)} title={`Supprimer les bouteilles de ${removing?.ml ?? ''} ml ?`} description="Le suivi de cette taille s'arrête et son historique est effacé. Les décants de cette taille ne seront plus limités par les bouteilles." confirmLabel="Supprimer" destructive loading={deleteSize.isPending} onConfirm={() => removing && deleteSize.mutate(removing.id, { onSuccess: () => { toast.success('Taille supprimée.'); setRemoving(null) }, onError: (e) => toast.error(apiError(e)) })} />
+
+      <ConfirmDialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)} title={`Modifier ce mouvement, ${editing?.ml ?? ''} ml`} description="Le nombre de bouteilles suit la correction. Il ne peut pas passer sous zéro." confirmLabel="Enregistrer" loading={updateMovement.isPending} onConfirm={() => editing && updateMovement.mutate({ id: editing.id, quantity: Number(editing.quantity), total_cost: editing.type === 'entree' && editing.cost !== '' ? Number(editing.cost) : null, note: editing.note || null }, { onSuccess: () => { toast.success('Mouvement modifié.'); setEditing(null) }, onError: (e) => toast.error(apiError(e)) })}>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <label className="space-y-1"><span className="text-muted-foreground">Nombre de bouteilles</span><input type="number" className={inputClass} value={editing?.quantity ?? ''} onChange={(e) => setEditing(editing && { ...editing, quantity: e.target.value })} /></label>
+          {editing?.type === 'entree' && <label className="space-y-1"><span className="text-muted-foreground">Coût total (DA)</span><input type="number" min={0} className={inputClass} value={editing.cost} onChange={(e) => setEditing({ ...editing, cost: e.target.value })} /></label>}
+          <label className="col-span-2 space-y-1"><span className="text-muted-foreground">Note</span><input className={inputClass} value={editing?.note ?? ''} onChange={(e) => setEditing(editing && { ...editing, note: e.target.value })} /></label>
+        </div>
+      </ConfirmDialog>
+
+      <ConfirmDialog open={deletingMove !== null} onOpenChange={(o) => !o && setDeletingMove(null)} title="Supprimer ce mouvement ?" description="Son effet est retiré du nombre de bouteilles. Impossible si ces bouteilles ont déjà servi." confirmLabel="Supprimer" destructive loading={deleteMovement.isPending} onConfirm={() => deletingMove !== null && deleteMovement.mutate(deletingMove, { onSuccess: () => { toast.success('Mouvement supprimé.'); setDeletingMove(null) }, onError: (e) => toast.error(apiError(e)) })} />
 
       <ConfirmDialog open={adding !== null} onOpenChange={(o) => !o && close()} title="Ajouter des bouteilles" description="Vous avez reçu ou acheté des bouteilles vides." confirmLabel="Ajouter" loading={entry.isPending} onConfirm={saveEntry}>
         <div className="grid grid-cols-2 gap-3 text-sm">

@@ -64,6 +64,44 @@ class BottleController extends Controller
         return response()->json(['data' => ['ml' => $size->ml, 'qty' => $size->qty]], 201);
     }
 
+    /** Rename a size. */
+    public function updateSize(Request $request, BottleSize $size, BottleService $bottles): JsonResponse
+    {
+        $v = $request->validate(['ml' => ['required', 'integer', 'min:1', 'max:1000']]);
+        $size = $bottles->updateSize($size, $v['ml']);
+
+        return response()->json(['data' => ['id' => $size->id, 'ml' => $size->ml, 'qty' => $size->qty]]);
+    }
+
+    /** Stop tracking a size (its history is deleted). */
+    public function destroySize(BottleSize $size, BottleService $bottles): JsonResponse
+    {
+        $bottles->deleteSize($size);
+
+        return response()->json(['message' => 'Taille supprimée.']);
+    }
+
+    /** Correct an entry, a loss or a recount made by hand: `quantity` (signed like the movement), `total_cost` (entries), `note`. */
+    public function updateMovement(Request $request, BottleMovement $movement, BottleService $bottles): JsonResponse
+    {
+        $v = $request->validate([
+            'quantity' => ['required', 'integer', 'not_in:0', 'min:-100000', 'max:100000'],
+            'total_cost' => ['nullable', 'integer', 'min:0'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+        $bottles->updateMovement($movement, $v['quantity'], $v['total_cost'] ?? null, $v['note'] ?? null);
+
+        return response()->json(['data' => ['qty' => BottleSize::query()->whereKey($movement->bottle_size_id)->value('qty')]]);
+    }
+
+    /** Delete a movement made by hand. */
+    public function destroyMovement(BottleMovement $movement, BottleService $bottles): JsonResponse
+    {
+        $bottles->deleteMovement($movement);
+
+        return response()->json(['message' => 'Mouvement supprimé.']);
+    }
+
     /** Correct the count: lost / broken bottles (negative) or a recount. A note is required. */
     public function adjustment(Request $request, BottleService $bottles): JsonResponse
     {
@@ -91,6 +129,8 @@ class BottleController extends Controller
         return response()->json([
             'data' => $page->getCollection()->map(fn (BottleMovement $m) => [
                 'id' => $m->id,
+                /** Entered by hand (an entry, a loss, a recount): it can be edited or deleted. */
+                'editable' => in_array($m->type, [StockMovementType::Entree, StockMovementType::Perte, StockMovementType::Ajustement], true),
                 'ml' => $m->size->ml,
                 'type' => $m->type,
                 'qty_change' => $m->qty_change,

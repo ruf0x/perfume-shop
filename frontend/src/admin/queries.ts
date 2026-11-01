@@ -296,6 +296,10 @@ export function useBottleWrite() {
   return {
     entry: useMutation({ mutationFn: (body: { ml: number; quantity: number; total_cost?: number; note?: string }) => api.post('/admin/bottles/entries', body), onSuccess: done }),
     adjust: useMutation({ mutationFn: (body: { ml: number; quantity: number; type: 'perte' | 'ajustement'; note: string }) => api.post('/admin/bottles/adjustments', body), onSuccess: done }),
+    renameSize: useMutation({ mutationFn: ({ id, ml }: { id: number; ml: number }) => api.put(`/admin/bottles/${id}`, { ml }), onSuccess: done }),
+    deleteSize: useMutation({ mutationFn: (id: number) => api.delete(`/admin/bottles/${id}`), onSuccess: done }),
+    updateMovement: useMutation({ mutationFn: ({ id, ...body }: { id: number; quantity: number; total_cost?: number | null; note?: string | null }) => api.put(`/admin/bottles/movements/${id}`, body), onSuccess: done }),
+    deleteMovement: useMutation({ mutationFn: (id: number) => api.delete(`/admin/bottles/movements/${id}`), onSuccess: done }),
   }
 }
 
@@ -338,4 +342,15 @@ export function useCustomerSearch(q: string) {
     enabled: q.trim().length >= 2,
     queryFn: () => api.get<{ data: CustomerHit[] }>('/admin/customers/search', { params: { q: q.trim() } }).then((r) => r.data.data),
   })
+}
+
+// ── deleting ─────────────────────────────────────────────────────────────
+export function useDeleteOrder() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: number) => api.delete(`/admin/orders/${id}`), onSuccess: () => refresh(qc) })
+}
+
+export function useDeleteCustomer() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: number) => api.delete(`/admin/customers/${id}`), onSuccess: () => refresh(qc) })
 }

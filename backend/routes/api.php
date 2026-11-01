@@ -98,6 +98,10 @@ Route::prefix('admin')->group(function () {
             Route::get('/bottles/movements', [BottleController::class, 'movements']);
             Route::post('/bottles/entries', [BottleController::class, 'entry']);
             Route::post('/bottles/adjustments', [BottleController::class, 'adjustment']);
+            Route::put('/bottles/movements/{movement}', [BottleController::class, 'updateMovement']);
+            Route::delete('/bottles/movements/{movement}', [BottleController::class, 'destroyMovement']);
+            Route::put('/bottles/{size}', [BottleController::class, 'updateSize']);
+            Route::delete('/bottles/{size}', [BottleController::class, 'destroySize']);
 
             Route::post('/stock/entries', [StockController::class, 'entry']);
             Route::post('/stock/adjustments', [StockController::class, 'adjustment']);
@@ -106,6 +110,8 @@ Route::prefix('admin')->group(function () {
             Route::get('/customers', [CustomerController::class, 'index']);
             Route::get('/customers/{customer}', [CustomerController::class, 'show']);
             Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
+            Route::delete('/customers/{customer}', [CustomerController::class, 'destroy']);
+            Route::delete('/orders/{order}', [OrderController::class, 'destroy']);
             Route::get('/customers/{customer}/loyalty', [LoyaltyController::class, 'show']);
             Route::post('/customers/{customer}/loyalty/redeem', [LoyaltyController::class, 'redeem']);
 

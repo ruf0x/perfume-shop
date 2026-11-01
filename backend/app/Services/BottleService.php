@@ -54,6 +54,75 @@ class BottleService
         });
     }
 
+    /** Rename a size (a typo: 100 instead of 10). The ml must not already be tracked. */
+    public function updateSize(BottleSize $size, int $ml): BottleSize
+    {
+        if ($ml < 1 || $ml > 1000) {
+            throw new ShopException('Contenance invalide.');
+        }
+        if (BottleSize::query()->where('ml', $ml)->whereKeyNot($size->id)->exists()) {
+            throw new ShopException("Les bouteilles de {$ml} ml sont déjà suivies.");
+        }
+        $size->update(['ml' => $ml]);
+
+        return $size->refresh();
+    }
+
+    /** Stop tracking a size and delete its history. Decants of that size are then no longer limited by bottles. */
+    public function deleteSize(BottleSize $size): void
+    {
+        DB::transaction(function () use ($size) {
+            BottleMovement::query()->where('bottle_size_id', $size->id)->delete();
+            $size->delete();
+        });
+    }
+
+    /**
+     * Correct a movement entered by hand (an entry, a loss, a recount): its quantity, cost and note. The count of the
+     * size follows. Movements made by sales and cancellations are not edited here.
+     */
+    public function updateMovement(BottleMovement $movement, int $quantity, ?int $totalCost, ?string $note): BottleMovement
+    {
+        $this->assertManual($movement);
+        if ($quantity === 0 || ($movement->type === StockMovementType::Entree && $quantity < 0) || ($movement->type === StockMovementType::Perte && $quantity > 0)) {
+            throw new ShopException('Quantité invalide pour ce type de mouvement.');
+        }
+
+        return DB::transaction(function () use ($movement, $quantity, $totalCost, $note) {
+            $size = BottleSize::query()->lockForUpdate()->findOrFail($movement->bottle_size_id);
+            $delta = $quantity - $movement->qty_change;
+            if ($size->qty + $delta < 0) {
+                throw new ShopException("Il ne reste que {$size->qty} bouteille(s) de {$size->ml} ml : cette correction les ferait passer sous zéro.");
+            }
+            $movement->update(['qty_change' => $quantity, 'total_cost' => $movement->type === StockMovementType::Entree ? $totalCost : null, 'note' => $note]);
+            $size->increment('qty', $delta);
+
+            return $movement->refresh();
+        });
+    }
+
+    /** Delete a movement entered by hand, and take its effect off the count. */
+    public function deleteMovement(BottleMovement $movement): void
+    {
+        $this->assertManual($movement);
+
+        DB::transaction(function () use ($movement) {
+            $size = BottleSize::query()->lockForUpdate()->findOrFail($movement->bottle_size_id);
+            if ($size->qty - $movement->qty_change < 0) {
+                throw new ShopException("Ces bouteilles ont déjà servi : il n'en reste que {$size->qty} de {$size->ml} ml.");
+            }
+            $size->decrement('qty', $movement->qty_change);
+            $movement->delete();
+        });
+    }
+
+    private function assertManual(BottleMovement $movement): void
+    {
+        if (! in_array($movement->type, [StockMovementType::Entree, StockMovementType::Perte, StockMovementType::Ajustement], true)) {
+            throw new ShopException('Ce mouvement vient d\'une vente : il ne se modifie pas ici.');
+        }
+    }
+
     /**
      * Lock the tracked sizes among $mls (inside a transaction).
      *

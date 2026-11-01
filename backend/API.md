@@ -102,6 +102,7 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | GET | `/orders/{id}` | ✅ | Detail: client, items, totals, history, `allowed_actions`, `awaiting_stock`, and for a pending order `stock_check` (`possible`, `shortages`, and per item `item_id`, `ok`, `left`, `max_qty`: what the stock can cover) |
 | PUT | `/orders/{id}` | ✅ | Edit an order. Pending / confirmed: everything (client info, `lines`, `delivery_fee`, `discount`, `delivery_mode`, `admin_note`, `awaiting_stock`: put the order aside until stock arrives, it stays pending). Any other status (shipped, delivered, sold in shop, cancelled, returned): only the client (names, phones, address, wilaya / commune), `admin_note`, and for a caisse sale `payment_method` + `amount_received`; sending `lines`, `discount` or fees is refused. Adding or changing the phone links the order to that customer (created if new), moving its counters and loyalty perfumes |
 | POST | `/orders/{id}/transition` | ✅ | Workflow action (below) |
+| DELETE | `/orders/{id}` | | Delete an order made by mistake (owner only): pending, cancelled, returned, or a caisse sale (its stock and bottles are put back). A confirmed, shipped or delivered order is refused: cancel it first. The customer's counters and loyalty perfumes go back, and a gift given with it becomes available again |
 | POST | `/pos/sales` | ✅ | Caisse sale. A client is optional but needs `first_name`, `last_name` and `phone` together (the client is created, or found by phone); `wilaya_id` / `commune_id` place them, Oran / Oran (`config/shop.php`) when left out for a new client |
 | GET | `/customers/search` | ✅ | `?q=` (2+ characters): up to 8 clients by name or phone, with their wilaya / commune, to fill the client form. Owner and staff |
 | GET | `/products`, `/products/{id}` | ✅ | Catalogue with stock and hidden items. Filters: `q, kind (comma-separated), product_type_id, type_id, active, low_stock` |
@@ -117,8 +118,10 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | POST | `/stock/entries` | | Receive stock |
 | POST | `/stock/adjustments` | | Correction or loss |
 | POST | `/stock/open-bottle` | | Sealed bottle → decant pool |
-| GET/PATCH | `/customers`, `/customers/{id}` | | List, blacklist, note; each carries its `loyalty` count |
+| GET/PATCH/DELETE | `/customers`, `/customers/{id}` | | List, edit (names, phone, wilaya, commune, address, note, blacklist; a taken number is refused), delete (their orders stay, detached; their loyalty goes with them); each carries its `loyalty` count |
 | GET | `/bottles`, `/bottles/movements` | | The empty decant bottles: per size `qty` left, `bought`, `invested`, `unit_cost` (average), `value_left`, `low`, plus `totals`; the ledger (`ml` filter) |
+| PUT/DELETE | `/bottles/{id}` | | Rename a size (`ml`) / stop tracking it (its history is deleted) |
+| PUT/DELETE | `/bottles/movements/{id}` | | Correct (`quantity`, `total_cost`, `note`) or delete an entry, a loss or a recount made by hand (`editable` in the list); the count follows and never goes below zero. Movements made by sales are refused |
 | POST | `/bottles/entries`, `/bottles/adjustments` | | Receive bottles (`ml`, `quantity`, optional `total_cost`) / lose or recount them (`quantity` signed, `type` perte or ajustement, `note` required; never below zero) |
 | GET | `/loyalty` | ✅ | `?phone=`: the customer behind a number and where they stand (counted toward the next gift, pending gifts with the suggested value). Owner and staff, for the caisse |
 | GET | `/customers/{id}/loyalty` | | Count, pending gifts and the gifts already given |

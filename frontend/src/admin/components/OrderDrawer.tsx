@@ -1,4 +1,4 @@
-import { MessageCircle, Pencil, Phone, Printer } from 'lucide-react'
+import { MessageCircle, Pencil, Phone, Printer, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { formatPhone, formatPrice, phoneHref } from '@/shop/format'
 import { useSettings } from '@/shop/queries'
 import { apiError, formatDateTime } from '../lib'
 import { print } from '../printHelper'
-import { useOrder, useOrderAction, useUpdateOrder, type TransitionPayload } from '../queries'
+import { useDeleteOrder, useOrder, useOrderAction, useUpdateOrder, type TransitionPayload } from '../queries'
 import type { Order, OrderAction } from '../types'
 import { AwaitingBadge, ConfirmDialog, ErrorState, Loading, STATUS_LABEL, StatusBadge, inputClass } from './common'
 import { useIsOwner } from '../auth'
@@ -44,7 +44,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 const stockLine = (order: Order, itemId: number) => order.stock_check?.lines.find((l) => l.item_id === itemId)
 
-function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
+function Detail({ order, onEdit, onClose }: { order: Order; onEdit: () => void; onClose: () => void }) {
   const act = useOrderAction()
   const saveNote = useUpdateOrder()
   const { data: settings } = useSettings()
@@ -55,6 +55,10 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
   const [restock, setRestock] = useState(false)
   const [note, setNote] = useState(order.admin_note ?? '')
   const owner = useIsOwner()
+  const remove = useDeleteOrder()
+  const [deleting, setDeleting] = useState(false)
+  // Only what no goods left with: pending, cancelled, returned, or a caisse sale. The others are cancelled first.
+  const deletable = owner && ['en_attente', 'annulee', 'retournee', 'vendue_boutique'].includes(order.status)
   const [gift, setGift] = useState(false)
 
   const c = order.customer
@@ -226,9 +230,21 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
         )}
         <div className="flex gap-2">
           <Button variant="outline" className="h-10 flex-1" onClick={onEdit}><Pencil className="size-4" aria-hidden />Modifier</Button>
+          {deletable && <Button variant="outline" className="h-10 text-destructive hover:text-destructive" onClick={() => setDeleting(true)} aria-label="Supprimer la commande"><Trash2 className="size-4" aria-hidden />Supprimer</Button>}
           <Button variant="outline" className="h-10 flex-1" onClick={() => print(order, settings?.shop_name ?? 'Boutique')}><Printer className="size-4" aria-hidden />Imprimer</Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleting}
+        onOpenChange={setDeleting}
+        title={`Supprimer ${order.reference} ?`}
+        description={order.status === 'vendue_boutique' ? 'Cette vente en caisse sera supprimée : le stock et les bouteilles utilisés sont remis, et ses parfums ne comptent plus pour la fidélité du client.' : 'Cette commande sera supprimée définitivement.'}
+        confirmLabel="Supprimer"
+        destructive
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate(order.id, { onSuccess: () => { toast.success('Commande supprimée.'); setDeleting(false); onClose() }, onError: (e) => toast.error(apiError(e)) })}
+      />
 
       <ConfirmDialog open={dialog === 'confirm'} onOpenChange={(o) => !o && setDialog(null)} title="Confirmer la commande ?" description="Le client a confirmé par téléphone. Les quantités seront retirées du stock." confirmLabel="Confirmer" loading={pending} onConfirm={() => run('confirm', {}, 'Commande confirmée.')} />
       <ConfirmDialog open={dialog === 'deliver'} onOpenChange={(o) => !o && setDialog(null)} title="Marquer comme livrée ?" description="Le client a reçu et payé sa commande." confirmLabel="Livrée" loading={pending} onConfirm={() => run('deliver', {}, 'Commande livrée.')} />
@@ -291,7 +307,7 @@ export function OrderDrawer({ id, onClose }: { id: number | null; onClose: () =>
         ) : editing ? (
           <div className="flex-1 overflow-y-auto p-5"><OrderEdit order={order} onDone={() => setEditing(false)} /></div>
         ) : (
-          <Detail key={order.id + order.status + order.call_attempts} order={order} onEdit={() => setEditing(true)} />
+          <Detail key={order.id + order.status + order.call_attempts} order={order} onEdit={() => setEditing(true)} onClose={onClose} />
         )}
       </SheetContent>
     </Sheet>

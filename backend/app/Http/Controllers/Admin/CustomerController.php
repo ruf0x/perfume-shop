@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Illuminate\Support\Facades\DB;
+use App\Support\Phone;
+use App\Models\Order;
+use App\Models\Commune;
+use App\Exceptions\ShopException;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
@@ -75,14 +80,46 @@ class CustomerController extends Controller
     /** Blacklist a client (their phone can no longer place online orders) or add a note. */
     public function update(Request $request, Customer $customer): JsonResponse
     {
-        $customer->update($request->validate([
+        $v = $request->validate([
             'is_blacklisted' => ['sometimes', 'boolean'],
             'note' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'first_name' => ['sometimes', 'string', 'max:80'],
             'last_name' => ['sometimes', 'string', 'max:80'],
-        ]));
+            'phone' => ['sometimes', 'string', 'max:20'],
+            'wilaya_id' => ['sometimes', 'nullable', 'integer', 'exists:wilayas,id'],
+            'commune_id' => ['sometimes', 'nullable', 'integer', 'exists:communes,id'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+        ]);
+
+        if (array_key_exists('phone', $v)) {
+            $v['phone'] = Phone::normalize($v['phone']) ?? throw new ShopException('Numéro de téléphone invalide.');
+            if (Customer::query()->where('phone', $v['phone'])->whereKeyNot($customer->id)->exists()) {
+                throw new ShopException('Ce numéro est déjà utilisé par un autre client.');
+            }
+        }
+        $wilayaId = array_key_exists('wilaya_id', $v) ? $v['wilaya_id'] : $customer->wilaya_id;
+        $communeId = array_key_exists('commune_id', $v) ? $v['commune_id'] : $customer->commune_id;
+        if ($communeId && ! Commune::query()->whereKey($communeId)->where('wilaya_id', $wilayaId)->exists()) {
+            throw new ShopException("Cette commune n'appartient pas à la wilaya choisie.");
+        }
+
+        $customer->update($v);
 
         return response()->json(['data' => $this->present($customer->fresh('wilaya:id,name'))]);
+    }
+
+    /**
+     * Delete a client. Their orders stay (they carry the name and phone they were made with) but are no longer
+     * attached to a client; their loyalty count and gifts are deleted with them.
+     */
+    public function destroy(Customer $customer): JsonResponse
+    {
+        DB::transaction(function () use ($customer) {
+            Order::query()->where('customer_id', $customer->id)->update(['customer_id' => null]);
+            $customer->delete();
+        });
+
+        return response()->json(['message' => 'Client supprimé.']);
     }
 
     /** @return array<string, mixed> */
@@ -94,6 +131,8 @@ class CustomerController extends Controller
             'first_name' => $c->first_name,
             'last_name' => $c->last_name,
             'wilaya' => $c->wilaya?->name,
+            'wilaya_id' => $c->wilaya_id,
+            'commune_id' => $c->commune_id,
             'address' => $c->address,
             'orders_count' => $c->orders_count,
             'delivered_count' => $c->delivered_count,
