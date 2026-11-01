@@ -52,6 +52,14 @@ export interface Order {
   delivery_mode: DeliveryMode | null
   customer_note: string | null
   admin_note: string | null
+  /** The owner put this order aside until stock arrives. */
+  awaiting_stock: boolean
+  /** Pending orders: can the stock cover the order, and what is left on each line (by item id). */
+  stock_check?: {
+    possible: boolean
+    shortages: { name: string; unit: string; requested: number; available: number }[]
+    lines: { item_id: number; ok: boolean; left: string; max_qty: number }[]
+  }
   subtotal: number
   delivery_fee: number
   discount: number

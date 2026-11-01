@@ -591,6 +591,19 @@ export const AR: Record<string, string> = {
   "Calculé avec les prix d'achat enregistrés ; enregistrez le pack après avoir changé son contenu pour le mettre à jour.": 'محسوب بأسعار الشراء المسجّلة؛ احفظ الباقة بعد تغيير محتواها لتحديثه.',
   "Une seule journée sélectionnée : les chiffres sont ci-dessus. Choisissez « Cette semaine » ou plus pour voir l'évolution.": 'تم اختيار يوم واحد: الأرقام أعلاه. اختر «هذا الأسبوع» أو أكثر لرؤية التطور.',
 
+  // Orders beyond the stock
+  "En attente d'arrivage": 'في انتظار وصول البضاعة',
+  "Mettre en attente d'arrivage": 'وضعه في انتظار وصول البضاعة',
+  "Reprendre (l'arrivage est là)": 'استئناف (وصلت البضاعة)',
+  'Commande mise de côté.': 'تم وضع الطلب جانباً.',
+  'Commande reprise.': 'تم استئناف الطلب.',
+  'Le stock couvre cette commande : vous pouvez la confirmer.': 'المخزون يغطي هذا الطلب: يمكنك تأكيده.',
+  'Stock insuffisant : la commande ne peut pas être confirmée pour le moment.': 'المخزون غير كافٍ: لا يمكن تأكيد الطلب حالياً.',
+  "Si un arrivage est prévu, mettez-la de côté : elle reste en attente et vous la confirmerez quand le stock sera arrivé.": 'إن كانت هناك بضاعة قادمة، ضعه جانباً: يبقى الطلب معلّقاً وتؤكده عند وصول المخزون.',
+  'Article supprimé': 'منتج محذوف',
+  'flacon(s)': 'قارورة',
+  'article(s)': 'قطعة',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',
@@ -606,6 +619,11 @@ export const AR: Record<string, string> = {
 
 /** Words of a sentence whose other part is data (names, numbers). Longest match first is not needed: each is anchored. */
 export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) => string) => string]> = [
+  [/^(En stock|Stock insuffisant) : (.+)$/, (m, tr) => `${m[1] === 'En stock' ? 'في المخزون' : 'مخزون غير كافٍ'}: ${tr(m[2])}`],
+  [/^(\d+) flacon\(s\)$/, (m) => `${m[1]} قارورة`],
+  [/^(\d+) article\(s\)$/, (m) => `${m[1]} قطعة`],
+  [/^peut être assemblé (\d+) fois$/, (m) => `يمكن تجميعه ${m[1]} مرة`],
+  [/^(.+) : (\d+) (.+) demandés, (\d+) en stock\.$/, (m, tr) => `${m[1]}: مطلوب ${m[2]} ${tr(m[3])}، المتوفر ${m[4]}.`],
   [/^\((.+) % du prix d'achat\)$/, (m) => `(${m[1]} % من سعر الشراء)`],
   [/^(.+) % du prix d'achat$/, (m) => `${m[1]} % من سعر الشراء`],
   [/^(\d+) ventes? sans prix d'achat non comptées?$/, (m) => `${m[1]} مبيعات بدون سعر شراء غير محسوبة`],

@@ -21,6 +21,8 @@ class UpdateOrderRequest extends FormRequest
             'delivery_fee' => ['sometimes', 'integer', 'min:0'],
             'discount' => ['sometimes', 'integer', 'min:0'],
             'admin_note' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            /** Put the order aside until stock arrives (it stays pending). */
+            'awaiting_stock' => ['sometimes', 'boolean'],
             /**
              * Replaces all items. Variants already in the order keep their original price;
              * new ones use the current price.

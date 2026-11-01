@@ -53,7 +53,7 @@ class StockService
      * For the owner, on a pending order: can it be confirmed with the stock we have, and what is left per line.
      * Several lines can draw on the same ml pool, so the needs are added up before they are compared.
      *
-     * @return array{possible: bool, shortages: list<array<string, mixed>>, lines: array<int, array{ok: bool, left: string, max_qty: int}>}
+     * @return array{possible: bool, shortages: list<array<string, mixed>>, lines: list<array{item_id: int, ok: bool, left: string, max_qty: int}>}
      */
     public function checkOrder(Order $order): array
     {
@@ -87,7 +87,7 @@ class StockService
         $lines = [];
         foreach ($perLine as $id => $entry) {
             if (isset($entry['keys'])) {
-                $lines[$id] = ['ok' => false, 'left' => $entry['left'], 'max_qty' => 0];
+                $lines[] = ['item_id' => $id, 'ok' => false, 'left' => $entry['left'], 'max_qty' => 0];
 
                 continue;
             }
@@ -103,7 +103,7 @@ class StockService
             } else {
                 $left = 'peut être assemblé '.$this->maxQty($variant).' fois';
             }
-            $lines[$id] = ['ok' => $ok, 'left' => $left, 'max_qty' => $this->maxQty($variant)];
+            $lines[] = ['item_id' => $id, 'ok' => $ok, 'left' => $left, 'max_qty' => $this->maxQty($variant)];
         }
 
         $shortages = [];

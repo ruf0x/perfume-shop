@@ -55,7 +55,7 @@ class OrderPlacement
             }
 
             $quote = $this->pricing->quote($data['lines'], $wilayaId, $mode);
-            $this->assertAvailable($quote);
+            $this->assertAvailableOnline($quote);
 
             $customer = $this->upsertCustomer($phone, $data['first_name'], $data['last_name'], $wilayaId, $communeId, $data['address'] ?? null);
             $customer->increment('orders_count');
@@ -145,6 +145,25 @@ class OrderPlacement
 
             return $order->load('items');
         });
+    }
+
+    /**
+     * The online shop. With backorder the customer may order more than the stock (the owner confirms or waits for
+     * stock), so only what the shop itself shows is checked: the item is still listed and the quantity is under the cap.
+     * The message never reveals the stock.
+     */
+    private function assertAvailableOnline(Quote $quote): void
+    {
+        if (! settings()->backorderEnabled()) {
+            $this->assertAvailable($quote);
+
+            return;
+        }
+
+        $gone = collect($quote->lines)->reject(fn (QuoteLine $line) => $line->shopAvailable());
+        if ($gone->isNotEmpty()) {
+            throw new ShopException('Un article de votre panier n\'est plus disponible : '.$gone->map(fn (QuoteLine $l) => $l->variant->product->name)->unique()->implode(', ').'.');
+        }
     }
 
     private function assertAvailable(Quote $quote): void

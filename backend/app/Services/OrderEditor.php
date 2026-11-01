@@ -72,7 +72,7 @@ class OrderEditor
     private function clientFields(Order $order, array $data): array
     {
         $fields = array_intersect_key($data, array_flip([
-            'first_name', 'last_name', 'wilaya_id', 'commune_id', 'address', 'delivery_mode', 'admin_note',
+            'first_name', 'last_name', 'wilaya_id', 'commune_id', 'address', 'delivery_mode', 'admin_note', 'awaiting_stock',
         ]));
 
         foreach (['phone', 'phone2'] as $key) {

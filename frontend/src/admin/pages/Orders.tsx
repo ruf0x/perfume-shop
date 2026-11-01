@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatPhone, formatPrice, phoneHref } from '@/shop/format'
 import { useWilayas } from '@/shop/queries'
-import { EmptyState, ErrorState, Loading, PageHeader, Pagination, STATUS_LABEL, StatusBadge, inputClass } from '../components/common'
+import { AwaitingBadge, EmptyState, ErrorState, Loading, PageHeader, Pagination, STATUS_LABEL, StatusBadge, inputClass } from '../components/common'
 import { OrderDrawer } from '../components/OrderDrawer'
 import { apiError, downloadBlob, formatDateTime } from '../lib'
 import { exportOrders, useOrders } from '../queries'
@@ -197,7 +197,7 @@ export default function Orders() {
                   <button type="button" onClick={() => openOrder(o)} className="block w-full text-start focus-visible:outline-2 focus-visible:outline-ring">
                     <div className="flex items-start justify-between gap-3">
                       <span className="tnum font-medium">{o.reference}</span>
-                      <StatusBadge status={o.status} />
+                      <StatusBadge status={o.status} /><AwaitingBadge order={o} />
                     </div>
                     <p className="mt-2 font-medium">{[o.customer.first_name, o.customer.last_name].filter(Boolean).join(' ') || 'Client de passage'}</p>
                     <p className="text-sm text-muted-foreground">
@@ -264,7 +264,7 @@ export default function Orders() {
                     <td className="px-4 py-3 text-muted-foreground">{o.wilaya?.name ?? '—'}</td>
                     <td className="tnum px-4 py-3 text-end font-medium whitespace-nowrap">{formatPrice(o.total)}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={o.status} />
+                      <StatusBadge status={o.status} /><AwaitingBadge order={o} />
                     </td>
                   </tr>
                 ))}

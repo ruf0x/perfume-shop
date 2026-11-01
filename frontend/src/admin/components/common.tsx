@@ -29,6 +29,13 @@ export function StatusBadge({ status, className }: { status: OrderStatus; classN
   return <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap', STATUS_STYLE[status], className)}>{STATUS_LABEL[status]}</span>
 }
 
+/** Next to the status of a pending order that the owner put aside until stock arrives. */
+export function AwaitingBadge({ order }: { order: { status: OrderStatus; awaiting_stock?: boolean } }) {
+  if (order.status !== 'en_attente' || !order.awaiting_stock) return null
+
+  return <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-amber-900">En attente d'arrivage</span>
+}
+
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">

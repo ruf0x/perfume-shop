@@ -36,6 +36,7 @@ class Order extends Model
             'total' => 'integer',
             'amount_received' => 'integer',
             'call_attempts' => 'integer',
+            'awaiting_stock' => 'boolean',
             'stock_deducted' => 'boolean',
             'confirmed_at' => 'datetime',
             'shipped_at' => 'datetime',

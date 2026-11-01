@@ -20,4 +20,10 @@ final readonly class Quote
     {
         return collect($this->lines)->every(fn (QuoteLine $line) => $line->available());
     }
+
+    /** The same for the online shop: with backorder, only the cap and the listing matter, never the real stock. */
+    public function allShopAvailable(): bool
+    {
+        return collect($this->lines)->every(fn (QuoteLine $line) => $line->shopAvailable());
+    }
 }

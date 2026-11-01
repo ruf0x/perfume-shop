@@ -71,7 +71,7 @@ class ShopController extends Controller
             'subtotal' => $quote->subtotal,
             'delivery_fee' => $withDelivery ? $quote->deliveryFee : null,
             'total' => $quote->total,
-            'all_available' => $quote->allAvailable(),
+            'all_available' => $quote->allShopAvailable(),
         ]]);
     }
 

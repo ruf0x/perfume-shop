@@ -11,7 +11,7 @@ import { apiError, formatDateTime } from '../lib'
 import { print } from '../printHelper'
 import { useOrder, useOrderAction, useUpdateOrder, type TransitionPayload } from '../queries'
 import type { Order, OrderAction } from '../types'
-import { ConfirmDialog, ErrorState, Loading, STATUS_LABEL, StatusBadge, inputClass } from './common'
+import { AwaitingBadge, ConfirmDialog, ErrorState, Loading, STATUS_LABEL, StatusBadge, inputClass } from './common'
 import { OrderEdit } from './OrderEdit'
 
 const MODE = { domicile: 'À domicile', stop_desk: 'Point relais', boutique: 'Retrait en boutique' } as const
@@ -39,6 +39,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     </div>
   )
 }
+
+const stockLine = (order: Order, itemId: number) => order.stock_check?.lines.find((l) => l.item_id === itemId)
 
 function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
   const act = useOrderAction()
@@ -109,6 +111,11 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
                 <div className="min-w-0">
                   <p className="font-medium">{i.product_name}</p>
                   <p className="tnum text-muted-foreground">{i.variant_label}, {i.quantity} × {formatPrice(i.unit_price)}</p>
+                  {stockLine(order, i.id) && (
+                    <p className={`mt-0.5 text-xs ${stockLine(order, i.id)!.ok ? 'text-muted-foreground' : 'font-medium text-destructive'}`}>
+                      {`${stockLine(order, i.id)!.ok ? 'En stock' : 'Stock insuffisant'} : ${stockLine(order, i.id)!.left}`}
+                    </p>
+                  )}
                 </div>
                 <p className="tnum shrink-0 font-medium">{formatPrice(i.line_total)}</p>
               </li>
@@ -123,6 +130,33 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
             {order.amount_received !== null && <div className="flex justify-between text-muted-foreground"><dt>Reçu / rendu</dt><dd>{formatPrice(order.amount_received)} / {formatPrice(order.change_due ?? 0)}</dd></div>}
           </dl>
           {order.stock_deducted && <p className="mt-2 text-xs text-muted-foreground">Le stock de cette commande a été retiré.</p>}
+          {order.stock_check && (
+            <div className={`mt-3 rounded-md border p-3 text-sm ${order.stock_check.possible ? 'border-border bg-secondary/60' : 'border-destructive/40 bg-destructive/5'}`} role="status">
+              {order.stock_check.possible ? (
+                <p>Le stock couvre cette commande : vous pouvez la confirmer.</p>
+              ) : (
+                <>
+                  <p className="font-medium">Stock insuffisant : la commande ne peut pas être confirmée pour le moment.</p>
+                  <ul className="tnum mt-1 space-y-0.5">
+                    {order.stock_check.shortages.map((s) => (
+                      <li key={s.name}>{`${s.name} : ${s.requested} ${s.unit} demandés, ${s.available} en stock.`}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-muted-foreground">Si un arrivage est prévu, mettez-la de côté : elle reste en attente et vous la confirmerez quand le stock sera arrivé.</p>
+                </>
+              )}
+              {(!order.stock_check.possible || order.awaiting_stock) && (
+                <Button
+                  variant={order.awaiting_stock ? 'default' : 'outline'}
+                  className="mt-2 h-9"
+                  disabled={saveNote.isPending}
+                  onClick={() => saveNote.mutate({ id: order.id, awaiting_stock: !order.awaiting_stock }, { onSuccess: () => toast.success(order.awaiting_stock ? 'Commande reprise.' : 'Commande mise de côté.'), onError: (e) => toast.error(apiError(e)) })}
+                >
+                  {order.awaiting_stock ? "Reprendre (l'arrivage est là)" : "Mettre en attente d'arrivage"}
+                </Button>
+              )}
+            </div>
+          )}
         </section>
 
         <section aria-label="Note interne">
@@ -174,7 +208,7 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
         {order.allowed_actions.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {order.allowed_actions.map((a) => (
-              <Button key={a} variant={BUTTON[a].primary ? 'default' : BUTTON[a].danger ? 'destructive' : 'outline'} className="h-11 flex-1 basis-36" disabled={pending} onClick={() => click(a)}>
+              <Button key={a} variant={BUTTON[a].primary ? 'default' : BUTTON[a].danger ? 'destructive' : 'outline'} className="h-11 flex-1 basis-36" disabled={pending || (a === 'confirm' && order.stock_check?.possible === false)} onClick={() => click(a)}>
                 {BUTTON[a].label}
               </Button>
             ))}
@@ -235,7 +269,7 @@ export function OrderDrawer({ id, onClose }: { id: number | null; onClose: () =>
         <SheetHeader className="border-b border-border p-5 pe-12">
           <SheetTitle className="flex flex-wrap items-center gap-3 font-display text-xl">
             <span className="tnum">{order?.reference ?? 'Commande'}</span>
-            {order && <StatusBadge status={order.status} />}
+            {order && <><StatusBadge status={order.status} /><AwaitingBadge order={order} /></>}
           </SheetTitle>
           <SheetDescription>{order ? `Passée le ${formatDateTime(order.created_at)}${order.created_by ? `, par ${order.created_by}` : ''}` : 'Détail de la commande'}</SheetDescription>
         </SheetHeader>

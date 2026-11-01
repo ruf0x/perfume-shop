@@ -37,6 +37,10 @@ class OrderResource extends JsonResource
             'delivery_mode' => $this->delivery_mode,
             'customer_note' => $this->customer_note,
             'admin_note' => $this->admin_note,
+            /** The owner put this order aside until stock arrives. */
+            'awaiting_stock' => (bool) $this->awaiting_stock,
+            /** Pending orders only, when the items are loaded: can the stock cover it, and what is left per line. */
+            'stock_check' => $this->when($this->relationLoaded('items') && $this->status === \App\Enums\OrderStatus::EnAttente, fn () => app(\App\Services\StockService::class)->checkOrder($this->resource)),
             'subtotal' => $this->subtotal,
             'delivery_fee' => $this->delivery_fee,
             'discount' => $this->discount,
