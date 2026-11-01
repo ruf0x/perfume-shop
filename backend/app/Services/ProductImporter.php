@@ -71,7 +71,9 @@ class ProductImporter
     {
         $sizes = $this->sizeColumns($headers);
         if ($sizes['decants'] === [] && $sizes['flacons'] === []) {
-            throw new ShopException('Aucune colonne de prix : ajoutez par exemple prix_10ml, prix_20ml ou prix_flacon_100ml.');
+            throw new ShopException(in_array('option', $headers, true)
+                ? 'Ce fichier est au format « Autres produits » (il a une colonne option) : choisissez le modèle « Autres produits ».'
+                : 'Aucune colonne de prix : ajoutez par exemple prix_10ml, prix_20ml ou prix_flacon_100ml.');
         }
 
         foreach ($rows as $row) {
@@ -151,6 +153,12 @@ class ProductImporter
      */
     private function options(array $headers, array $rows, array &$report, ?User $user): void
     {
+        if (! in_array('option', $headers, true)) {
+            $sizes = $this->sizeColumns($headers);
+            throw new ShopException($sizes['decants'] !== [] || $sizes['flacons'] !== []
+                ? 'Ce fichier est au format « Parfums » (les tailles sont des colonnes) : choisissez le modèle « Parfums ».'
+                : 'Il manque la colonne « option » (la taille, la teinte ou la couleur) : voir le modèle « Autres produits ».');
+        }
         // Group the rows of one product (type + name + brand), keeping the order of the file.
         $groups = [];
         foreach ($rows as $row) {

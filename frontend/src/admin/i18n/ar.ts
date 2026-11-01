@@ -722,6 +722,11 @@ export const AR: Record<string, string> = {
 
 /** Words of a sentence whose other part is data (names, numbers). Longest match first is not needed: each is anchored. */
 export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) => string) => string]> = [
+  [/^(\d+) en stock$/, (m) => `${m[1]} في المخزون`],
+  [/^Modèle choisi d'après le fichier : (.+)\.$/, (m, tr) => `النموذج المختار حسب الملف: ${tr(m[1])}.`],
+  [/^Ce fichier est au format « Autres produits » \(il a une colonne option\) : choisissez le modèle « Autres produits »\.$/, () => 'هذا الملف بصيغة «منتجات أخرى» (فيه عمود option): اختر نموذج «منتجات أخرى».'],
+  [/^Ce fichier est au format « Parfums » \(les tailles sont des colonnes\) : choisissez le modèle « Parfums »\.$/, () => 'هذا الملف بصيغة «العطور» (الأحجام أعمدة): اختر نموذج «العطور».'],
+  [/^Il manque la colonne « option » \(la taille, la teinte ou la couleur\) : voir le modèle « Autres produits »\.$/, () => 'ينقص عمود «option» (الحجم أو اللون): راجع نموذج «منتجات أخرى».'],
   [/^Flacon complet (\d+) ml$/, (m) => `قارورة كاملة ${m[1]} مل`],
   [/^(\d+) produits? prêts? à importer$/, (m) => `${m[1]} منتج جاهز للاستيراد`],
   [/^(\d+) produits? importés?$/, (m) => `تم استيراد ${m[1]} منتج`],

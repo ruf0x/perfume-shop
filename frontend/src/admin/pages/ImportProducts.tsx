@@ -36,6 +36,21 @@ export default function ImportProducts() {
   const report = run.data
   const chosen = FORMATS.find((f) => f.id === format)!
 
+  /** The model is guessed from the titles of the file, so a file never meets the wrong one. */
+  const [guessed, setGuessed] = useState<ImportFormat | null>(null)
+  const pick = async (f: File | null) => {
+    setFile(f)
+    run.reset()
+    setGuessed(null)
+    if (!f) return
+    const first = (await f.slice(0, 4000).text()).split(/\r?\n/)[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const titles = first.split(/[;,\t]/).map((t) => t.trim().replace(/[\s-]+/g, '_').replace(/_(\d+)_ml/, '_$1ml'))
+    const found: ImportFormat | null = titles.includes('option') ? 'options' : titles.some((t) => /^prix_(flacon_)?\d+ml$/.test(t)) ? 'perfumes' : null
+    if (found) {
+      setFormat(found)
+      if (found !== format) setGuessed(found)
+    }
+  }
   const check = () => file && run.mutate({ file, format, commit: false }, { onError: (e) => toast.error(apiError(e)) })
   const importNow = () =>
     file &&
@@ -92,13 +107,14 @@ ${chosen.example}`}</pre>
             accept=".csv,text/csv,text/plain"
             className="sr-only"
             id="import-file"
-            onChange={(e) => { setFile(e.target.files?.[0] ?? null); run.reset() }}
+            onChange={(e) => pick(e.target.files?.[0] ?? null)}
           />
           <Button variant="outline" className="h-10 gap-2" onClick={() => input.current?.click()}>
             <Upload className="size-4" aria-hidden />
             Choisir un fichier CSV
           </Button>
           <span className="min-w-0 truncate text-sm text-muted-foreground">{file ? file.name : 'Aucun fichier choisi'}</span>
+          {guessed && <span className="text-sm text-muted-foreground">{`Modèle choisi d'après le fichier : ${FORMATS.find((f) => f.id === guessed)!.title}.`}</span>}
           <Button className="ms-auto h-10" disabled={!file || run.isPending} onClick={check}>
             {run.isPending && !report?.committed ? 'Vérification…' : 'Vérifier le fichier'}
           </Button>

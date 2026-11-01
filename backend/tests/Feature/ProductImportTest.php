@@ -155,3 +155,11 @@ it('lets only the owner import', function () {
 
     $this->actingAs($staff)->post('/api/admin/imports/products', ['file' => UploadedFile::fake()->createWithContent('a.csv', "nom;prix_10ml\nX;1\n"), 'format' => 'perfumes'], ['Accept' => 'application/json'])->assertForbidden();
 });
+
+it('tells which model a file belongs to when the wrong one was chosen', function () {
+    importCsv($this, 'perfumes', model('modele-autres-produits.csv'))->assertUnprocessable()->assertJsonPath('message', 'Ce fichier est au format « Autres produits » (il a une colonne option) : choisissez le modèle « Autres produits ».');
+    importCsv($this, 'options', model('modele-parfums.csv'))->assertUnprocessable()->assertJsonPath('message', 'Ce fichier est au format « Parfums » (les tailles sont des colonnes) : choisissez le modèle « Parfums ».');
+    importCsv($this, 'options', "type;nom;prix
+Cosmétiques;Gel;900
+")->assertUnprocessable();
+});
