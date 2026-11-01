@@ -24,10 +24,16 @@ function translateCore(core: string): string {
   return core.replace(/\bDA\b/g, AR.DA).replace(/\bml\b/g, AR.ml)
 }
 
+/**
+ * "1 200" is two numbers separated by a space for the right-to-left algorithm, which would show "200 1".
+ * Each number written with thousands groups is isolated so that it keeps its order.
+ */
+const keepNumbers = (s: string) => (s.includes('\u2066') ? s : s.replace(/\d+(?:[ \u00a0\u202f]\d{3})+(?:,\d+)?/g, '\u2066$&\u2069'))
+
 export function translate(text: string): string {
   const m = text.match(/^(\s*)([\s\S]*?)(\s*)$/)
   if (!m || !m[2]) return text
-  const out = translateCore(m[2])
+  const out = keepNumbers(translateCore(m[2]))
 
   return out === m[2] ? text : m[1] + out + m[3]
 }
