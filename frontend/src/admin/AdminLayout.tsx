@@ -72,7 +72,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-[0.92rem] transition-colors focus-visible:outline-2 focus-visible:outline-ring',
-                    isActive ? 'bg-primary font-medium text-primary-foreground' : 'text-foreground/75 hover:bg-secondary hover:text-foreground',
+                    isActive ? 'bg-sidebar-primary font-medium text-sidebar-primary-foreground' : 'text-foreground/75 hover:bg-secondary hover:text-foreground',
                   )
                 }
               >

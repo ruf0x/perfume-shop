@@ -65,11 +65,11 @@
 
 :root {
     /* Shop palette: white and grey: chalk paper, charcoal ink and actions, mid grey for liquid. */
-    --chalk: #f6f6f7;
+    --chalk: #f5f1e9;
     --oud: #222426;
     --oud-foreground: #f1f2f3;
     --saffron: #8a8f96;
-    --background: #f4f4f5;
+    --background: #f5f1e9;
     --foreground: #222426;
     --card: #ffffff;
     --card-foreground: #222426;
@@ -95,8 +95,8 @@
     --radius: 0.75rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-primary: #6a6e75;
+    --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: oklch(0.97 0 0);
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
