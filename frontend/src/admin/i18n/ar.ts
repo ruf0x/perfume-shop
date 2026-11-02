@@ -706,6 +706,8 @@ export const AR: Record<string, string> = {
   'Aucune colonne de prix : ajoutez par exemple prix_10ml, prix_20ml ou prix_flacon_100ml.': 'لا يوجد عمود للأسعار: أضف مثلاً prix_10ml أو prix_20ml أو prix_flacon_100ml.',
   "Le fichier est vide : il faut la ligne des titres, puis au moins un produit.": 'الملف فارغ: يلزم سطر العناوين ثم منتج واحد على الأقل.',
 
+  'La première photo est celle de la boutique. Jpg, png ou webp : elle est recadrée et réduite automatiquement.': 'الصورة الأولى هي التي تظهر في المتجر. jpg أو png أو webp: تُقتصّ وتُصغَّر تلقائياً.',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import Cropper, { type Area } from 'react-easy-crop'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -44,6 +45,9 @@ export function PhotoCrop({ file, onDone, onCancel }: PhotoCropProps) {
     setBusy(true)
     try {
       onDone(await cropToFile(src, area, file.name))
+    } catch (e) {
+      // Never leave the dialog stuck: say what happened and let the admin try again or cancel.
+      toast.error(e instanceof Error ? e.message : "La photo n'a pas pu être préparée. Essayez une autre image.")
     } finally {
       setBusy(false)
     }

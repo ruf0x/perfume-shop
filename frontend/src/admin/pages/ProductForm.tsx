@@ -133,6 +133,16 @@ const Field = ({ label, error, className, children }: { label: string; error?: s
   </label>
 )
 
+/**
+ * Adds the chosen files to the cropping queue. The files are read BEFORE the input is emptied: reading them inside
+ * the state updater (which React may run later) found an empty list, so a second upload silently did nothing.
+ */
+function addToQueue(e: React.ChangeEvent<HTMLInputElement>, setQueue: React.Dispatch<React.SetStateAction<File[]>>) {
+  const picked = Array.from(e.target.files ?? [])
+  e.target.value = ''
+  if (picked.length > 0) setQueue((q) => [...q, ...picked])
+}
+
 function Photos({ product, disabled }: { product: AdminProduct; disabled: boolean }) {
   const { upload, remove, reorder } = useProductImages(product.id)
   const input = useRef<HTMLInputElement>(null)
@@ -151,7 +161,7 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
   }
 
   return (
-    <Section title="Photos" hint="La première photo est celle de la boutique. Jpg, png ou webp, 5 Mo maximum.">
+    <Section title="Photos" hint="La première photo est celle de la boutique. Jpg, png ou webp : elle est recadrée et réduite automatiquement.">
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {images.map((img, i) => (
           <li key={img.id} className="space-y-1.5">
@@ -179,7 +189,7 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
           </li>
         )}
       </ul>
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { setQueue((q) => [...q, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => addToQueue(e, setQueue)} />
       {queue[0] && <PhotoCrop key={queue.length + queue[0].name} file={queue[0]} onDone={sendCropped} onCancel={() => setQueue((q) => q.slice(1))} />}
     </Section>
   )
@@ -222,7 +232,7 @@ function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (fi
           </li>
         )}
       </ul>
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { setQueue((q) => [...q, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => addToQueue(e, setQueue)} />
       {queue[0] && (
         <PhotoCrop
           key={queue.length + queue[0].name}
