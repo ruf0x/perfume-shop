@@ -3174,11 +3174,224 @@
                                                             "given_at"
                                                         ]
                                                     }
+                                                },
+                                                "tiers": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "number": {
+                                                                        "type": "number"
+                                                                    },
+                                                                    "from": {
+                                                                        "type": "number"
+                                                                    },
+                                                                    "to": {
+                                                                        "type": "number"
+                                                                    },
+                                                                    "complete": {
+                                                                        "type": "boolean"
+                                                                    },
+                                                                    "average": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "perfumes": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "reward": {
+                                                                        "type": "object",
+                                                                        "properties": {
+                                                                            "id": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "status": {
+                                                                                "type": "string",
+                                                                                "enum": [
+                                                                                    "given",
+                                                                                    "pending"
+                                                                                ]
+                                                                            },
+                                                                            "gift_name": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "gift_value": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "given_at": {
+                                                                                "type": "string"
+                                                                            }
+                                                                        },
+                                                                        "required": [
+                                                                            "id",
+                                                                            "status",
+                                                                            "gift_name",
+                                                                            "gift_value",
+                                                                            "given_at"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "number",
+                                                                    "from",
+                                                                    "to",
+                                                                    "complete",
+                                                                    "average",
+                                                                    "perfumes",
+                                                                    "reward"
+                                                                ]
+                                                            },
+                                                            {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "number": {
+                                                                        "type": "integer"
+                                                                    },
+                                                                    "from": {
+                                                                        "type": "integer"
+                                                                    },
+                                                                    "to": {
+                                                                        "type": "integer"
+                                                                    },
+                                                                    "complete": {
+                                                                        "type": "boolean"
+                                                                    },
+                                                                    "average": {
+                                                                        "type": [
+                                                                            "integer",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "perfumes": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "reward": {
+                                                                        "type": "null"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "number",
+                                                                    "from",
+                                                                    "to",
+                                                                    "complete",
+                                                                    "average",
+                                                                    "perfumes",
+                                                                    "reward"
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
                                                 }
                                             },
                                             "required": [
                                                 "loyalty",
-                                                "history"
+                                                "history",
+                                                "tiers"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/admin/customers/{customer}/loyalty/suggestions": {
+            "get": {
+                "operationId": "loyalty.suggestions",
+                "summary": "Perfumes in stock worth about the average of the oldest pending gift (a quarter above or below), closest first",
+                "tags": [
+                    "Loyalty"
+                ],
+                "parameters": [
+                    {
+                        "name": "customer",
+                        "in": "path",
+                        "required": true,
+                        "description": "The customer ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": [
+                                                "object",
+                                                "null"
+                                            ],
+                                            "properties": {
+                                                "average": {
+                                                    "type": "integer"
+                                                },
+                                                "from": {
+                                                    "type": "integer"
+                                                },
+                                                "to": {
+                                                    "type": "integer"
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "variant_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "product": {
+                                                                "type": "string"
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "price": {
+                                                                "type": "integer"
+                                                            },
+                                                            "kind": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "flacon",
+                                                                    "ml"
+                                                                ]
+                                                            },
+                                                            "gap": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "variant_id",
+                                                            "product",
+                                                            "label",
+                                                            "price",
+                                                            "kind",
+                                                            "gap"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "average",
+                                                "from",
+                                                "to",
+                                                "items"
                                             ]
                                         }
                                     },
@@ -3201,7 +3414,7 @@
         "/admin/customers/{customer}/loyalty/redeem": {
             "post": {
                 "operationId": "loyalty.redeem",
-                "summary": "Give the oldest pending gift: a sealed flacon (any price: the average of the perfumes bought is only a guide)",
+                "summary": "Give the oldest pending gift: a flacon or a decant size of a perfume (any price: the average of the perfumes bought is only a guide)",
                 "tags": [
                     "Loyalty"
                 ],

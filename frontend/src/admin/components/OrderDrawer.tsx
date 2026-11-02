@@ -110,7 +110,7 @@ function Detail({ order, onEdit, onClose }: { order: Order; onEdit: () => void; 
           </dl>
           {c.loyalty && c.id && (
             <div className="mt-3 rounded-md border border-border bg-secondary/60 p-3">
-              <LoyaltyNote loyalty={c.loyalty} adds={c.loyalty.adds} />
+              <LoyaltyNote loyalty={c.loyalty} adds={c.loyalty.adds} customerId={c.id} />
               {owner && c.loyalty.pending.length > 0 && <Button variant="outline" className="mt-2 h-9" onClick={() => setGift(true)}>Offrir le cadeau</Button>}
             </div>
           )}

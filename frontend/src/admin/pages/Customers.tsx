@@ -69,7 +69,7 @@ export default function Customers() {
                 </p>
                 {c.loyalty && (
                   <div className="md:w-1/4">
-                    <LoyaltyNote loyalty={c.loyalty} />
+                    <LoyaltyNote loyalty={c.loyalty} customerId={c.id} />
                     {c.loyalty.pending.length > 0 && <button type="button" className="mt-1 text-sm font-medium underline underline-offset-4" onClick={() => setGiftFor(c)}>Offrir le cadeau</button>}
                   </div>
                 )}

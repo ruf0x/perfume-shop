@@ -126,8 +126,9 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | PUT/DELETE | `/bottles/movements/{id}` | | Correct (`quantity`, `total_cost`, `note`) or delete an entry, a loss or a recount made by hand (`editable` in the list); the count follows and never goes below zero. Movements made by sales are refused |
 | POST | `/bottles/entries`, `/bottles/adjustments` | | Receive bottles (`ml`, `quantity`, optional `total_cost`) / lose or recount them (`quantity` signed, `type` perte or ajustement, `note` required; never below zero) |
 | GET | `/loyalty` | ✅ | `?phone=`: the customer behind a number and where they stand (counted toward the next gift, pending gifts with the suggested value). Owner and staff, for the caisse |
-| GET | `/customers/{id}/loyalty` | | Count, pending gifts and the gifts already given |
-| POST | `/customers/{id}/loyalty/redeem` | | `variant_id` of a sealed perfume flacon (any price): a zero-price caisse sale that marks the oldest pending gift as given. Every `loyalty_every` perfumes (config/features.php) a customer buys earn one |
+| GET | `/customers/{id}/loyalty` | | Count, pending gifts, the gifts already given and `tiers`: the perfumes in rounds of N (0 to 6, 6 to 12…), each with its perfumes (name, price, order), its average and its gift (`pending` / `given`); the last round is the one in progress |
+| GET | `/customers/{id}/loyalty/suggestions` | | Perfumes in stock (a flacon or a decant size) priced within a quarter of the average of the oldest pending gift, closest first; `null` when no gift is waiting |
+| POST | `/customers/{id}/loyalty/redeem` | | `variant_id` of a perfume, a sealed flacon or a decant size (any price): a zero-price caisse sale that marks the oldest pending gift as given. Every `loyalty_every` perfumes (config/features.php) a customer buys earn one |
 | GET/PUT | `/settings` | | Shop settings |
 | GET/PUT | `/wilayas`, `/wilayas/{id}` | | Delivery fees, switch a wilaya off |
 | GET/POST/PUT/DELETE | `/users`, `/users/{id}` | | Admin accounts |

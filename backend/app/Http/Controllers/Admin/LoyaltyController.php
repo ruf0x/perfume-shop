@@ -30,10 +30,16 @@ class LoyaltyController extends Controller
     /** A customer's count, pending gifts and the gifts already given. */
     public function show(Customer $customer, LoyaltyService $loyalty): JsonResponse
     {
-        return response()->json(['data' => ['loyalty' => $loyalty->progress($customer), 'history' => $loyalty->history($customer)]]);
+        return response()->json(['data' => ['loyalty' => $loyalty->progress($customer), 'history' => $loyalty->history($customer), 'tiers' => $loyalty->tiers($customer)]]);
     }
 
-    /** Give the oldest pending gift: a sealed flacon (any price: the average of the perfumes bought is only a guide). */
+    /** Perfumes in stock worth about the average of the oldest pending gift (a quarter above or below), closest first. */
+    public function suggestions(Customer $customer, LoyaltyService $loyalty): JsonResponse
+    {
+        return response()->json(['data' => $loyalty->suggestions($customer)]);
+    }
+
+    /** Give the oldest pending gift: a flacon or a decant size of a perfume (any price: the average of the perfumes bought is only a guide). */
     public function redeem(Request $request, Customer $customer, LoyaltyService $loyalty): JsonResponse
     {
         $v = $request->validate(['variant_id' => ['required', 'integer', 'exists:product_variants,id']]);

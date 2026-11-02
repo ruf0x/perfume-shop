@@ -340,7 +340,7 @@ export default function Caisse() {
               {lookup.data?.customer && lookup.data.loyalty && (
                 <div className="mt-3 rounded-md bg-secondary/60 p-3">
                   <p className="mb-1 font-medium">{`${lookup.data.customer.first_name} ${lookup.data.customer.last_name}`}</p>
-                  <LoyaltyNote loyalty={lookup.data.loyalty} />
+                  <LoyaltyNote loyalty={lookup.data.loyalty} customerId={lookup.data.customer.id} />
                   {owner && lookup.data.loyalty.pending.length > 0 && <Button variant="outline" className="mt-2 h-9" onClick={() => setGift(true)}>Offrir le cadeau</Button>}
                 </div>
               )}

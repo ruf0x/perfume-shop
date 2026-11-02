@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import { api } from '@/lib/api'
 import { clean } from './lib'
 import { prepareImage } from './imagePrep'
-import type { AdminProduct, Loyalty, BottleMovement, BottleSizeRow, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
+import type { AdminProduct, GiftSuggestions, Loyalty, LoyaltyTier, BottleMovement, BottleSizeRow, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
 
 /** Everything the admin shows may have changed after a write; "me" is left alone. */
 const refresh = (qc: QueryClient) => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'admin' && q.queryKey[1] !== 'me' })
@@ -385,3 +385,19 @@ export function useImportProducts() {
 }
 
 export const downloadImportTemplate = (format: ImportFormat) => api.get(`/admin/imports/templates/${format}`, { responseType: 'blob' }).then((r) => r.data as Blob)
+
+/** The rounds of a customer (owner only). */
+export function useLoyaltyDetail(customerId: number) {
+  return useQuery({
+    queryKey: ['admin', 'loyalty-detail', customerId],
+    queryFn: () => api.get<{ data: { loyalty: Loyalty | null; tiers: LoyaltyTier[] } }>(`/admin/customers/${customerId}/loyalty`).then((r) => r.data.data),
+  })
+}
+
+/** Perfumes worth about the average of the gift waiting (owner only). */
+export function useLoyaltySuggestions(customerId: number) {
+  return useQuery({
+    queryKey: ['admin', 'loyalty-suggestions', customerId],
+    queryFn: () => api.get<{ data: GiftSuggestions | null }>(`/admin/customers/${customerId}/loyalty/suggestions`).then((r) => r.data.data),
+  })
+}

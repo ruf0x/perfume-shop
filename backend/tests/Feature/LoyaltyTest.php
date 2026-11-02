@@ -81,14 +81,15 @@ it('gives the gift as a zero-price sale: stock taken, nothing counted, the rewar
     expect($giftOrder->total)->toBe(0)->and($giftOrder->items->first()->unit_price)->toBe(0)->and($giftOrder->admin_note)->toContain('Cadeau fidélité');
 });
 
-it('refuses a gift when none is earned, or when it is not a sealed perfume flacon', function () {
+it('refuses a gift when none is earned, or when it is not a perfume', function () {
     loyaltySale($this, [[$this->v10, 2]]);
     $customer = Customer::firstOrFail();
 
     $this->postJson("/api/admin/customers/{$customer->id}/loyalty/redeem", ['variant_id' => $this->flacon->id])->assertUnprocessable();
 
     loyaltySale($this, [[$this->v10, 4]]);
-    $this->postJson("/api/admin/customers/{$customer->id}/loyalty/redeem", ['variant_id' => $this->v10->id])->assertUnprocessable();   // a decant is not a gift flacon
+    $gel = makeCosmetic('Gel cadeau', ['250 ml' => [900, 5]]);
+    $this->postJson("/api/admin/customers/{$customer->id}/loyalty/redeem", ['variant_id' => variantOf($gel, '250 ml')->id])->assertUnprocessable();   // a cosmetic is not a perfume gift
 });
 
 it('shows the progress to the caisse by phone number and to the owner on the order and the client', function () {
@@ -146,4 +147,66 @@ it('counts the perfumes inside a pack, each at its share of the pack price, and 
     expect($entries)->toHaveCount(2)
         ->and($entries->pluck('unit_price')->all())->toBe([667, 667])                  // 1000 x 6000 / 9000
         ->and(loyaltyOf()['counted'])->toBe(2);
+});
+
+// ───────────────────────────── rounds of six, and gifts around the average ─────────────────────────────
+
+it('cuts the perfumes into rounds of six, each with its perfumes, its average and its gift', function () {
+    loyaltySale($this, [[$this->v10, 6]]);                                             // round 1: 6 x 1000
+    $customer = Customer::firstOrFail();
+    $this->postJson("/api/admin/customers/{$customer->id}/loyalty/redeem", ['variant_id' => $this->flacon->id])->assertOk();
+    loyaltySale($this, [[$this->v30, 6]]);                                             // round 2: 6 x 2500
+    loyaltySale($this, [[$this->v10, 2]]);                                             // round 3 in progress: 2 perfumes
+
+    $tiers = $this->getJson("/api/admin/customers/{$customer->id}/loyalty")->assertOk()->json('data.tiers');
+
+    expect($tiers)->toHaveCount(3)
+        ->and($tiers[0])->toMatchArray(['number' => 1, 'from' => 0, 'to' => 6, 'complete' => true, 'average' => 1000])
+        ->and($tiers[0]['reward']['status'])->toBe('given')->and($tiers[0]['reward']['gift_name'])->toContain('Loyalty Test')
+        ->and($tiers[0]['perfumes'])->toHaveCount(6)->and($tiers[0]['perfumes'][0]['order'])->toStartWith('POS-')
+        ->and($tiers[1])->toMatchArray(['number' => 2, 'from' => 6, 'to' => 12, 'complete' => true, 'average' => 2500])
+        ->and($tiers[1]['reward']['status'])->toBe('pending')
+        ->and($tiers[2])->toMatchArray(['number' => 3, 'from' => 12, 'to' => 18, 'complete' => false, 'average' => 1000, 'reward' => null])
+        ->and($tiers[2]['perfumes'])->toHaveCount(2);
+});
+
+it('lets the gift be a decant size as well as a flacon', function () {
+    loyaltySale($this, [[$this->v10, 6]]);
+    $customer = Customer::firstOrFail();
+    $mlBefore = $this->p->fresh()->stock_ml;
+
+    $this->postJson("/api/admin/customers/{$customer->id}/loyalty/redeem", ['variant_id' => $this->v30->id])->assertOk();
+
+    expect($this->p->fresh()->stock_ml)->toBe($mlBefore - 30)
+        ->and(LoyaltyReward::first()->gift_name)->toBe('Loyalty Test (30 ml)')
+        ->and(LoyaltyEntry::count())->toBe(6);                                          // a gift never counts
+});
+
+it('suggests the perfumes in stock worth about the average, closest first', function () {
+    loyaltySale($this, [[$this->v10, 6]]);                                             // average 1000: from 750 to 1250
+    $customer = Customer::firstOrFail();
+    $other = makePerfume('Autre parfum', poolMl: 500, sealed: 2);                      // also has a 10 ml at 1000
+    $dear = makePerfume('Parfum cher', poolMl: 500);
+    $dear->variants()->where('label', '10 ml')->update(['price' => 1240]);             // inside the range
+    $cheap = makePerfume('Parfum moins cher', poolMl: 500);
+    $cheap->variants()->where('label', '10 ml')->update(['price' => 800]);             // below the average: must not overflow the unsigned price
+    $far = makePerfume('Parfum trop cher', poolMl: 500);
+    $far->variants()->where('label', '10 ml')->update(['price' => 1300]);              // outside it
+    $empty = makePerfume('Parfum vide', poolMl: 0);                                    // no stock: not offered
+
+    $res = $this->getJson("/api/admin/customers/{$customer->id}/loyalty/suggestions")->assertOk();
+    $names = collect($res->json('data.items'))->map(fn ($i) => $i['product'].' '.$i['label']);
+
+    expect($res->json('data.average'))->toBe(1000)->and($res->json('data.from'))->toBe(750)->and($res->json('data.to'))->toBe(1250)
+        ->and($names)->toContain('Autre parfum 10 ml')->toContain('Parfum cher 10 ml')->toContain('Parfum moins cher 10 ml')
+        ->and($names)->not->toContain('Parfum trop cher 10 ml')->not->toContain('Parfum vide 10 ml')
+        ->and($res->json('data.items.0.gap'))->toBe(0)->and($res->json('data.items.0.kind'))->toBe('ml');
+
+    $other->variants()->count();
+});
+
+it('has no suggestions when no gift is waiting', function () {
+    loyaltySale($this, [[$this->v10, 2]]);
+
+    $this->getJson('/api/admin/customers/'.Customer::firstOrFail()->id.'/loyalty/suggestions')->assertOk()->assertJsonPath('data', null);
 });

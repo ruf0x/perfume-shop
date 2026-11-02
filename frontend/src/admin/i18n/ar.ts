@@ -708,6 +708,18 @@ export const AR: Record<string, string> = {
 
   'La première photo est celle de la boutique. Jpg, png ou webp : elle est recadrée et réduite automatiquement.': 'الصورة الأولى هي التي تظهر في المتجر. jpg أو png أو webp: تُقتصّ وتُصغَّر تلقائياً.',
 
+  // Loyalty rounds and gift choice
+  'Voir le détail des parfums': 'عرض تفاصيل العطور',
+  'Parfums achetés': 'العطور المشتراة',
+  'Cadeau offert': 'هدية سُلّمت',
+  'Aucun parfum pour le moment.': 'لا عطور حتى الآن.',
+  'Offrir ce parfum': 'تقديم هذا العطر',
+  'Choisir un autre parfum': 'اختيار عطر آخر',
+  'Choisissez le parfum à offrir.': 'اختر العطر الذي سيُهدى.',
+  'Parfum à offrir': 'العطر المُهدى',
+  'Aucun parfum en stock dans cette fourchette : choisissez-en un autre ci-dessous.': 'لا يوجد عطر متوفر في هذا المجال: اختر عطراً آخر أدناه.',
+  "Le cadeau sort du stock (le flacon, ou les ml et une bouteille) et son prix d'achat compte dans le bénéfice.": 'تخرج الهدية من المخزون (القارورة، أو المل وقارورة صغيرة) ويُحسب سعر شرائها ضمن الربح.',
+
   // Pack lines and misc units
   'DA': 'دج',
   'ml': 'مل',
@@ -724,6 +736,14 @@ export const AR: Record<string, string> = {
 
 /** Words of a sentence whose other part is data (names, numbers). Longest match first is not needed: each is anchored. */
 export const AR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray, tr: (s: string) => string) => string]> = [
+  [/^(\d+) parfums? achetés? au total\.$/, (m) => `${m[1]} عطر مشترى في المجموع.`],
+  [/^(\d+) parfums? au total, par tranches de (\d+)\. Chaque tranche complète donne un cadeau\.$/, (m) => `${m[1]} عطر في المجموع، بشرائح من ${m[2]}. كل شريحة مكتملة تعطي هدية.`],
+  [/^De (\d+) à (\d+)$/, (m) => `من ${m[1]} إلى ${m[2]}`],
+  [/^En cours : (\d+) \/ (\d+)$/, (m) => `جارٍ: ${m[1]} / ${m[2]}`],
+  [/^(Moyenne des prix|Moyenne pour le moment) : (.+)$/, (m, tr) => `${m[1] === 'Moyenne des prix' ? 'متوسط الأسعار' : 'المتوسط حتى الآن'}: ${tr(m[2])}`],
+  [/^Cadeau : (.+)$/, (m, tr) => `الهدية: ${tr(m[1])}`],
+  [/^Propositions entre (.+) et (.+)$/, (m, tr) => `اقتراحات بين ${tr(m[1])} و${tr(m[2])}`],
+  [/^Il a acheté (\d+) parfums\. Valeur conseillée : (.+) \(la moyenne de leurs prix\)\. Vous pouvez offrir un parfum plus cher\.$/, (m, tr) => `اشترى ${m[1]} عطور. القيمة المقترحة: ${tr(m[2])} (متوسط أسعارها). يمكنك إهداء عطر أغلى.`],
   [/^(\d+) en stock$/, (m) => `${m[1]} في المخزون`],
   [/^Modèle choisi d'après le fichier : (.+)\.$/, (m, tr) => `النموذج المختار حسب الملف: ${tr(m[1])}.`],
   [/^Ce fichier est au format « Autres produits » \(il a une colonne option\) : choisissez le modèle « Autres produits »\.$/, () => 'هذا الملف بصيغة «منتجات أخرى» (فيه عمود option): اختر نموذج «منتجات أخرى».'],

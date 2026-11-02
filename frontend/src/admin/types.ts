@@ -253,6 +253,24 @@ export interface Loyalty {
   given: number
 }
 
+/** One round of perfumes (0 to 6, 6 to 12…): its perfumes, its average and the gift it earned. */
+export interface LoyaltyTier {
+  number: number
+  from: number
+  to: number
+  complete: boolean
+  average: number | null
+  perfumes: { name: string; price: number; order: string | null; date: string | null }[]
+  reward: { id: number; status: 'pending' | 'given'; gift_name: string | null; gift_value: number | null; given_at: string | null } | null
+}
+
+export interface GiftSuggestions {
+  average: number
+  from: number
+  to: number
+  items: { variant_id: number; product: string; label: string; price: number; kind: 'flacon' | 'ml'; gap: number }[]
+}
+
 export interface Customer {
   id: number
   phone: string

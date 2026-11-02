@@ -117,6 +117,7 @@ Route::prefix('admin')->group(function () {
             Route::delete('/customers/{customer}', [CustomerController::class, 'destroy']);
             Route::delete('/orders/{order}', [OrderController::class, 'destroy']);
             Route::get('/customers/{customer}/loyalty', [LoyaltyController::class, 'show']);
+            Route::get('/customers/{customer}/loyalty/suggestions', [LoyaltyController::class, 'suggestions']);
             Route::post('/customers/{customer}/loyalty/redeem', [LoyaltyController::class, 'redeem']);
 
             Route::get('/settings', [SettingsController::class, 'show']);
