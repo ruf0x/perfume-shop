@@ -76,7 +76,7 @@ Use `127.0.0.1` or `localhost` consistently in the browser — Sanctum cookies a
 - Data: all hooks in `admin/queries.ts` (keys start with `['admin', ...]`; every write refreshes them). Shapes in `admin/types.ts`. API errors → `apiError()` / `fieldErrors()` in `admin/lib.ts`.
 - The admin UI text is **French only and written inline** (not in `fr.json`): it is for the owner, and only the shop is planned for Arabic/RTL.
 - Order actions live in `components/OrderDrawer.tsx` (confirm, no answer, cancel, ship, deliver, return, sell in store), editing in `OrderEdit.tsx`, printing in `print.ts` (opens a printable window).
-- Local API: run `composer serve` (= `php backend/serve.php`), not `php artisan serve`. On this Windows/Herd setup `artisan serve` starts PHP without a temp dir and every photo upload fails.
+- Local API: `php artisan serve` or `composer serve` (= `php backend/serve.php`), both work. On this Windows/Herd setup PHP's built-in server had no temp folder and every upload failed ("File upload error - unable to create a temporary file", before Laravel runs); `App\Console\Commands\Serve` replaces the framework's `serve` and starts it with `-d upload_tmp_dir=storage/app/tmp` (and larger upload limits).
 - After adding npm packages while `vite` is running, restart it with `--force` (otherwise: "504 Outdated Optimize Dep" and a blank page).
 - Validation messages are French (`backend/lang/fr/validation.php`).
 - Timezone: app `Africa/Algiers` and DB session `+01:00` (`APP_TIMEZONE`, `DB_TIMEZONE`), so timestamps in the database read as local time. The API sends UTC ISO strings and the browser shows local time.
