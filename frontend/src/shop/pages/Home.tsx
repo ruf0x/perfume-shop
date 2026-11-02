@@ -1,20 +1,10 @@
-import { useState } from 'react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { ProductGrid } from '../components/ProductGrid'
 import { linkButton } from '../components/ui'
-import { VolumeGauge } from '../components/VolumeGauge'
-import { useProductTypes, useProducts } from '../queries'
+import { useProductTypes, useProducts, useSettings } from '../queries'
 import type { ShopProductType } from '../types'
 import { useDocumentTitle } from '../useDocumentTitle'
-
-// Demo volumes for the hero vial. Not tied to any product.
-const DEMO = [
-  { id: 1, label: '10 ml' },
-  { id: 2, label: '20 ml' },
-  { id: 3, label: '30 ml' },
-  { id: 4, label: 'Flacon complet' },
-]
 
 /** A product type on the home page: its categories as links, and a few of its products. */
 function TypeSection({ type }: { type: ShopProductType }) {
@@ -51,7 +41,7 @@ function TypeSection({ type }: { type: ShopProductType }) {
 export default function Home() {
   const { t } = useTranslation()
   useDocumentTitle(null, t('meta.homeDescription'))
-  const [demo, setDemo] = useState(2)
+  const { data: settings } = useSettings()
 
   const types = useProductTypes()
   const packs = useProducts({ kind: 'pack' }, 3)
@@ -79,13 +69,9 @@ export default function Home() {
             </div>
           </div>
 
-          {perfumeTypes.length > 0 && (
-          <div className="mx-auto w-full max-w-sm rounded-md bg-background p-5 text-foreground">
-            <p className="mb-3 font-display text-lg">{t('home.vialTitle')}</p>
-            <VolumeGauge options={DEMO} value={demo} onChange={setDemo} legend={t('home.vialTitle')} animateIn type="arabe" row={54} />
-            <p className="mt-4 text-sm text-muted-foreground">{t('home.vialHint')}</p>
+          <div className="mx-auto flex w-full max-w-sm justify-center">
+            <img src="/brand/logo-light.webp" alt={settings?.shop_name ?? t('brand.name')} width={632} height={900} className="h-auto max-h-[26rem] w-auto max-w-full" />
           </div>
-          )}
         </div>
       </section>
 
