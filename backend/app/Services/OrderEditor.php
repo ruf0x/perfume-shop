@@ -5,10 +5,14 @@ namespace App\Services;
 use App\Enums\OrderStatus;
 use App\Enums\StockMovementType;
 use App\Exceptions\ShopException;
+use App\Enums\OrderChannel;
+use App\Enums\PaymentMethod;
 use App\Models\Commune;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Support\DefaultLocation;
 use App\Support\Phone;
 use Illuminate\Support\Facades\DB;
 
@@ -27,11 +31,21 @@ class OrderEditor
         return DB::transaction(function () use ($order, $data, $user) {
             $order = Order::query()->lockForUpdate()->findOrFail($order->id);
 
-            if (! in_array($order->status, [OrderStatus::EnAttente, OrderStatus::Confirmee], true)) {
-                throw new ShopException('Cette commande ne peut plus être modifiée.');
+            $editable = in_array($order->status, [OrderStatus::EnAttente, OrderStatus::Confirmee], true);
+            if (! $editable && array_intersect(['lines', 'delivery_fee', 'discount', 'delivery_mode'], array_keys($data)) !== []) {
+                throw new ShopException('Les articles, la remise et la livraison ne se modifient plus une fois la commande expédiée, vendue ou annulée. Le client, le paiement et les notes restent modifiables.');
             }
 
-            $fields = $this->clientFields($order, $data);
+            $fields = $this->clientFields($order, $data) + $this->paymentFields($order, $data);
+
+            if (! $editable) {
+                // Only the details that never touch stock or money: the client, the notes, how it was paid.
+                $order->forceFill($fields)->save();
+                $this->syncCustomer($order);
+                $order->history()->create(['from_status' => $order->status, 'to_status' => $order->status, 'user_id' => $user?->id, 'note' => 'Informations modifiées']);
+
+                return $order->refresh();
+            }
 
             if (isset($data['lines'])) {
                 $this->replaceItems($order, $data['lines'], $user);
@@ -51,6 +65,7 @@ class OrderEditor
                 'discount' => $discount,
                 'total' => $subtotal + $fee - $discount,
             ])->save();
+            $this->syncCustomer($order);
 
             // Re-take the stock for the new items; throws (and rolls everything back) if short.
             if (isset($data['lines']) && $order->status === OrderStatus::Confirmee) {
@@ -68,11 +83,97 @@ class OrderEditor
         });
     }
 
+    /**
+     * How a caisse sale was paid (a forgotten card payment, say). Cash needs the amount received.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function paymentFields(Order $order, array $data): array
+    {
+        if (! array_key_exists('payment_method', $data)) {
+            return [];
+        }
+        if ($order->channel !== OrderChannel::Pos) {
+            throw new ShopException('Le mode de paiement ne se change que sur une vente en caisse.');
+        }
+
+        $method = PaymentMethod::from($data['payment_method']);
+        if ($method === PaymentMethod::Especes) {
+            $received = (int) ($data['amount_received'] ?? $order->amount_received ?? 0);
+            if ($received < $order->total) {
+                throw new ShopException('Le montant reçu est inférieur au total.');
+            }
+
+            return ['payment_method' => $method, 'amount_received' => $received];
+        }
+
+        return ['payment_method' => $method, 'amount_received' => null];
+    }
+
+    /**
+     * Keep the customer record in step with the order's phone: a sale made without a client gets one when the
+     * number is added later, and an order moved to another number moves its counters and loyalty perfumes with it.
+     */
+    private function syncCustomer(Order $order): void
+    {
+        if (! $order->phone) {
+            return;
+        }
+
+        $current = $order->customer_id ? Customer::query()->find($order->customer_id) : null;
+        $names = array_filter(['first_name' => $order->first_name, 'last_name' => $order->last_name], fn ($v) => filled($v));
+
+        if ($current && $current->phone === $order->phone) {
+            $current->fill($names)->save();
+
+            return;
+        }
+
+        $target = Customer::query()->firstOrNew(['phone' => $order->phone]);
+        if (! $target->exists) {
+            if (blank($order->first_name) || blank($order->last_name)) {
+                throw new ShopException('Indiquez le prénom, le nom et le téléphone du client.');
+            }
+            // A new client lives where the order says, else in the shop's own wilaya and commune (Oran, Oran).
+            $place = $order->wilaya_id ? ['wilaya_id' => $order->wilaya_id, 'commune_id' => $order->commune_id] : ['wilaya_id' => DefaultLocation::wilayaId(), 'commune_id' => DefaultLocation::communeId()];
+            $target->fill($place);
+        }
+        $target->fill($names)->save();
+
+        $loyalty = app(LoyaltyService::class);
+        if ($current) {
+            $this->counters($current, $order, -1);
+            $loyalty->forgetOrder($order);
+        }
+        $this->counters($target, $order, 1);
+        $order->forceFill(['customer_id' => $target->id])->save();
+
+        if (in_array($order->status, OrderStatus::revenueStatuses(), true)) {
+            $loyalty->record($order->refresh());
+        }
+    }
+
+    private function counters(Customer $customer, Order $order, int $sign): void
+    {
+        $columns = ['orders_count'];
+        $status = match ($order->status) {
+            OrderStatus::Livree => 'delivered_count',
+            OrderStatus::Annulee => 'cancelled_count',
+            OrderStatus::Retournee => 'returned_count',
+            default => null,
+        };
+        $status && $columns[] = $status;
+
+        foreach ($columns as $column) {
+            $sign > 0 ? $customer->increment($column) : $customer->newQuery()->whereKey($customer->id)->where($column, '>', 0)->decrement($column);
+        }
+    }
+
     /** @param array<string, mixed> $data */
     private function clientFields(Order $order, array $data): array
     {
         $fields = array_intersect_key($data, array_flip([
-            'first_name', 'last_name', 'wilaya_id', 'commune_id', 'address', 'delivery_mode', 'admin_note',
+            'first_name', 'last_name', 'wilaya_id', 'commune_id', 'address', 'delivery_mode', 'admin_note', 'awaiting_stock',
         ]));
 
         foreach (['phone', 'phone2'] as $key) {
@@ -130,6 +231,8 @@ class OrderEditor
                 'variant_label' => $kept?->variant_label ?? $variant->label,
                 'ml' => $variant->ml,
                 'unit_price' => $unitPrice,
+                // An existing line keeps the cost it was sold with; a new line takes today's.
+                'unit_cost' => $kept ? $kept->unit_cost : $variant->unitCost(),
                 'quantity' => $quantity,
                 'line_total' => $unitPrice * $quantity,
             ]);

@@ -11,19 +11,16 @@ class SettingsService
 
     /** Defaults used until the owner saves a value. */
     public const DEFAULTS = [
-        'shop_name' => 'Arena Cosmétique',
+        'shop_name' => 'Roze Sham',
         'shop_phone' => null,
-        'shop_address' => 'MCR6+39H LPP Hayet Regency, Oran',
-        'socials' => [
-            'instagram' => 'https://www.instagram.com/arenecosmetique/',
-            'facebook' => 'https://web.facebook.com/people/Arena-cosm%C3%A9tique-Oran-hayate-regenci-lpp-Oran/61581182056275/',
-            'tiktok' => 'https://www.tiktok.com/@arenacosmetiq',
-        ],
+        'shop_address' => null,
+        'socials' => [],
         'show_unavailable' => false,
         'low_stock_threshold_ml' => 10,
         'low_stock_threshold_qty' => 3,
         'store_pickup_enabled' => true,
         'free_delivery_over' => null,
+        'loyalty_enabled' => true,
     ];
 
     /** @return array<string, mixed> */
@@ -74,10 +71,22 @@ class SettingsService
         return (int) $this->get('low_stock_threshold_qty');
     }
 
+    /** Whether customers can order beyond the stock without seeing it. A code switch (config/features.php). */
+    public function backorderEnabled(): bool
+    {
+        return (bool) config('features.backorder');
+    }
+
     /** Whether the admin can be used from the website. A code switch (config/features.php), not an admin setting. */
     public function webAdminEnabled(): bool
     {
         return (bool) config('features.web_admin');
+    }
+
+    /** The owner's yes / no for the loyalty programme. It only matters when the shop has the feature (config/features.php). */
+    public function loyaltyEnabled(): bool
+    {
+        return (bool) $this->get('loyalty_enabled');
     }
 
     public function storePickupEnabled(): bool

@@ -1,6 +1,6 @@
 {
   "brand": {
-    "name": "Arena Cosmétique"
+    "name": "Roze Sham"
   },
   "meta": {
     "homeDescription": "Commandez en ligne et payez à la livraison, partout en Algérie.",
@@ -42,8 +42,6 @@
     "lead": "Choisissez, commandez en ligne et payez à la livraison.",
     "cta": "Voir la boutique",
     "ctaSecondary": "Comment commander",
-    "vialTitle": "Un volume par parfum",
-    "vialHint": "Exemple. Chaque parfum a ses propres tailles et ses propres prix : sur sa page, vous prenez un 10 ml de l'un, un 30 ml d'un autre, ou le flacon complet.",
     "families": "Choisissez une famille",
     "familyText": {
       "designer": "Les grandes maisons et leurs classiques.",

@@ -6,6 +6,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { cn } from '@/lib/utils'
 import { cartCount, useCart, useCartUi } from '@/stores/cart'
 import { useSettings } from '../queries'
+import { LangSwitch } from '@/admin/i18n/LangSwitch'
+import { shopLang } from '@/admin/i18n/lang'
+import { isDemo } from '@/lib/api'
+import { brand } from '@/lib/brand'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn('rounded-sm px-1 py-2 text-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-ring', isActive ? 'font-medium text-primary' : 'text-foreground/80')
@@ -37,13 +41,13 @@ function SearchForm({ className }: { className?: string }) {
     <form onSubmit={submit} role="search" className={className}>
       <label className="relative block">
         <span className="sr-only">{t('nav.search')}</span>
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+        <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
         <input
           type="search"
           value={term}
           onChange={(e) => setTerm(e.target.value)}
           placeholder={t('nav.searchPlaceholder')}
-          className="h-10 w-full rounded-md border border-input bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+          className="h-10 w-full rounded-md border border-input bg-card pe-3 ps-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
         />
       </label>
     </form>
@@ -62,7 +66,7 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <button
           type="button"
-          className="-ml-2 flex size-10 items-center justify-center rounded-md hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring md:hidden"
+          className="-ms-2 flex size-10 items-center justify-center rounded-md hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring md:hidden"
           onClick={() => setMenu(true)}
           aria-label={t('nav.menu')}
         >
@@ -70,17 +74,18 @@ export function Header() {
         </button>
 
         <Link to="/" className="flex items-center gap-2.5 font-display text-lg font-medium tracking-tight focus-visible:outline-2 focus-visible:outline-ring sm:text-xl">
-          <img src="/brand/logo-mark.webp" alt="" width={256} height={179} className="h-9 w-auto" />
+          <img src={brand('logo-mark')} alt="" width={221} height={256} className="h-10 w-auto" />
           <span className="leading-tight">{settings?.shop_name ?? t('brand.name')}</span>
         </Link>
 
-        <nav className="ml-6 hidden items-center gap-5 md:flex" aria-label={t('nav.main')}>
+        <nav className="ms-6 hidden items-center gap-5 md:flex" aria-label={t('nav.main')}>
           <NavItem to="/boutique">{t('nav.shop')}</NavItem>
           <NavItem to="/packs">{t('nav.packs')}</NavItem>
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           <SearchForm className="hidden w-64 lg:block" />
+          {isDemo && <LangSwitch className="hidden sm:inline-flex" />}
           <button
             type="button"
             onClick={() => setCartOpen(true)}
@@ -89,14 +94,14 @@ export function Header() {
           >
             <ShoppingBag className="size-5" />
             {count > 0 && (
-              <span className="tnum absolute -top-0.5 -right-0.5 flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] leading-5 font-medium text-primary-foreground">{count}</span>
+              <span className="tnum absolute -top-0.5 -end-0.5 flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] leading-5 font-medium text-primary-foreground">{count}</span>
             )}
           </button>
         </div>
       </div>
 
       <Sheet open={menu} onOpenChange={setMenu}>
-        <SheetContent side="left" className="w-72 gap-0 p-0">
+        <SheetContent side={shopLang() === 'ar' ? 'right' : 'left'} className="w-72 gap-0 p-0">
           <SheetHeader className="border-b border-border p-5">
             <SheetTitle className="font-display text-xl">{settings?.shop_name ?? t('brand.name')}</SheetTitle>
             <SheetDescription className="sr-only">{t('nav.menu')}</SheetDescription>
@@ -113,6 +118,7 @@ export function Header() {
                 </Link>
               ))}
             </nav>
+            {isDemo && <LangSwitch />}
           </div>
         </SheetContent>
       </Sheet>

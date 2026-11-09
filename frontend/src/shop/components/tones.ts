@@ -6,31 +6,31 @@ export interface Tone {
 }
 
 const TONES: Record<string, Tone> = {
-  designer: { ground: '#e6ebee', liquid: '#6f9bb5', shape: 'rect' },
-  niche: { ground: '#efe3df', liquid: '#a24d3d', shape: 'round' },
-  arabe: { ground: '#e3eee7', liquid: '#cf9327', shape: 'attar' },
-  dupe: { ground: '#ebe7f1', liquid: '#8574b3', shape: 'rect' },
-  'creation-maison': { ground: '#efe9d8', liquid: '#6a4727', shape: 'round' },
+  designer: { ground: '#eaeaea', liquid: '#919191', shape: 'rect' },
+  niche: { ground: '#e6e6e6', liquid: '#656565', shape: 'round' },
+  arabe: { ground: '#eaeaea', liquid: '#999999', shape: 'attar' },
+  dupe: { ground: '#e9e9e9', liquid: '#808080', shape: 'rect' },
+  'creation-maison': { ground: '#e9e9e9', liquid: '#4e4e4e', shape: 'round' },
   // Cosmetic categories are drawn as a pot.
-  maquillage: { ground: '#f6e3e4', liquid: '#c2566b', shape: 'jar' },
-  ongles: { ground: '#efe3ee', liquid: '#a0559a', shape: 'jar' },
-  'soin-du-corps': { ground: '#f2e9dc', liquid: '#c9a468', shape: 'jar' },
-  'douche-et-bain': { ground: '#e0eef0', liquid: '#4f9fae', shape: 'jar' },
-  cheveux: { ground: '#f0e6da', liquid: '#ad7a3e', shape: 'jar' },
-  deodorants: { ground: '#e4ebf1', liquid: '#6f93b4', shape: 'jar' },
-  'soin-du-visage': { ground: '#f5e8e3', liquid: '#d6957f', shape: 'jar' },
-  accessoires: { ground: '#ece8f1', liquid: '#8c7cab', shape: 'jar' },
+  maquillage: { ground: '#e9e9e9', liquid: '#797979', shape: 'jar' },
+  ongles: { ground: '#e8e8e8', liquid: '#737373', shape: 'jar' },
+  'soin-du-corps': { ground: '#eaeaea', liquid: '#a8a8a8', shape: 'jar' },
+  'douche-et-bain': { ground: '#eaeaea', liquid: '#898989', shape: 'jar' },
+  cheveux: { ground: '#e8e8e8', liquid: '#828282', shape: 'jar' },
+  deodorants: { ground: '#eaeaea', liquid: '#8c8c8c', shape: 'jar' },
+  'soin-du-visage': { ground: '#ebebeb', liquid: '#a6a6a6', shape: 'jar' },
+  accessoires: { ground: '#eaeaea', liquid: '#868686', shape: 'jar' },
 }
 
 /** What to draw for a product type when its category has no colours of its own (the owner can create any type). */
 const RAYON_TONES: Record<string, Tone> = {
-  parfums: { ground: '#ecebe5', liquid: '#b38b3d', shape: 'rect' },
-  cosmetiques: { ground: '#f4e6e2', liquid: '#c98f7a', shape: 'jar' },
-  montres: { ground: '#e8e9ee', liquid: '#7b8199', shape: 'watch' },
-  lunettes: { ground: '#efe8dd', liquid: '#8a6a45', shape: 'glasses' },
+  parfums: { ground: '#ebebeb', liquid: '#8e8e8e', shape: 'rect' },
+  cosmetiques: { ground: '#eaeaea', liquid: '#9e9e9e', shape: 'jar' },
+  montres: { ground: '#e9e9e9', liquid: '#828282', shape: 'watch' },
+  lunettes: { ground: '#e9e9e9', liquid: '#6f6f6f', shape: 'glasses' },
 }
 
-const FALLBACK: Tone = { ground: '#ecebe5', liquid: '#b38b3d', shape: 'rect' }
+const FALLBACK: Tone = { ground: '#ebebeb', liquid: '#8e8e8e', shape: 'rect' }
 
 /** Tone of a category, else of its product type, else a neutral flacon. */
 export const toneFor = (typeSlug?: string | null, rayonSlug?: string | null): Tone => (typeSlug && TONES[typeSlug]) || (rayonSlug && RAYON_TONES[rayonSlug]) || FALLBACK

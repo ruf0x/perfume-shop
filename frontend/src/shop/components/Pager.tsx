@@ -26,7 +26,7 @@ export function Pager({ page, lastPage, total, onPage }: PagerProps) {
       <ul className="flex flex-wrap items-center justify-center gap-1.5">
         <li>
           <button type="button" className={cn(btn, 'border border-input hover:bg-secondary')} disabled={page <= 1} onClick={() => go(page - 1)} aria-label={t('pager.previous')}>
-            <ChevronLeft className="size-4" aria-hidden />
+            <ChevronLeft className="size-4 rtl:-scale-x-100" aria-hidden />
           </button>
         </li>
         {pages.map((n, i) => (
@@ -39,7 +39,7 @@ export function Pager({ page, lastPage, total, onPage }: PagerProps) {
         ))}
         <li>
           <button type="button" className={cn(btn, 'border border-input hover:bg-secondary')} disabled={page >= lastPage} onClick={() => go(page + 1)} aria-label={t('pager.next')}>
-            <ChevronRight className="size-4" aria-hidden />
+            <ChevronRight className="size-4 rtl:-scale-x-100" aria-hidden />
           </button>
         </li>
       </ul>

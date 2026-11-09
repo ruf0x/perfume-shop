@@ -75,7 +75,7 @@ Run these from the `desktop` folder. The admin screens are the website's own, pa
 | Open the app without rebuilding the admin | `npm run dev` |
 | Build the Windows installer (`desktop\dist\Administration-Boutique-Setup-1.0.0.exe`) | `npm run dist` |
 
-First launch asks for the shop's server address (for example `https://api.arena-cosmetique.com`); for a local test, `http://localhost:8000`.
+First launch asks for the shop's server address (for example `https://api.votre-domaine.com`); for a local test, `http://localhost:8000`.
 After changing the frontend, run `npm run web` again before `npm start` / `npm run dist`.
 
 Turn the website's admin off or on (the desktop app keeps working): edit one line in `backend\config\features.php`:

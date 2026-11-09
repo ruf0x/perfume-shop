@@ -1,7 +1,9 @@
+import { shopLang } from '@/admin/i18n/lang'
+
 const number = new Intl.NumberFormat('fr-FR')
 
 /** 1500 -> "1 500 DA" (non-breaking spaces so a price never wraps). */
-export const formatPrice = (amount: number) => `${number.format(amount).replace(/[\s ]/g, ' ')} DA`
+export const formatPrice = (amount: number) => `${number.format(amount).replace(/[\s ]/g, ' ')} ${shopLang() === 'ar' ? 'دج' : 'DA'}`
 
 /** "0550123456" -> "05 50 12 34 56" */
 export const formatPhone = (phone: string) => phone.replace(/\D/g, '').replace(/(\d{2})(?=\d)/g, '$1 ').trim()

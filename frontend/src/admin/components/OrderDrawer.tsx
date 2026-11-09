@@ -1,4 +1,4 @@
-import { MessageCircle, Pencil, Phone, Printer } from 'lucide-react'
+import { MessageCircle, Pencil, Phone, Printer, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -9,9 +9,11 @@ import { formatPhone, formatPrice, phoneHref } from '@/shop/format'
 import { useSettings } from '@/shop/queries'
 import { apiError, formatDateTime } from '../lib'
 import { print } from '../printHelper'
-import { useOrder, useOrderAction, useUpdateOrder, type TransitionPayload } from '../queries'
+import { useDeleteOrder, useOrder, useOrderAction, useUpdateOrder, type TransitionPayload } from '../queries'
 import type { Order, OrderAction } from '../types'
-import { ConfirmDialog, ErrorState, Loading, STATUS_LABEL, StatusBadge, inputClass } from './common'
+import { AwaitingBadge, ConfirmDialog, ErrorState, Loading, STATUS_LABEL, StatusBadge, inputClass } from './common'
+import { useIsOwner } from '../auth'
+import { GiftDialog, LoyaltyNote } from './Loyalty'
 import { OrderEdit } from './OrderEdit'
 
 const MODE = { domicile: 'À domicile', stop_desk: 'Point relais', boutique: 'Retrait en boutique' } as const
@@ -40,7 +42,9 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   )
 }
 
-function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
+const stockLine = (order: Order, itemId: number) => order.stock_check?.lines.find((l) => l.item_id === itemId)
+
+function Detail({ order, onEdit, onClose }: { order: Order; onEdit: () => void; onClose: () => void }) {
   const act = useOrderAction()
   const saveNote = useUpdateOrder()
   const { data: settings } = useSettings()
@@ -50,9 +54,14 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
   const [tracking, setTracking] = useState('')
   const [restock, setRestock] = useState(false)
   const [note, setNote] = useState(order.admin_note ?? '')
+  const owner = useIsOwner()
+  const remove = useDeleteOrder()
+  const [deleting, setDeleting] = useState(false)
+  // Only what no goods left with: pending, cancelled, returned, or a caisse sale. The others are cancelled first.
+  const deletable = owner && ['en_attente', 'annulee', 'retournee', 'vendue_boutique'].includes(order.status)
+  const [gift, setGift] = useState(false)
 
   const c = order.customer
-  const editable = order.status === 'en_attente' || order.status === 'confirmee'
   const name = [c.first_name, c.last_name].filter(Boolean).join(' ')
   const place = [order.address, order.commune?.name, order.wilaya?.name].filter(Boolean).join(', ')
 
@@ -99,6 +108,13 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
             {order.tracking_number && <Row label="Suivi">{order.delivery_company} {order.tracking_number}</Row>}
             {order.cancel_reason && <Row label="Motif d'annulation">{order.cancel_reason}</Row>}
           </dl>
+          {c.loyalty && c.id && (
+            <div className="mt-3 rounded-md border border-border bg-secondary/60 p-3">
+              <LoyaltyNote loyalty={c.loyalty} adds={c.loyalty.adds} customerId={c.id} />
+              {owner && c.loyalty.pending.length > 0 && <Button variant="outline" className="mt-2 h-9" onClick={() => setGift(true)}>Offrir le cadeau</Button>}
+            </div>
+          )}
+          {gift && c.loyalty && c.id && <GiftDialog customerId={c.id} name={name || 'ce client'} loyalty={c.loyalty} onClose={() => setGift(false)} />}
         </section>
 
         <section aria-label="Articles">
@@ -109,6 +125,11 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
                 <div className="min-w-0">
                   <p className="font-medium">{i.product_name}</p>
                   <p className="tnum text-muted-foreground">{i.variant_label}, {i.quantity} × {formatPrice(i.unit_price)}</p>
+                  {stockLine(order, i.id) && (
+                    <p className={`mt-0.5 text-xs ${stockLine(order, i.id)!.ok ? 'text-muted-foreground' : 'font-medium text-destructive'}`}>
+                      {`${stockLine(order, i.id)!.ok ? 'En stock' : 'Stock insuffisant'} : ${stockLine(order, i.id)!.left}`}
+                    </p>
+                  )}
                 </div>
                 <p className="tnum shrink-0 font-medium">{formatPrice(i.line_total)}</p>
               </li>
@@ -123,12 +144,39 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
             {order.amount_received !== null && <div className="flex justify-between text-muted-foreground"><dt>Reçu / rendu</dt><dd>{formatPrice(order.amount_received)} / {formatPrice(order.change_due ?? 0)}</dd></div>}
           </dl>
           {order.stock_deducted && <p className="mt-2 text-xs text-muted-foreground">Le stock de cette commande a été retiré.</p>}
+          {order.stock_check && (
+            <div className={`mt-3 rounded-md border p-3 text-sm ${order.stock_check.possible ? 'border-border bg-secondary/60' : 'border-destructive/40 bg-destructive/5'}`} role="status">
+              {order.stock_check.possible ? (
+                <p>Le stock couvre cette commande : vous pouvez la confirmer.</p>
+              ) : (
+                <>
+                  <p className="font-medium">Stock insuffisant : la commande ne peut pas être confirmée pour le moment.</p>
+                  <ul className="tnum mt-1 space-y-0.5">
+                    {order.stock_check.shortages.map((s) => (
+                      <li key={s.name}>{`${s.name} : ${s.requested} ${s.unit} demandés, ${s.available} en stock.`}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-muted-foreground">Si un arrivage est prévu, mettez-la de côté : elle reste en attente et vous la confirmerez quand le stock sera arrivé.</p>
+                </>
+              )}
+              {(!order.stock_check.possible || order.awaiting_stock) && (
+                <Button
+                  variant={order.awaiting_stock ? 'default' : 'outline'}
+                  className="mt-2 h-9"
+                  disabled={saveNote.isPending}
+                  onClick={() => saveNote.mutate({ id: order.id, awaiting_stock: !order.awaiting_stock }, { onSuccess: () => toast.success(order.awaiting_stock ? 'Commande reprise.' : 'Commande mise de côté.'), onError: (e) => toast.error(apiError(e)) })}
+                >
+                  {order.awaiting_stock ? "Reprendre (l'arrivage est là)" : "Mettre en attente d'arrivage"}
+                </Button>
+              )}
+            </div>
+          )}
         </section>
 
         <section aria-label="Note interne">
           <h3 className="mb-2 font-display text-lg">Note interne</h3>
-          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} disabled={!editable} placeholder="Visible uniquement par l'équipe" className="text-sm" />
-          {editable && note !== (order.admin_note ?? '') && (
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Visible uniquement par l'équipe" className="text-sm" />
+          {note !== (order.admin_note ?? '') && (
             <Button className="mt-2 h-9" disabled={saveNote.isPending} onClick={() => saveNote.mutate({ id: order.id, admin_note: note || null }, { onSuccess: () => toast.success('Note enregistrée.'), onError: (e) => toast.error(apiError(e)) })}>
               Enregistrer la note
             </Button>
@@ -158,7 +206,7 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
 
         <section aria-label="Historique">
           <h3 className="mb-3 font-display text-lg">Historique</h3>
-          <ol className="space-y-3 border-l-2 border-border pl-4">
+          <ol className="space-y-3 border-l-2 border-border ps-4">
             {order.history?.map((h, i) => (
               <li key={i} className="text-sm">
                 <p className="font-medium">{h.from && h.from === h.to ? h.note : <>{h.from ? `${STATUS_LABEL[h.from]} → ` : ''}{STATUS_LABEL[h.to]}</>}</p>
@@ -174,17 +222,29 @@ function Detail({ order, onEdit }: { order: Order; onEdit: () => void }) {
         {order.allowed_actions.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {order.allowed_actions.map((a) => (
-              <Button key={a} variant={BUTTON[a].primary ? 'default' : BUTTON[a].danger ? 'destructive' : 'outline'} className="h-11 flex-1 basis-36" disabled={pending} onClick={() => click(a)}>
+              <Button key={a} variant={BUTTON[a].primary ? 'default' : BUTTON[a].danger ? 'destructive' : 'outline'} className="h-11 flex-1 basis-36" disabled={pending || (a === 'confirm' && order.stock_check?.possible === false)} onClick={() => click(a)}>
                 {BUTTON[a].label}
               </Button>
             ))}
           </div>
         )}
         <div className="flex gap-2">
-          {editable && <Button variant="outline" className="h-10 flex-1" onClick={onEdit}><Pencil className="size-4" aria-hidden />Modifier</Button>}
+          <Button variant="outline" className="h-10 flex-1" onClick={onEdit}><Pencil className="size-4" aria-hidden />Modifier</Button>
+          {deletable && <Button variant="outline" className="h-10 text-destructive hover:text-destructive" onClick={() => setDeleting(true)} aria-label="Supprimer la commande"><Trash2 className="size-4" aria-hidden />Supprimer</Button>}
           <Button variant="outline" className="h-10 flex-1" onClick={() => print(order, settings?.shop_name ?? 'Boutique')}><Printer className="size-4" aria-hidden />Imprimer</Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleting}
+        onOpenChange={setDeleting}
+        title={`Supprimer ${order.reference} ?`}
+        description={order.status === 'vendue_boutique' ? 'Cette vente en caisse sera supprimée : le stock et les bouteilles utilisés sont remis, et ses parfums ne comptent plus pour la fidélité du client.' : 'Cette commande sera supprimée définitivement.'}
+        confirmLabel="Supprimer"
+        destructive
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate(order.id, { onSuccess: () => { toast.success('Commande supprimée.'); setDeleting(false); onClose() }, onError: (e) => toast.error(apiError(e)) })}
+      />
 
       <ConfirmDialog open={dialog === 'confirm'} onOpenChange={(o) => !o && setDialog(null)} title="Confirmer la commande ?" description="Le client a confirmé par téléphone. Les quantités seront retirées du stock." confirmLabel="Confirmer" loading={pending} onConfirm={() => run('confirm', {}, 'Commande confirmée.')} />
       <ConfirmDialog open={dialog === 'deliver'} onOpenChange={(o) => !o && setDialog(null)} title="Marquer comme livrée ?" description="Le client a reçu et payé sa commande." confirmLabel="Livrée" loading={pending} onConfirm={() => run('deliver', {}, 'Commande livrée.')} />
@@ -232,10 +292,10 @@ export function OrderDrawer({ id, onClose }: { id: number | null; onClose: () =>
   return (
     <Sheet open={id !== null} onOpenChange={(o) => { if (!o) { setEditing(false); onClose() } }}>
       <SheetContent side="right" className="gap-0 p-0 data-[side=right]:w-full sm:data-[side=right]:max-w-xl">
-        <SheetHeader className="border-b border-border p-5 pr-12">
+        <SheetHeader className="border-b border-border p-5 pe-12">
           <SheetTitle className="flex flex-wrap items-center gap-3 font-display text-xl">
             <span className="tnum">{order?.reference ?? 'Commande'}</span>
-            {order && <StatusBadge status={order.status} />}
+            {order && <><StatusBadge status={order.status} /><AwaitingBadge order={order} /></>}
           </SheetTitle>
           <SheetDescription>{order ? `Passée le ${formatDateTime(order.created_at)}${order.created_by ? `, par ${order.created_by}` : ''}` : 'Détail de la commande'}</SheetDescription>
         </SheetHeader>
@@ -247,7 +307,7 @@ export function OrderDrawer({ id, onClose }: { id: number | null; onClose: () =>
         ) : editing ? (
           <div className="flex-1 overflow-y-auto p-5"><OrderEdit order={order} onDone={() => setEditing(false)} /></div>
         ) : (
-          <Detail key={order.id + order.status + order.call_attempts} order={order} onEdit={() => setEditing(true)} />
+          <Detail key={order.id + order.status + order.call_attempts} order={order} onEdit={() => setEditing(true)} onClose={onClose} />
         )}
       </SheetContent>
     </Sheet>

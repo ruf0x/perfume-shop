@@ -6,6 +6,8 @@ import { OwnerOnly, RequireAuth, useIsOwner } from './auth'
 import AdminLayout from './AdminLayout'
 import { Loading } from './components/common'
 import Login from './pages/Login'
+import { useLang } from './i18n/lang'
+import { startTranslator } from './i18n/translate'
 
 // Each section is its own chunk: the owner downloads a page only when opening it.
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -14,6 +16,8 @@ const Orders = lazy(() => import('./pages/Orders'))
 const Products = lazy(() => import('./pages/Products'))
 const ProductForm = lazy(() => import('./pages/ProductForm'))
 const Stock = lazy(() => import('./pages/Stock'))
+const Bottles = lazy(() => import('./pages/Bottles'))
+const ImportProducts = lazy(() => import('./pages/ImportProducts'))
 const Taxonomy = lazy(() => import('./pages/Taxonomy'))
 const ProductTypes = lazy(() => import('./pages/ProductTypes'))
 const Customers = lazy(() => import('./pages/Customers'))
@@ -56,12 +60,16 @@ function useWebAdminOff() {
 /** Everything under /admin. */
 export default function AdminApp() {
   const { off, checking } = useWebAdminOff()
+  const lang = useLang()
+
+  // Arabic: the texts are translated after React draws them, and the page switches to right-to-left.
+  useEffect(() => startTranslator(), [lang])
 
   if (checking) return <Loading />
   if (off) return <Suspense fallback={<Loading />}><WebAdminDisabled /></Suspense>
 
   return (
-    <Suspense fallback={<Loading />}>
+    <Suspense key={lang} fallback={<Loading />}>
       <Routes>
         <Route path="login" element={<Login />} />
         <Route
@@ -82,6 +90,8 @@ export default function AdminApp() {
           <Route path="packs/nouveau" element={owner(<ProductForm kind="pack" />)} />
           <Route path="packs/:id" element={<ProductForm kind="pack" />} />
           <Route path="stock" element={<Stock />} />
+          <Route path="bouteilles" element={owner(<Bottles />)} />
+          <Route path="importer" element={owner(<ImportProducts />)} />
           <Route path="types-de-produits" element={owner(<ProductTypes />)} />
           <Route path="types" element={owner(<Taxonomy kind="types" />)} />
           <Route path="marques" element={owner(<Taxonomy kind="brands" />)} />

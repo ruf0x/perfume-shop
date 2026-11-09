@@ -23,7 +23,7 @@ export default function ThankYou() {
       </p>
       <p className="mt-3 max-w-prose text-lg leading-relaxed text-muted-foreground">{t('thanks.lead')}</p>
 
-      <ol className="mt-10 space-y-4 border-l-2 border-primary/30 pl-6">
+      <ol className="mt-10 space-y-4 border-s-2 border-primary/30 ps-6">
         {steps.map((step) => (
           <li key={step} className="leading-relaxed">
             {step}

@@ -32,6 +32,13 @@ return [
     'backup_path' => env('BACKUP_PATH', storage_path('app/backups')),
     'dump_binary' => env('DB_DUMP_BINARY', 'mysqldump'),
 
+    /*
+    | Where a client is assumed to live when the shop does not know: the wilaya (its official code) and the commune
+    | (by name) of the shop. A client added at the caisse, or to a sale afterwards, gets these unless told otherwise.
+    */
+    'default_wilaya_id' => (int) env('SHOP_DEFAULT_WILAYA', 31),
+    'default_commune' => env('SHOP_DEFAULT_COMMUNE', 'Oran'),
+
     // Default delivery fees (DZD) seeded for every wilaya; editable in the admin.
     'default_home_fee' => 600,
     'default_desk_fee' => 400,

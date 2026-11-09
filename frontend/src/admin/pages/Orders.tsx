@@ -1,4 +1,4 @@
-import { Download, X } from 'lucide-react'
+import { Download, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatPhone, formatPrice, phoneHref } from '@/shop/format'
 import { useWilayas } from '@/shop/queries'
-import { EmptyState, ErrorState, Loading, PageHeader, Pagination, STATUS_LABEL, StatusBadge, inputClass } from '../components/common'
+import { AwaitingBadge, EmptyState, ErrorState, Loading, PageHeader, Pagination, STATUS_LABEL, StatusBadge, inputClass } from '../components/common'
 import { OrderDrawer } from '../components/OrderDrawer'
 import { apiError, downloadBlob, formatDateTime } from '../lib'
 import { exportOrders, useOrders } from '../queries'
@@ -88,6 +88,8 @@ export default function Orders() {
   const orders = query.data?.data ?? []
   const activeTab = filters.status ?? 'all'
   const sortMark = (c: 'created_at' | 'total') => ((filters.sort ?? 'created_at') === c ? ((filters.dir ?? 'desc') === 'desc' ? ' ↓' : ' ↑') : '')
+  const advancedCount = [filters.from, filters.to, filters.wilaya_id, filters.channel, filters.min_total, filters.max_total].filter((v) => v !== undefined && v !== null && v !== '').length
+  const [showFilters, setShowFilters] = useState(advancedCount > 0)
   const hasFilters = !!(filters.q || filters.channel || filters.from || filters.to || filters.wilaya_id || filters.customer_id || filters.min_total !== undefined || filters.max_total !== undefined)
 
   return (
@@ -103,7 +105,7 @@ export default function Orders() {
         }
       />
 
-      <div role="tablist" aria-label="Statut des commandes" className="-mx-4 mb-5 flex gap-1 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+      <div role="tablist" aria-label="Statut des commandes" className="mb-4 flex max-w-full gap-1 overflow-x-auto rounded-xl bg-secondary p-1">
         {TABS.map((tab) => {
           const selected = activeTab === tab.key
           const count = counts?.[tab.key]
@@ -113,20 +115,30 @@ export default function Orders() {
               role="tab"
               aria-selected={selected}
               onClick={() => update({ status: tab.key === 'all' ? undefined : tab.key })}
-              className={cn('flex shrink-0 items-center gap-2 rounded-md px-3.5 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring', selected ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground/80 hover:bg-secondary/70')}
+              className={cn('flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring', selected ? 'bg-card font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground')}
             >
               {tab.label}
-              {count !== undefined && <span className={cn('tnum rounded-full px-1.5 text-xs', selected ? 'bg-primary-foreground/20' : 'bg-background', tab.key === 'en_attente' && count > 0 && !selected && 'bg-amber-200 text-amber-900')}>{count}</span>}
+              {count !== undefined && <span className={cn('tnum rounded-full px-1.5 text-xs', selected ? 'bg-secondary' : 'bg-background', tab.key === 'en_attente' && count > 0 && 'bg-amber-200 text-amber-900')}>{count}</span>}
             </button>
           )
         })}
       </div>
 
-      <section aria-label="Filtres" className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-        <label className="col-span-2 space-y-1 text-sm md:col-span-2">
-          <span className="text-muted-foreground">Rechercher</span>
-          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Référence, nom, téléphone" className={inputClass} />
-        </label>
+      <section aria-label="Filtres" className="mb-6 space-y-3">
+        <div className="flex gap-2">
+          <label className="relative block flex-1">
+            <span className="sr-only">Rechercher</span>
+            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Référence, nom, téléphone" className={`${inputClass} h-11 ps-9`} />
+          </label>
+          <Button variant={advancedCount > 0 ? 'default' : 'outline'} className="h-11 shrink-0 gap-2" onClick={() => setShowFilters((v) => !v)} aria-expanded={showFilters}>
+            <SlidersHorizontal className="size-4" aria-hidden />
+            Filtres
+            {advancedCount > 0 && <span className="tnum rounded-full bg-primary-foreground/20 px-1.5 text-xs">{advancedCount}</span>}
+          </Button>
+        </div>
+        {showFilters && (
+          <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-3 xl:grid-cols-6">
         <label className="space-y-1 text-sm">
           <span className="text-muted-foreground">Du</span>
           <input type="date" value={filters.from ?? ''} max={filters.to} onChange={(e) => update({ from: e.target.value })} className={inputClass} />
@@ -162,12 +174,14 @@ export default function Orders() {
           <span className="text-muted-foreground">Total max (DA)</span>
           <input type="number" min={0} inputMode="numeric" value={filters.max_total ?? ''} onChange={(e) => update({ max_total: e.target.value })} className={inputClass} />
         </label>
-        {(hasFilters || filters.status) && (
-          <div className="col-span-2 flex items-end md:col-span-1">
-            <Button variant="ghost" className="h-10" onClick={() => setParams({}, { replace: true })}>
-              <X className="size-4" aria-hidden />
-              Effacer les filtres
-            </Button>
+            {(hasFilters || filters.status) && (
+              <div className="col-span-2 flex items-end md:col-span-1">
+                <Button variant="ghost" className="h-10" onClick={() => setParams({}, { replace: true })}>
+                  <X className="size-4" aria-hidden />
+                  Effacer les filtres
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -193,11 +207,11 @@ export default function Orders() {
           <ul className="space-y-3 md:hidden">
             {orders.map((o) => (
               <li key={o.id}>
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <button type="button" onClick={() => openOrder(o)} className="block w-full text-left focus-visible:outline-2 focus-visible:outline-ring">
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <button type="button" onClick={() => openOrder(o)} className="block w-full text-start focus-visible:outline-2 focus-visible:outline-ring">
                     <div className="flex items-start justify-between gap-3">
                       <span className="tnum font-medium">{o.reference}</span>
-                      <StatusBadge status={o.status} />
+                      <StatusBadge status={o.status} /><AwaitingBadge order={o} />
                     </div>
                     <p className="mt-2 font-medium">{[o.customer.first_name, o.customer.last_name].filter(Boolean).join(' ') || 'Client de passage'}</p>
                     <p className="text-sm text-muted-foreground">
@@ -219,9 +233,9 @@ export default function Orders() {
           </ul>
 
           {/* larger screens: table */}
-          <div className="hidden overflow-x-auto rounded-lg border border-border bg-card md:block">
+          <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card md:block">
             <table className="w-full text-sm">
-              <thead className="border-b border-border bg-secondary/50 text-left text-muted-foreground">
+              <thead className="border-b border-border bg-secondary/50 text-start text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-medium">Référence</th>
                   <th className="px-4 py-3 font-medium">
@@ -230,9 +244,9 @@ export default function Orders() {
                     </button>
                   </th>
                   <th className="px-4 py-3 font-medium">Client</th>
-                  <th className="px-4 py-3 font-medium">Téléphone</th>
-                  <th className="px-4 py-3 font-medium">Wilaya</th>
-                  <th className="px-4 py-3 text-right font-medium">
+                  <th className="hidden px-4 py-3 font-medium xl:table-cell">Téléphone</th>
+                  <th className="hidden px-4 py-3 font-medium xl:table-cell">Wilaya</th>
+                  <th className="px-4 py-3 text-end font-medium">
                     <button onClick={() => toggleSort('total')} className="hover:text-foreground">
                       Total{sortMark('total')}
                     </button>
@@ -247,11 +261,11 @@ export default function Orders() {
                       <button type="button" onClick={(e) => { e.stopPropagation(); openOrder(o) }} className="tnum font-medium whitespace-nowrap underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
                         {o.reference}
                       </button>
-                      {o.channel === 'pos' && <span className="ml-2 text-xs text-muted-foreground">caisse</span>}
+                      {o.channel === 'pos' && <span className="ms-2 text-xs text-muted-foreground">caisse</span>}
                     </td>
                     <td className="tnum px-4 py-3 whitespace-nowrap text-muted-foreground">{formatDateTime(o.created_at)}</td>
                     <td className="px-4 py-3">{[o.customer.first_name, o.customer.last_name].filter(Boolean).join(' ') || '—'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="hidden px-4 py-3 whitespace-nowrap xl:table-cell">
                       {o.customer.phone ? (
                         <a href={phoneHref(o.customer.phone)} onClick={(e) => e.stopPropagation()} className="tnum underline-offset-4 hover:underline">
                           {formatPhone(o.customer.phone)}
@@ -259,12 +273,12 @@ export default function Orders() {
                       ) : (
                         '—'
                       )}
-                      {o.call_attempts > 0 && <span className="ml-2 text-xs text-amber-800" title="Tentatives d'appel sans réponse">{o.call_attempts}×</span>}
+                      {o.call_attempts > 0 && <span className="ms-2 text-xs text-amber-800" title="Tentatives d'appel sans réponse">{o.call_attempts}×</span>}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{o.wilaya?.name ?? '—'}</td>
-                    <td className="tnum px-4 py-3 text-right font-medium whitespace-nowrap">{formatPrice(o.total)}</td>
+                    <td className="hidden px-4 py-3 text-muted-foreground xl:table-cell">{o.wilaya?.name ?? '—'}</td>
+                    <td className="tnum px-4 py-3 text-end font-medium whitespace-nowrap">{formatPrice(o.total)}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={o.status} />
+                      <StatusBadge status={o.status} /><AwaitingBadge order={o} />
                     </td>
                   </tr>
                 ))}

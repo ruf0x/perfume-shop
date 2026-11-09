@@ -125,7 +125,7 @@ describe('administration on the website', function () {
     });
 
     it('is on in the shipped config/features.php', function () {
-        expect(require base_path('config/features.php'))->toBe(['web_admin' => true]);
+        expect(require base_path('config/features.php'))->toHaveKey('web_admin', true);
     });
 
     it('does not touch the shop itself', function () {

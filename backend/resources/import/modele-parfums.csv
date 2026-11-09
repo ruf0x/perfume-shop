@@ -1,0 +1,6 @@
+﻿nom;marque;famille;genre;description;notes_tete;notes_coeur;notes_fond;inspire_de;prix_10ml;prix_20ml;prix_30ml;prix_flacon_100ml;achat_10ml;achat_20ml;achat_30ml;achat_flacon_100ml;stock_ml;stock_flacon_100ml;actif
+Sauvage;Dior;Designer;homme;Frais et épicé;Bergamote;Poivre;Ambroxan;;1500;2800;4000;14000;1250;2333;3333;11667;400;3;oui
+La Vie Est Belle;Lancôme;Designer;femme;Gourmand et lumineux;Poire;Iris;Praliné;;1600;3000;4300;15000;1333;2500;3583;12500;500;4;oui
+Aventus;Creed;Niche;homme;Fruité et boisé;Ananas;Bouleau;Musc;;2800;5200;7500;28000;2154;4000;5769;21538;200;1;oui
+Khamrah;Lattafa;Arabe;mixte;Épicé et sucré;Cannelle;Dattes;Praliné;;900;1700;2400;8000;783;1478;2087;6957;600;5;oui
+Club de Nuit Intense;Armaf;Dupe;homme;;;;;Inspiré de Aventus – Creed;800;1500;2100;6500;696;1304;1826;5652;300;;oui

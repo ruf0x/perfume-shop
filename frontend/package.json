@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "demo:snapshot": "node scripts/demo-snapshot.mjs",
+    "build:demo": "tsc -b && vite build --mode demo && node scripts/finish-demo.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -13,6 +15,7 @@
     "@base-ui/react": "^1.9.0",
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
     "@hookform/resolvers": "^6.0.2",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.105.0",

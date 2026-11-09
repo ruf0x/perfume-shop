@@ -20,7 +20,12 @@ class UpdateOrderRequest extends FormRequest
             'delivery_mode' => ['sometimes', 'in:domicile,stop_desk,boutique'],
             'delivery_fee' => ['sometimes', 'integer', 'min:0'],
             'discount' => ['sometimes', 'integer', 'min:0'],
+            /** Caisse sales only: how it was really paid. Cash needs `amount_received`. */
+            'payment_method' => ['sometimes', 'in:especes,carte,ccp'],
+            'amount_received' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'admin_note' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            /** Put the order aside until stock arrives (it stays pending). */
+            'awaiting_stock' => ['sometimes', 'boolean'],
             /**
              * Replaces all items. Variants already in the order keep their original price;
              * new ones use the current price.

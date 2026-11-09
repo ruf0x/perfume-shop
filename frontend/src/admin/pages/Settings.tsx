@@ -20,7 +20,7 @@ const SOCIALS = [
 
 function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-4 rounded-lg border border-border bg-card p-5">
+    <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
       <div><h2 className="font-display text-xl">{title}</h2>{hint && <p className="mt-0.5 text-sm text-muted-foreground">{hint}</p>}</div>
       {children}
     </section>
@@ -58,6 +58,7 @@ function ShopTab() {
         low_stock_threshold_qty: f.low_stock_threshold_qty,
         store_pickup_enabled: f.store_pickup_enabled,
         free_delivery_over: f.free_delivery_over,
+        ...(f.loyalty_available ? { loyalty_enabled: f.loyalty_enabled } : {}),
       },
       { onSuccess: () => toast.success('Paramètres enregistrés.'), onError: (e) => toast.error(apiError(e)) },
     )
@@ -98,6 +99,12 @@ function ShopTab() {
         </label>
       </Card>
 
+      {f.loyalty_available && (
+        <Card title="Fidélité">
+          <Toggle label="Parfum offert après plusieurs achats" hint={`Activé : au bout de ${f.loyalty_every} parfums achetés, le suivant est offert (les achats sont suivis par numéro de téléphone). Désactivé : plus de compteur ni de cadeau ; les parfums achetés pendant ce temps ne sont pas comptés.`} checked={f.loyalty_enabled !== false} onChange={(v) => set('loyalty_enabled', v)} />
+        </Card>
+      )}
+
       <div><Button className="h-11 px-8" onClick={submit} disabled={save.isPending}>{save.isPending ? 'Enregistrement…' : 'Enregistrer'}</Button></div>
     </div>
   )
@@ -107,7 +114,7 @@ function FeeInput({ value, onCommit, label }: { value: number; onCommit: (n: num
   const [v, setV] = useState(String(value))
   useEffect(() => setV(String(value)), [value])
   const commit = () => { const n = Math.max(0, Math.round(Number(v) || 0)); setV(String(n)); if (n !== value) onCommit(n) }
-  return <input type="number" min={0} inputMode="numeric" aria-label={label} className={cn(inputClass, 'w-24 text-right')} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
+  return <input type="number" min={0} inputMode="numeric" aria-label={label} className={cn(inputClass, 'w-24 text-end')} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
 }
 
 function DeliveryTab() {
@@ -124,15 +131,15 @@ function DeliveryTab() {
     <div className="max-w-3xl">
       <p className="mb-4 text-sm text-muted-foreground">Tarifs en dinars. Un tarif s'enregistre quand vous quittez la case. Désactivez une wilaya pour ne plus y livrer.</p>
       <label className="mb-4 block space-y-1 text-sm"><span className="text-muted-foreground">Rechercher une wilaya</span><input type="search" className={`${inputClass} max-w-sm`} value={search} onChange={(e) => setSearch(e.target.value)} /></label>
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-border bg-secondary/50 text-left text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Wilaya</th><th className="px-4 py-3 text-right font-medium">À domicile</th><th className="px-4 py-3 text-right font-medium">Point relais</th><th className="px-4 py-3 text-center font-medium">Livrée</th></tr></thead>
+          <thead className="border-b border-border bg-secondary/50 text-start text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Wilaya</th><th className="px-4 py-3 text-end font-medium">À domicile</th><th className="px-4 py-3 text-end font-medium">Point relais</th><th className="px-4 py-3 text-center font-medium">Livrée</th></tr></thead>
           <tbody className="divide-y divide-border">
             {rows.map((w) => (
               <tr key={w.id} className={cn(!w.is_active && 'text-muted-foreground')}>
-                <td className="px-4 py-2"><span className="tnum mr-2 text-muted-foreground">{w.code}</span>{w.name}</td>
-                <td className="px-4 py-2 text-right"><FeeInput value={w.home_fee} label={`Tarif à domicile ${w.name}`} onCommit={(n) => patch(w, { home_fee: n })} /></td>
-                <td className="px-4 py-2 text-right"><FeeInput value={w.desk_fee} label={`Tarif point relais ${w.name}`} onCommit={(n) => patch(w, { desk_fee: n })} /></td>
+                <td className="px-4 py-2"><span className="tnum me-2 text-muted-foreground">{w.code}</span>{w.name}</td>
+                <td className="px-4 py-2 text-end"><FeeInput value={w.home_fee} label={`Tarif à domicile ${w.name}`} onCommit={(n) => patch(w, { home_fee: n })} /></td>
+                <td className="px-4 py-2 text-end"><FeeInput value={w.desk_fee} label={`Tarif point relais ${w.name}`} onCommit={(n) => patch(w, { desk_fee: n })} /></td>
                 <td className="px-4 py-2 text-center"><Switch checked={w.is_active} onCheckedChange={(v) => patch(w, { is_active: v })} aria-label={`Livrer à ${w.name}`} /></td>
               </tr>
             ))}
@@ -193,11 +200,11 @@ function TeamTab() {
   return (
     <div className="max-w-3xl">
       <div className="mb-4 flex justify-end"><Button className="h-10" onClick={() => setEditing('new')}><Plus className="size-4" aria-hidden />Nouveau compte</Button></div>
-      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+      <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
         {q.data.map((u) => (
           <li key={u.id} className="flex items-center gap-3 p-4">
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{u.name}{u.id === me.id && <span className="ml-2 text-xs text-muted-foreground">(vous)</span>}</p>
+              <p className="truncate font-medium">{u.name}{u.id === me.id && <span className="ms-2 text-xs text-muted-foreground">(vous)</span>}</p>
               <p className="truncate text-sm text-muted-foreground">{u.username}, {u.role === 'owner' ? 'propriétaire' : 'équipe'}{!u.is_active && ', désactivé'}{u.last_login_at ? `, vu ${formatDateTime(u.last_login_at)}` : ''}</p>
             </div>
             <button className="flex size-10 items-center justify-center rounded-md hover:bg-secondary" onClick={() => setEditing(u)} aria-label={`Modifier ${u.name}`}><Pencil className="size-4" /></button>

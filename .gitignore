@@ -14,8 +14,10 @@ backend/public/hot
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/dist-demo/
 frontend/.env
 frontend/.env.local
 
-# Deploy artifacts
+# Deploy artifacts (the zips, and the filled-in .env of each client)
 *.zip
+deploy/out/

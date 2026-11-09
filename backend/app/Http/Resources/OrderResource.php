@@ -30,6 +30,13 @@ class OrderResource extends JsonResource
                 'last_name' => $this->last_name,
                 'phone' => $this->phone,
                 'phone2' => $this->phone2,
+                /** Loyalty count of the customer (null when the programme is off or the order has no customer); `adds` = perfumes this order would add once completed. */
+                'loyalty' => $this->when($this->customer_id && $this->relationLoaded('items'), function () {
+                    $service = app(\App\Services\LoyaltyService::class);
+                    $progress = $service->progress(\App\Models\Customer::query()->find($this->customer_id));
+
+                    return $progress ? $progress + ['adds' => $this->status->value === 'en_attente' || $this->status->value === 'confirmee' || $this->status->value === 'en_livraison' ? $service->perfumeUnits($this->resource) : 0] : null;
+                }),
             ],
             'wilaya' => $this->whenLoaded('wilaya', fn () => $this->wilaya ? ['id' => $this->wilaya->id, 'name' => $this->wilaya->name] : null),
             'commune' => $this->whenLoaded('commune', fn () => $this->commune ? ['id' => $this->commune->id, 'name' => $this->commune->name] : null),
@@ -37,6 +44,10 @@ class OrderResource extends JsonResource
             'delivery_mode' => $this->delivery_mode,
             'customer_note' => $this->customer_note,
             'admin_note' => $this->admin_note,
+            /** The owner put this order aside until stock arrives. */
+            'awaiting_stock' => (bool) $this->awaiting_stock,
+            /** Pending orders only, when the items are loaded: can the stock cover it, and what is left per line. */
+            'stock_check' => $this->when($this->relationLoaded('items') && $this->status === \App\Enums\OrderStatus::EnAttente, fn () => app(\App\Services\StockService::class)->checkOrder($this->resource)),
             'subtotal' => $this->subtotal,
             'delivery_fee' => $this->delivery_fee,
             'discount' => $this->discount,

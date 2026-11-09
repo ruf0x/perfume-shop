@@ -28,6 +28,8 @@ class ShopController extends Controller
             'store_pickup_enabled' => $s['store_pickup_enabled'],
             'free_delivery_over' => $s['free_delivery_over'],
             'show_unavailable' => $s['show_unavailable'],
+            /** Where a new client is placed unless told otherwise (Oran, Oran). */
+            'default_location' => ['wilaya_id' => \App\Support\DefaultLocation::wilayaId(), 'commune_id' => \App\Support\DefaultLocation::communeId()],
             /** When false the website's /admin page only says to use the desktop app. */
             'web_admin_enabled' => settings()->webAdminEnabled(),
         ]]);
@@ -64,14 +66,14 @@ class ShopController extends Controller
                 'quantity' => $line->quantity,
                 'unit_price' => $line->unitPrice,
                 'line_total' => $line->lineTotal,
-                'available' => $line->available(),
-                'max_qty' => $line->maxQty,
+                'available' => $line->shopAvailable(),
+                'max_qty' => $line->shopMaxQty(),
             ])->values(),
             'removed' => $removed,
             'subtotal' => $quote->subtotal,
             'delivery_fee' => $withDelivery ? $quote->deliveryFee : null,
             'total' => $quote->total,
-            'all_available' => $quote->allAvailable(),
+            'all_available' => $quote->allShopAvailable(),
         ]]);
     }
 

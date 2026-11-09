@@ -12,6 +12,7 @@ use App\Models\Commune;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\User;
+use App\Support\DefaultLocation;
 use App\Support\Phone;
 use App\Support\Quote;
 use App\Support\QuoteLine;
@@ -55,7 +56,7 @@ class OrderPlacement
             }
 
             $quote = $this->pricing->quote($data['lines'], $wilayaId, $mode);
-            $this->assertAvailable($quote);
+            $this->assertAvailableOnline($quote);
 
             $customer = $this->upsertCustomer($phone, $data['first_name'], $data['last_name'], $wilayaId, $communeId, $data['address'] ?? null);
             $customer->increment('orders_count');
@@ -116,7 +117,8 @@ class OrderPlacement
 
             $customer = null;
             if ($phone) {
-                $customer = $this->upsertCustomer($phone, $data['first_name'] ?? 'Client', $data['last_name'] ?? 'Boutique');
+                [$wilayaId, $communeId] = $this->clientLocation($phone, $data);
+                $customer = $this->upsertCustomer($phone, $data['first_name'] ?? 'Client', $data['last_name'] ?? 'Boutique', $wilayaId, $communeId);
                 $customer->increment('orders_count');
             }
 
@@ -142,9 +144,29 @@ class OrderPlacement
             $this->createItems($order, $quote);
             $this->stock->deductForOrder($order, $user);
             $this->logCreation($order, OrderStatus::VendueBoutique, $user, 'Vente en caisse');
+            app(LoyaltyService::class)->record($order);
 
             return $order->load('items');
         });
+    }
+
+    /**
+     * The online shop. With backorder the customer may order more than the stock (the owner confirms or waits for
+     * stock), so only what the shop itself shows is checked: the item is still listed and the quantity is under the cap.
+     * The message never reveals the stock.
+     */
+    private function assertAvailableOnline(Quote $quote): void
+    {
+        if (! settings()->backorderEnabled()) {
+            $this->assertAvailable($quote);
+
+            return;
+        }
+
+        $gone = collect($quote->lines)->reject(fn (QuoteLine $line) => $line->shopAvailable());
+        if ($gone->isNotEmpty()) {
+            throw new ShopException('Un article de votre panier n\'est plus disponible : '.$gone->map(fn (QuoteLine $l) => $l->variant->product->name)->unique()->implode(', ').'.');
+        }
     }
 
     private function assertAvailable(Quote $quote): void
@@ -178,10 +200,33 @@ class OrderPlacement
                 'unit_price' => $line->unitPrice,
                 // The catalogue price at the time of the sale: it differs from unit_price when the cashier negotiated.
                 'list_price' => $line->variant->price,
+                'unit_cost' => $line->variant->unitCost(),
                 'quantity' => $line->quantity,
                 'line_total' => $line->lineTotal,
             ]);
         }
+    }
+
+    /**
+     * Wilaya and commune of a client added at the caisse: what was given, else (for a new client) the shop's own
+     * (Oran, Oran). A known client keeps the place we already have for them.
+     *
+     * @return array{0: ?int, 1: ?int}
+     */
+    private function clientLocation(string $phone, array $data): array
+    {
+        $existing = Customer::query()->where('phone', $phone)->first();
+        $wilayaId = $data['wilaya_id'] ?? null;
+        $communeId = $data['commune_id'] ?? null;
+
+        if ($wilayaId === null && $communeId === null) {
+            return $existing?->wilaya_id ? [null, null] : [DefaultLocation::wilayaId(), DefaultLocation::communeId()];
+        }
+        if ($communeId && ! Commune::query()->whereKey($communeId)->where('wilaya_id', $wilayaId)->exists()) {
+            throw new ShopException("Cette commune n'appartient pas à la wilaya choisie.");
+        }
+
+        return [$wilayaId, $communeId];
     }
 
     private function upsertCustomer(string $phone, string $firstName, string $lastName, ?int $wilayaId = null, ?int $communeId = null, ?string $address = null): Customer

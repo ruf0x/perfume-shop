@@ -95,7 +95,7 @@ it('records a caisse sale with change due, updating the stock', function () {
         'payment_method' => 'especes',
         'amount_received' => 6000,
         'discount' => 500,
-        'first_name' => 'Walid', 'phone' => '0550999888',
+        'first_name' => 'Walid', 'last_name' => 'Amrani', 'phone' => '0550999888',
     ])->assertCreated();
 
     expect($res->json('data.reference'))->toBe('POS-000001')

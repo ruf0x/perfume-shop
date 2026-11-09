@@ -52,7 +52,7 @@ export default function CartPage() {
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">{t('cart.delivery')}</dt>
-              <dd className="text-right text-muted-foreground">{t('cart.deliveryNext')}</dd>
+              <dd className="text-end text-muted-foreground">{t('cart.deliveryNext')}</dd>
             </div>
           </dl>
           {freeOver ? <p className="text-sm text-primary">{t('cart.freeOver', { amount: formatPrice(freeOver) })}</p> : null}

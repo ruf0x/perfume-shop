@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import { api } from '@/lib/api'
 import { clean } from './lib'
 import { prepareImage } from './imagePrep'
-import type { AdminProduct, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
+import type { AdminProduct, GiftSuggestions, Loyalty, LoyaltyTier, BottleMovement, BottleSizeRow, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
 
 /** Everything the admin shows may have changed after a write; "me" is left alone. */
 const refresh = (qc: QueryClient) => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'admin' && q.queryKey[1] !== 'me' })
@@ -262,6 +262,8 @@ export interface PosSalePayload {
   first_name?: string
   last_name?: string
   phone?: string
+  wilaya_id?: number
+  commune_id?: number
 }
 
 export function usePosSale() {
@@ -269,5 +271,133 @@ export function usePosSale() {
   return useMutation({
     mutationFn: (body: PosSalePayload) => api.post<{ data: Order }>('/admin/pos/sales', body).then((r) => r.data.data),
     onSuccess: () => refresh(qc), // stock, products, orders and dashboard all changed
+  })
+}
+
+// ── decant bottles ───────────────────────────────────────────────────────
+export function useBottles() {
+  return useQuery({
+    queryKey: ['admin', 'bottles'],
+    queryFn: () => api.get<{ data: BottleSizeRow[]; totals: { bottles_left: number; bought: number; invested: number; value_left: number } }>('/admin/bottles').then((r) => r.data),
+  })
+}
+
+export function useBottleMovements(ml?: number) {
+  return useQuery({
+    queryKey: ['admin', 'bottles', 'movements', ml ?? 'all'],
+    queryFn: () => api.get<{ data: BottleMovement[] }>('/admin/bottles/movements', { params: clean({ ml }) }).then((r) => r.data),
+  })
+}
+
+export function useBottleWrite() {
+  const qc = useQueryClient()
+  const done = () => refresh(qc)
+
+  return {
+    entry: useMutation({ mutationFn: (body: { ml: number; quantity: number; total_cost?: number; note?: string }) => api.post('/admin/bottles/entries', body), onSuccess: done }),
+    adjust: useMutation({ mutationFn: (body: { ml: number; quantity: number; type: 'perte' | 'ajustement'; note: string }) => api.post('/admin/bottles/adjustments', body), onSuccess: done }),
+    renameSize: useMutation({ mutationFn: ({ id, ml }: { id: number; ml: number }) => api.put(`/admin/bottles/${id}`, { ml }), onSuccess: done }),
+    deleteSize: useMutation({ mutationFn: (id: number) => api.delete(`/admin/bottles/${id}`), onSuccess: done }),
+    updateMovement: useMutation({ mutationFn: ({ id, ...body }: { id: number; quantity: number; total_cost?: number | null; note?: string | null }) => api.put(`/admin/bottles/movements/${id}`, body), onSuccess: done }),
+    deleteMovement: useMutation({ mutationFn: (id: number) => api.delete(`/admin/bottles/movements/${id}`), onSuccess: done }),
+  }
+}
+
+// ── loyalty ──────────────────────────────────────────────────────────────
+/** The customer behind a phone number (caisse): null while the number is too short or unknown. */
+export function useLoyaltyLookup(phone: string) {
+  const digits = phone.replace(/\D/g, '')
+
+  return useQuery({
+    queryKey: ['admin', 'loyalty', digits],
+    enabled: digits.length >= 9,
+    queryFn: () => api.get<{ data: { customer: { id: number; first_name: string; last_name: string } | null; loyalty: Loyalty | null } }>('/admin/loyalty', { params: { phone } }).then((r) => r.data.data),
+  })
+}
+
+export function useRedeemGift() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ customerId, variantId }: { customerId: number; variantId: number }) => api.post(`/admin/customers/${customerId}/loyalty/redeem`, { variant_id: variantId }),
+    onSuccess: () => refresh(qc),
+  })
+}
+
+/** Find a client while typing (name or phone): up to 8, with the place they live. */
+export interface CustomerHit {
+  id: number
+  first_name: string
+  last_name: string
+  phone: string
+  wilaya_id: number | null
+  commune_id: number | null
+  wilaya: string | null
+  orders_count: number
+}
+
+export function useCustomerSearch(q: string) {
+  return useQuery({
+    queryKey: ['admin', 'customers', 'search', q],
+    enabled: q.trim().length >= 2,
+    queryFn: () => api.get<{ data: CustomerHit[] }>('/admin/customers/search', { params: { q: q.trim() } }).then((r) => r.data.data),
+  })
+}
+
+// ── deleting ─────────────────────────────────────────────────────────────
+export function useDeleteOrder() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: number) => api.delete(`/admin/orders/${id}`), onSuccess: () => refresh(qc) })
+}
+
+export function useDeleteCustomer() {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: (id: number) => api.delete(`/admin/customers/${id}`), onSuccess: () => refresh(qc) })
+}
+
+// ── CSV import ───────────────────────────────────────────────────────────
+export type ImportFormat = 'perfumes' | 'options'
+
+export interface ImportReport {
+  format: ImportFormat
+  committed: boolean
+  rows: number
+  created: { line: number; name: string; brand: string | null; type: string; family: string | null; variants: { label: string; price: number }[]; stock_ml: number; stock_units: number }[]
+  skipped: { line: number; name: string; message: string }[]
+  errors: { line: number; name: string | null; message: string }[]
+}
+
+/** Checks a CSV (`commit: false`, nothing is saved) or imports it (`commit: true`). */
+export function useImportProducts() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ file, format, commit }: { file: File; format: ImportFormat; commit: boolean }) => {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('format', format)
+      body.append('commit', commit ? '1' : '0')
+
+      return api.post<{ data: ImportReport }>('/admin/imports/products', body).then((r) => r.data.data)
+    },
+    onSuccess: (report) => report.committed && refresh(qc),
+  })
+}
+
+export const downloadImportTemplate = (format: ImportFormat) => api.get(`/admin/imports/templates/${format}`, { responseType: 'blob' }).then((r) => r.data as Blob)
+
+/** The rounds of a customer (owner only). */
+export function useLoyaltyDetail(customerId: number) {
+  return useQuery({
+    queryKey: ['admin', 'loyalty-detail', customerId],
+    queryFn: () => api.get<{ data: { loyalty: Loyalty | null; tiers: LoyaltyTier[] } }>(`/admin/customers/${customerId}/loyalty`).then((r) => r.data.data),
+  })
+}
+
+/** Perfumes worth about the average of the gift waiting (owner only). */
+export function useLoyaltySuggestions(customerId: number) {
+  return useQuery({
+    queryKey: ['admin', 'loyalty-suggestions', customerId],
+    queryFn: () => api.get<{ data: GiftSuggestions | null }>(`/admin/customers/${customerId}/loyalty/suggestions`).then((r) => r.data.data),
   })
 }

@@ -250,3 +250,15 @@ it('lets a perfume be deleted once the only pack that used it has been deleted',
     $this->deleteJson("/api/admin/products/{$pack->product->id}")->assertNoContent();
     $this->deleteJson("/api/admin/products/{$a->id}")->assertNoContent();
 });
+
+it('saves the purchase price of each size and refuses a negative one', function () {
+    $payload = perfumePayload();
+    $payload['variants'][0]['cost_price'] = 600;
+
+    $this->postJson('/api/admin/products', $payload)->assertCreated()
+        ->assertJsonPath('data.variants.0.cost_price', 600)
+        ->assertJsonPath('data.variants.1.cost_price', null);
+
+    $payload['variants'][0]['cost_price'] = -5;
+    $this->postJson('/api/admin/products', $payload)->assertUnprocessable()->assertJsonValidationErrors(['variants.0.cost_price']);
+});

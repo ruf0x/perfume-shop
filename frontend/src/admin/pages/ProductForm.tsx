@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { QtyStepper } from '@/shop/components/QtyStepper'
+import { formatPrice } from '@/shop/format'
 import { api } from '@/lib/api'
 import { prepareImage } from '../imagePrep'
 import { PhotoCrop } from '../components/PhotoCrop'
@@ -24,6 +25,9 @@ interface Row {
   ml: string
   price: string
   compare: string
+  cost: string
+  /** Gain on the purchase price, in percent: typed here, or worked out from price and cost. */
+  gain: string
   mode: Exclude<StockMode, 'pack'>
   active: boolean
   stock_qty: number
@@ -34,6 +38,7 @@ interface Component {
   product: string
   label: string
   quantity: number
+  cost: number | null
 }
 
 interface FormState {
@@ -55,6 +60,7 @@ interface FormState {
   packPrice: string
   packCompare: string
   components: Component[]
+  packGain: string
 }
 
 const PRESETS: { label: string; ml: number; mode: Row['mode'] }[] = [
@@ -64,6 +70,21 @@ const PRESETS: { label: string; ml: number; mode: Row['mode'] }[] = [
   { label: 'Flacon complet 100 ml', ml: 100, mode: 'unit' },
   { label: 'Flacon complet 150 ml', ml: 150, mode: 'unit' },
 ]
+
+/** Gain on the purchase price, in percent: 20 means selling at cost + 20 %. */
+const gainOf = (price: number, cost: number) => (cost > 0 ? ((price - cost) / cost) * 100 : null)
+const pct = (v: number) => `${v > 0 ? '+' : ''}${(Math.round(v * 10) / 10).toString().replace('.', ',')} %`
+/** A price rounded up to the next 50 DA, so that the suggested prices look like real prices. */
+const roundUp50 = (v: number) => Math.ceil(v / 50) * 50
+
+/** The gain shown for a price and a cost typed as text ('' when either is missing). */
+const derivedGain = (price: string, cost: string) => {
+  const g = price !== '' && Number(cost) > 0 ? gainOf(Number(price), Number(cost)) : null
+
+  return g === null ? '' : String(Math.round(g * 10) / 10)
+}
+/** The price that gives a gain on a cost, to the dinar. */
+const priceFor = (cost: number, gain: number) => Math.round(cost * (1 + gain / 100))
 
 let seq = 0
 const newKey = () => `row-${++seq}`
@@ -84,16 +105,17 @@ function fromProduct(p?: AdminProduct): FormState {
     notes_base: p?.notes_base ?? '',
     is_active: p?.is_active ?? true,
     is_featured: p?.is_featured ?? false,
-    variants: p && p.kind !== 'pack' ? (p.variants ?? []).map((v) => ({ key: newKey(), id: v.id, label: v.label, ml: String(v.ml ?? ''), price: String(v.price), compare: v.compare_at_price ? String(v.compare_at_price) : '', mode: v.stock_mode === 'unit' ? 'unit' : 'pool', active: v.is_active, stock_qty: v.stock_qty })) : [],
+    variants: p && p.kind !== 'pack' ? (p.variants ?? []).map((v) => ({ key: newKey(), id: v.id, label: v.label, ml: String(v.ml ?? ''), price: String(v.price), compare: v.compare_at_price ? String(v.compare_at_price) : '', cost: v.cost_price !== null && v.cost_price !== undefined ? String(v.cost_price) : '', gain: derivedGain(String(v.price), v.cost_price != null ? String(v.cost_price) : ''), mode: v.stock_mode === 'unit' ? 'unit' : 'pool', active: v.is_active, stock_qty: v.stock_qty })) : [],
     packPrice: pack ? String(pack.price) : '',
+    packGain: pack && pack.cost_price ? derivedGain(String(pack.price), String(pack.cost_price)) : '',
     packCompare: pack?.compare_at_price ? String(pack.compare_at_price) : '',
-    components: pack?.components?.map((c) => ({ variant_id: c.variant_id, product: c.product, label: c.label, quantity: c.quantity })) ?? [],
+    components: pack?.components?.map((c) => ({ variant_id: c.variant_id, product: c.product, label: c.label, quantity: c.quantity, cost: c.cost_price })) ?? [],
   }
 }
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <section className="space-y-4 rounded-lg border border-border bg-card p-5">
+    <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
       <div>
         <h2 className="font-display text-xl">{title}</h2>
         {hint && <p className="mt-0.5 text-sm text-muted-foreground">{hint}</p>}
@@ -110,6 +132,16 @@ const Field = ({ label, error, className, children }: { label: string; error?: s
     {error && <span role="alert" className="block text-destructive">{error}</span>}
   </label>
 )
+
+/**
+ * Adds the chosen files to the cropping queue. The files are read BEFORE the input is emptied: reading them inside
+ * the state updater (which React may run later) found an empty list, so a second upload silently did nothing.
+ */
+function addToQueue(e: React.ChangeEvent<HTMLInputElement>, setQueue: React.Dispatch<React.SetStateAction<File[]>>) {
+  const picked = Array.from(e.target.files ?? [])
+  e.target.value = ''
+  if (picked.length > 0) setQueue((q) => [...q, ...picked])
+}
 
 function Photos({ product, disabled }: { product: AdminProduct; disabled: boolean }) {
   const { upload, remove, reorder } = useProductImages(product.id)
@@ -129,13 +161,13 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
   }
 
   return (
-    <Section title="Photos" hint="La première photo est celle de la boutique. Jpg, png ou webp, 5 Mo maximum.">
+    <Section title="Photos" hint="La première photo est celle de la boutique. Jpg, png ou webp : elle est recadrée et réduite automatiquement.">
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {images.map((img, i) => (
           <li key={img.id} className="space-y-1.5">
             <div className="relative aspect-square overflow-hidden rounded-md bg-secondary">
               <img src={img.url} alt={`Photo ${i + 1} de ${product.name}`} className="size-full object-cover" loading="lazy" />
-              {i === 0 && <span className="absolute top-2 left-2 rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground">Principale</span>}
+              {i === 0 && <span className="absolute top-2 start-2 rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground">Principale</span>}
             </div>
             {!disabled && (
               <div className="flex items-center justify-between">
@@ -157,7 +189,7 @@ function Photos({ product, disabled }: { product: AdminProduct; disabled: boolea
           </li>
         )}
       </ul>
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { setQueue((q) => [...q, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => addToQueue(e, setQueue)} />
       {queue[0] && <PhotoCrop key={queue.length + queue[0].name} file={queue[0]} onDone={sendCropped} onCancel={() => setQueue((q) => q.slice(1))} />}
     </Section>
   )
@@ -181,7 +213,7 @@ function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (fi
           <li key={`${file.name}-${i}`} className="space-y-1.5">
             <div className="relative aspect-square overflow-hidden rounded-md bg-secondary">
               <img src={previews[i]} alt={file.name} className="size-full object-cover" />
-              {i === 0 && <span className="absolute top-2 left-2 rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground">Principale</span>}
+              {i === 0 && <span className="absolute top-2 start-2 rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground">Principale</span>}
             </div>
             {!disabled && (
               <button type="button" onClick={() => onChange(files.filter((_, j) => j !== i))} className="flex h-9 w-full items-center justify-center gap-1.5 rounded text-sm text-muted-foreground hover:text-destructive">
@@ -200,7 +232,7 @@ function NewPhotos({ files, onChange, disabled }: { files: File[]; onChange: (fi
           </li>
         )}
       </ul>
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => { setQueue((q) => [...q, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => addToQueue(e, setQueue)} />
       {queue[0] && (
         <PhotoCrop
           key={queue.length + queue[0].name}
@@ -235,8 +267,22 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((s) => ({ ...s, [k]: v }))
   const err = (k: string) => errors[k]
 
-  const setRow = (i: number, patch: Partial<Row>) => set('variants', f.variants.map((r, j) => (j === i ? { ...r, ...patch } : r)))
-  const addRow = (p?: (typeof PRESETS)[number]) => set('variants', [...f.variants, { key: newKey(), label: p?.label ?? '', ml: p ? String(p.ml) : '', price: '', compare: '', mode: p?.mode ?? (isCosmetic ? 'unit' : 'pool'), active: true, stock_qty: 0 }])
+  // Price, cost and gain depend on each other: change one and the others follow (the gain wins when it is the one typed).
+  const withGain = (r: Row, patch: Partial<Row>): Row => {
+    const next = { ...r, ...patch }
+    if ('gain' in patch) return next.gain !== '' && Number(next.cost) > 0 && Number(next.gain) >= 0 ? { ...next, price: String(priceFor(Number(next.cost), Number(next.gain))) } : next
+    if ('price' in patch || 'cost' in patch) return { ...next, gain: derivedGain(next.price, next.cost) }
+
+    return next
+  }
+  const setRow = (i: number, patch: Partial<Row>) => set('variants', f.variants.map((r, j) => (j === i ? withGain(r, patch) : r)))
+  const addRow = (p?: (typeof PRESETS)[number]) => set('variants', [...f.variants, { key: newKey(), label: p?.label ?? '', ml: p ? String(p.ml) : '', price: '', compare: '', cost: '', gain: '', mode: p?.mode ?? (isCosmetic ? 'unit' : 'pool'), active: true, stock_qty: 0 }])
+  // Purchase helper (not saved): the gain wanted on every size.
+  const [wantedGain, setWantedGain] = useState('')
+  const packCost = f.components.length > 0 && f.components.every((c) => c.cost !== null) ? f.components.reduce((n, c) => n + (c.cost ?? 0) * c.quantity, 0) : null
+  const setPackPrice = (v: string) => setF((s) => ({ ...s, packPrice: v, packGain: packCost && v !== '' ? derivedGain(v, String(packCost)) : s.packGain }))
+  const setPackGain = (v: string) => setF((s) => ({ ...s, packGain: v, packPrice: packCost && v !== '' && Number(v) >= 0 ? String(priceFor(packCost, Number(v))) : s.packPrice }))
+  const applyWantedGain = () => Number(wantedGain) >= 0 && wantedGain !== '' && set('variants', f.variants.map((r) => (r.cost !== '' && Number(r.cost) > 0 ? withGain(r, { price: String(roundUp50(Number(r.cost) * (1 + Number(wantedGain) / 100))) }) : r)))
   const moveRow = (i: number, d: number) => {
     const rows = [...f.variants]
     ;[rows[i], rows[i + d]] = [rows[i + d], rows[i]]
@@ -265,7 +311,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
     }
     return {
       ...common,
-      variants: f.variants.map((r, i) => ({ id: r.id, label: r.label.trim(), ml: n(r.ml), price: Number(r.price), compare_at_price: n(r.compare), stock_mode: r.mode, is_active: r.active, sort_order: i })),
+      variants: f.variants.map((r, i) => ({ id: r.id, label: r.label.trim(), ml: n(r.ml), price: Number(r.price), compare_at_price: n(r.compare), cost_price: n(r.cost), stock_mode: r.mode, is_active: r.active, sort_order: i })),
     }
   }
 
@@ -387,15 +433,25 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
               hint={isCosmetic ? "Chaque option (une taille, une teinte, un lot...) a son prix et son stock. « À l'unité » se compte en pièces ; « Au millilitre » est versé depuis le stock en ml du produit." : 'Chaque taille a son prix. « À décanter » est versé depuis le stock en ml du parfum ; « Flacon scellé » se compte en flacons.'}
             >
               {err('variants') && <p role="alert" className="text-sm text-destructive">{err('variants')}</p>}
+              <div className="space-y-3 rounded-md bg-secondary/60 p-3 text-sm">
+                <p className="font-medium">Bénéfice sur toutes les tailles <span className="font-normal text-muted-foreground">(facultatif, visible par vous seulement)</span></p>
+                <div className="flex flex-wrap items-end gap-3">
+                  <Field label="Bénéfice voulu (%)" className="w-36"><input type="number" min={0} inputMode="decimal" className={inputClass} value={wantedGain} onChange={(e) => setWantedGain(e.target.value)} placeholder="20" /></Field>
+                  <Button type="button" variant="outline" className="h-10" disabled={wantedGain === '' || !f.variants.some((r) => Number(r.cost) > 0)} onClick={applyWantedGain}>Calculer les prix de vente</Button>
+                  <p className="pb-2 text-muted-foreground">Prix de vente = prix d'achat + ce pourcentage, arrondi aux 50 DA supérieurs. Vous pouvez ensuite corriger chaque prix.</p>
+                </div>
+              </div>
               <ul className="space-y-3">
                 {f.variants.map((r, i) => (
                   <li key={r.key} className="rounded-md border border-border p-3">
                     <div className="grid grid-cols-6 gap-3">
-                      <Field label="Nom" error={err(`variants.${i}.label`)} className="col-span-6 sm:col-span-2"><input className={inputClass} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} placeholder={isCosmetic ? '250 ml, Rose nude, Boîte de 24' : '20 ml'} /></Field>
+                      <Field label="Nom" error={err(`variants.${i}.label`)} className="col-span-6 sm:col-span-3"><input className={inputClass} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} placeholder={isCosmetic ? '250 ml, Rose nude, Boîte de 24' : '20 ml'} /></Field>
                       <Field label={isCosmetic && r.mode === 'unit' ? 'Contenance (ml), facultatif' : 'Contenance (ml)'} error={err(`variants.${i}.ml`)} className="col-span-2 sm:col-span-1"><input type="number" min={1} inputMode="numeric" className={inputClass} value={r.ml} onChange={(e) => setRow(i, { ml: e.target.value })} /></Field>
                       <Field label="Prix (DA)" error={err(`variants.${i}.price`)} className="col-span-2 sm:col-span-1"><input type="number" min={0} inputMode="numeric" className={inputClass} value={r.price} onChange={(e) => setRow(i, { price: e.target.value })} /></Field>
                       <Field label="Ancien prix" className="col-span-2 sm:col-span-1"><input type="number" min={0} inputMode="numeric" className={inputClass} value={r.compare} onChange={(e) => setRow(i, { compare: e.target.value })} placeholder="barré" /></Field>
-                      <Field label="Type de stock" className="col-span-6 sm:col-span-3">
+                      <Field label="Prix d'achat (DA)" className="col-span-3 sm:col-span-1"><input type="number" min={0} inputMode="numeric" className={inputClass} value={r.cost} onChange={(e) => setRow(i, { cost: e.target.value })} /></Field>
+                      <Field label="Bénéfice (%)" className="col-span-3 sm:col-span-1"><input type="number" min={0} step="0.1" inputMode="decimal" className={inputClass} value={r.gain} disabled={!(Number(r.cost) > 0)} onChange={(e) => setRow(i, { gain: e.target.value })} /></Field>
+                      <Field label="Type de stock" className="col-span-6 sm:col-span-2">
                         <select className={inputClass} value={r.mode} onChange={(e) => setRow(i, { mode: e.target.value as Row['mode'] })} disabled={r.stock_qty > 0}>
                           {isCosmetic ? (
                             <>
@@ -410,7 +466,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                           )}
                         </select>
                       </Field>
-                      <div className="col-span-6 flex items-end justify-between gap-2 sm:col-span-3">
+                      <div className="col-span-6 flex min-w-0 flex-wrap items-end justify-between gap-2 sm:col-span-2">
                         <label className="flex items-center gap-2 pb-2 text-sm"><Switch checked={r.active} onCheckedChange={(v) => setRow(i, { active: v })} />Vendue</label>
                         <span className="flex">
                           <button type="button" disabled={i === 0} onClick={() => moveRow(i, -1)} className="flex size-10 items-center justify-center rounded hover:bg-secondary disabled:opacity-30" aria-label="Monter"><ArrowUp className="size-4" /></button>
@@ -419,6 +475,12 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                         </span>
                       </div>
                     </div>
+                    {r.cost !== '' && r.price !== '' && Number(r.cost) >= 0 && (
+                      <p className="tnum mt-2 text-sm">
+                        Bénéfice : <strong className={Number(r.price) < Number(r.cost) ? 'text-destructive' : ''}>{formatPrice(Number(r.price) - Number(r.cost))}</strong>
+                        {gainOf(Number(r.price), Number(r.cost)) !== null && <span className="text-muted-foreground">{` (${pct(gainOf(Number(r.price), Number(r.cost))!)} du prix d'achat)`}</span>}
+                      </p>
+                    )}
                     {r.id && r.mode === 'unit' && <p className="tnum mt-2 text-xs text-muted-foreground">{r.stock_qty} {isCosmetic ? 'article(s)' : 'flacon(s)'} en stock. Le stock se gère dans « Stock ».</p>}
                   </li>
                 ))}
@@ -433,9 +495,23 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
           ) : (
             <Section title="Contenu et prix du pack" hint="Choisissez les produits (parfums, cosmétiques) et leurs tailles ou options qui composent le pack.">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Prix du pack (DA)" error={err('pack.price')}><input type="number" min={0} inputMode="numeric" className={inputClass} value={f.packPrice} onChange={(e) => set('packPrice', e.target.value)} /></Field>
+                <Field label="Prix du pack (DA)" error={err('pack.price')}><input type="number" min={0} inputMode="numeric" className={inputClass} value={f.packPrice} onChange={(e) => setPackPrice(e.target.value)} /></Field>
                 <Field label="Ancien prix (barré)"><input type="number" min={0} inputMode="numeric" className={inputClass} value={f.packCompare} onChange={(e) => set('packCompare', e.target.value)} /></Field>
               </div>
+              {packCost !== null ? (
+                <div className="space-y-2 rounded-md bg-secondary/60 p-3 text-sm">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <p className="tnum pb-2">{`Prix d'achat des produits : ${formatPrice(packCost)}.`}</p>
+                    <Field label="Bénéfice (%)" className="w-32"><input type="number" min={0} step="0.1" inputMode="decimal" className={inputClass} value={f.packGain} onChange={(e) => setPackGain(e.target.value)} /></Field>
+                  </div>
+                  {f.packPrice !== '' && (
+                    <p className="tnum">
+                      Bénéfice : <strong className={Number(f.packPrice) < packCost ? 'text-destructive' : ''}>{formatPrice(Number(f.packPrice) - packCost)}</strong>
+                      {gainOf(Number(f.packPrice), packCost) !== null && <span className="text-muted-foreground">{` (${pct(gainOf(Number(f.packPrice), packCost)!)} du prix d'achat)`}</span>}
+                    </p>
+                  )}
+                </div>
+              ) : f.components.length > 0 && <p className="text-sm text-muted-foreground">Le bénéfice du pack se calcule quand chaque produit du pack a un prix d'achat.</p>}
               {err('pack.components') && <p role="alert" className="text-sm text-destructive">{err('pack.components')}</p>}
               <ul className="divide-y divide-border rounded-md border border-border">
                 {f.components.map((c, i) => (
@@ -449,7 +525,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                 ))}
               </ul>
               <Button type="button" variant="outline" className="h-10" onClick={() => setPicker(true)}><Plus className="size-4" aria-hidden />Ajouter un produit</Button>
-              <VariantPicker open={picker} onOpenChange={setPicker} title="Ajouter au pack" onPick={(v, p) => set('components', f.components.some((c) => c.variant_id === v.id) ? f.components.map((c) => (c.variant_id === v.id ? { ...c, quantity: c.quantity + 1 } : c)) : [...f.components, { variant_id: v.id, product: p.name, label: v.label, quantity: 1 }])} />
+              <VariantPicker open={picker} onOpenChange={setPicker} title="Ajouter au pack" onPick={(v, p) => set('components', f.components.some((c) => c.variant_id === v.id) ? f.components.map((c) => (c.variant_id === v.id ? { ...c, quantity: c.quantity + 1 } : c)) : [...f.components, { variant_id: v.id, product: p.name, label: v.label, quantity: 1, cost: v.cost_price }])} />
             </Section>
           )}
 

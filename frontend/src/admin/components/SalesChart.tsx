@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { langFormat } from '../i18n/lang'
 import { cn } from '@/lib/utils'
 import { formatPrice } from '@/shop/format'
 import { parseDay } from '../lib'
@@ -10,8 +11,8 @@ import type { DashboardDay } from '../types'
  * contrast ≥ 3:1 on the card surface). Marks follow the spec: ≤ 24 px thick, 4 px rounded data end,
  * square at the baseline, a 2 px surface gap between stacked segments, hairline solid grid.
  */
-export const ONLINE = '#12805c'
-export const POS = '#c4850a'
+export const ONLINE = '#33363a'
+export const POS = '#9aa0a8'
 
 interface Bucket {
   key: string
@@ -23,9 +24,9 @@ interface Bucket {
   orders: number
 }
 
-const dayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-const shortFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
-const weekdayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric' })
+const dayFmt = langFormat({ weekday: 'long', day: 'numeric', month: 'long' })
+const shortFmt = langFormat({ day: 'numeric', month: 'short' })
+const weekdayFmt = langFormat({ weekday: 'short', day: 'numeric' })
 
 /** Up to ~6 weeks: one column per day. Longer: one per week (Monday to Sunday), so columns stay readable. */
 function bucketize(days: DashboardDay[]): Bucket[] {
@@ -130,10 +131,10 @@ export function SalesChart({ days, stale }: { days: DashboardDay[]; stale?: bool
         <div className={cn('max-h-80 overflow-auto rounded-md border border-border', stale && 'opacity-60')}>
           <table className="w-full text-sm">
             <caption className="sr-only">Ventes par période, en ligne et en caisse</caption>
-            <thead className="sticky top-0 bg-secondary text-left text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Période</th><th className="px-3 py-2 text-right font-medium">En ligne</th><th className="px-3 py-2 text-right font-medium">Caisse</th><th className="px-3 py-2 text-right font-medium">Total</th><th className="px-3 py-2 text-right font-medium">Ventes</th></tr></thead>
+            <thead className="sticky top-0 bg-secondary text-start text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Période</th><th className="px-3 py-2 text-end font-medium">En ligne</th><th className="px-3 py-2 text-end font-medium">Caisse</th><th className="px-3 py-2 text-end font-medium">Total</th><th className="px-3 py-2 text-end font-medium">Ventes</th></tr></thead>
             <tbody className="tnum divide-y divide-border">
               {buckets.map((b) => (
-                <tr key={b.key}><td className="px-3 py-2">{b.title}</td><td className="px-3 py-2 text-right">{formatPrice(b.online)}</td><td className="px-3 py-2 text-right">{formatPrice(b.pos)}</td><td className="px-3 py-2 text-right font-medium">{formatPrice(b.total)}</td><td className="px-3 py-2 text-right">{b.orders}</td></tr>
+                <tr key={b.key}><td className="px-3 py-2">{b.title}</td><td className="px-3 py-2 text-end">{formatPrice(b.online)}</td><td className="px-3 py-2 text-end">{formatPrice(b.pos)}</td><td className="px-3 py-2 text-end font-medium">{formatPrice(b.total)}</td><td className="px-3 py-2 text-end">{b.orders}</td></tr>
               ))}
             </tbody>
           </table>

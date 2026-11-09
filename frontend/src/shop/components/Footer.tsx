@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { formatPhone, phoneHref } from '../format'
 import { useSettings } from '../queries'
+import { brand } from '@/lib/brand'
 
 const SOCIAL_LABELS: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', whatsapp: 'WhatsApp' }
 
@@ -14,7 +15,7 @@ export function Footer() {
     <footer className="mt-24 bg-oud text-oud-foreground">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div className="space-y-3">
-          <img src="/brand/logo-light.webp" alt={s?.shop_name ?? t('brand.name')} width={900} height={797} className="h-32 w-auto" />
+          <img src={brand('logo-light')} alt={s?.shop_name ?? t('brand.name')} width={632} height={900} className="h-40 w-auto" />
           <p className="max-w-sm text-sm leading-relaxed text-oud-foreground/75">{t('footer.about')}</p>
         </div>
 

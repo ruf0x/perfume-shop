@@ -11,7 +11,10 @@ import { useSettings } from '@/shop/queries'
 import { EmptyState, Loading, PageHeader, Pagination, inputClass } from '../components/common'
 import { apiError } from '../lib'
 import { printTicket } from '../printHelper'
-import { useAdminProducts, usePosSale, useProductTypes, useTaxa } from '../queries'
+import { useAdminProducts, useLoyaltyLookup, usePosSale, useProductTypes, useTaxa } from '../queries'
+import { useIsOwner } from '../auth'
+import { ClientPicker, emptyClient, type ClientFields } from '../components/ClientPicker'
+import { GiftDialog, LoyaltyNote } from '../components/Loyalty'
 import type { AdminProduct, AdminVariant, Order, StockMode } from '../types'
 import { useDebounced } from '../useDebounced'
 
@@ -71,7 +74,7 @@ function SizeDialog({ product, onClose, onPick }: { product: AdminProduct; onClo
             const s = variantState(product, v)
             return (
               <li key={v.id}>
-                <button type="button" disabled={!s.ok} onClick={() => onPick(v)} className="flex w-full items-center justify-between gap-4 rounded-md border border-input bg-card px-4 py-3 text-left hover:border-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input disabled:hover:bg-card">
+                <button type="button" disabled={!s.ok} onClick={() => onPick(v)} className="flex w-full items-center justify-between gap-4 rounded-md border border-input bg-card px-4 py-3 text-start hover:border-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input disabled:hover:bg-card">
                   <span><span className="block font-medium">{v.label}</span><span className="text-sm text-muted-foreground">{s.hint}</span></span>
                   <span className="tnum font-display text-xl">{formatPrice(v.price)}</span>
                 </button>
@@ -136,8 +139,11 @@ export default function Caisse() {
   const [discountValue, setDiscountValue] = useState('')
   const [payment, setPayment] = useState<Payment>('especes')
   const [received, setReceived] = useState('')
-  const [client, setClient] = useState({ first_name: '', last_name: '', phone: '' })
+  const [client, setClient] = useState<ClientFields>(emptyClient)
   const [done, setDone] = useState<Order | null>(null)
+  const lookup = useLoyaltyLookup(useDebounced(client.phone, 500))
+  const owner = useIsOwner()
+  const [gift, setGift] = useState(false)
 
   const subtotal = lines.reduce((s, l) => s + priceOf(l) * l.qty, 0)
   // How much the cashier gave away by changing prices (shown, so it is never a surprise).
@@ -149,7 +155,10 @@ export default function Caisse() {
   const cash = received === '' ? total : Number(received) || 0
   const change = cash - total
   const count = lines.reduce((n, l) => n + l.qty, 0)
-  const canSell = lines.length > 0 && (payment !== 'especes' || cash >= total) && !sale.isPending
+  // A client is optional, but once started it needs the first name, last name and phone.
+  const clientTyped = client.first_name.trim() !== '' || client.last_name.trim() !== '' || client.phone.trim() !== ''
+  const clientOk = !clientTyped || (client.first_name.trim() !== '' && client.last_name.trim() !== '' && client.phone.trim() !== '')
+  const canSell = lines.length > 0 && clientOk && (payment !== 'especes' || cash >= total) && !sale.isPending
 
   const add = (p: AdminProduct, v: AdminVariant) => {
     const base: Line = { variantId: v.id, productId: p.id, name: p.name, label: v.label, listPrice: v.price, priceText: String(v.price), qty: 1, mode: v.stock_mode, ml: v.ml, poolStock: p.stock_ml, unitStock: v.stock_qty }
@@ -165,7 +174,7 @@ export default function Caisse() {
     setLines([])
     setDiscountValue('')
     setReceived('')
-    setClient({ first_name: '', last_name: '', phone: '' })
+    setClient(emptyClient)
     setPayment('especes')
     setDone(null)
     setTimeout(() => search.current?.focus(), 50)
@@ -182,6 +191,8 @@ export default function Caisse() {
         first_name: client.first_name.trim() || undefined,
         last_name: client.last_name.trim() || undefined,
         phone: client.phone.trim() || undefined,
+        wilaya_id: client.wilaya_id || undefined,
+        commune_id: client.commune_id || undefined,
       },
       { onSuccess: setDone, onError: (e) => toast.error(apiError(e)) },
     )
@@ -213,11 +224,11 @@ export default function Caisse() {
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <section aria-label="Produits" className="min-w-0">
-          <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_12rem]">
+          <div className="mb-4 grid gap-3 xl:grid-cols-[1fr_12rem]">
             <label className="relative block">
               <span className="sr-only">Rechercher un produit</span>
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <input ref={search} type="search" autoFocus value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Rechercher un produit ou un pack   (touche /)" className={`${inputClass} h-11 pl-9`} />
+              <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <input ref={search} type="search" autoFocus value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Rechercher un produit ou un pack   (touche /)" className={`${inputClass} h-11 ps-9`} />
             </label>
             <select className={`${inputClass} h-11`} aria-label="Famille ou catégorie" value={typeId ?? ''} onChange={(e) => setTypeId(e.target.value ? Number(e.target.value) : undefined)}>
               <option value="">Tout le catalogue</option>
@@ -234,10 +245,10 @@ export default function Caisse() {
               <ul className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4', products.isPlaceholderData && 'opacity-60')}>
                 {items.map((p) => (
                   <li key={p.id}>
-                    <button type="button" onClick={() => setPicked(p)} disabled={!p.available && p.kind !== 'pack' && p.stock_ml === 0 && !p.variants?.some((v) => v.stock_qty > 0)} className="group block w-full rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50">
+                    <button type="button" onClick={() => setPicked(p)} disabled={!p.available && p.kind !== 'pack' && p.stock_ml === 0 && !p.variants?.some((v) => v.stock_qty > 0)} className="group block w-full rounded-lg text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50">
                       <div className="relative aspect-square overflow-hidden rounded-lg bg-secondary">
                         <ProductVisual image={p.image} name={p.name} type={p.type?.slug} rayon={p.product_type?.slug} level={p.available ? 0.7 : 0.1} />
-                        {!p.available && <span className="absolute top-2 left-2 rounded bg-oud px-2 py-0.5 text-xs text-oud-foreground">Épuisé</span>}
+                        {!p.available && <span className="absolute top-2 start-2 rounded bg-oud px-2 py-0.5 text-xs text-oud-foreground">Épuisé</span>}
                       </div>
                       <p className="mt-2 truncate font-display text-base leading-tight group-hover:underline">{p.name}</p>
                       <p className="tnum text-sm text-muted-foreground">{p.kind === 'pack' ? 'Pack ' : 'dès '}{formatPrice(Math.min(...(p.variants?.filter((v) => v.is_active).map((v) => v.price) ?? [0])))}</p>
@@ -250,7 +261,7 @@ export default function Caisse() {
           )}
         </section>
 
-        <aside id="panier-caisse" aria-label="Vente en cours" className="h-fit space-y-5 rounded-lg border border-border bg-card p-5 lg:sticky lg:top-6">
+        <aside id="panier-caisse" aria-label="Vente en cours" className="h-fit space-y-5 rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-6">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl">Vente en cours</h2>
             {lines.length > 0 && <button type="button" onClick={() => setLines([])} className="flex items-center gap-1.5 rounded px-2 py-1 text-sm text-muted-foreground hover:text-destructive"><Trash2 className="size-4" aria-hidden />Vider</button>}
@@ -325,11 +336,15 @@ export default function Caisse() {
 
             <details className="rounded-md border border-border p-3 text-sm">
               <summary className="cursor-pointer text-muted-foreground">Ajouter le client (facultatif)</summary>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <input aria-label="Prénom" placeholder="Prénom" className={inputClass} value={client.first_name} onChange={(e) => setClient({ ...client, first_name: e.target.value })} />
-                <input aria-label="Nom" placeholder="Nom" className={inputClass} value={client.last_name} onChange={(e) => setClient({ ...client, last_name: e.target.value })} />
-                <input aria-label="Téléphone" placeholder="Téléphone" inputMode="tel" className={`${inputClass} col-span-2`} value={client.phone} onChange={(e) => setClient({ ...client, phone: e.target.value })} />
-              </div>
+              <div className="mt-3"><ClientPicker value={client} onChange={setClient} /></div>
+              {lookup.data?.customer && lookup.data.loyalty && (
+                <div className="mt-3 rounded-md bg-secondary/60 p-3">
+                  <p className="mb-1 font-medium">{`${lookup.data.customer.first_name} ${lookup.data.customer.last_name}`}</p>
+                  <LoyaltyNote loyalty={lookup.data.loyalty} customerId={lookup.data.customer.id} />
+                  {owner && lookup.data.loyalty.pending.length > 0 && <Button variant="outline" className="mt-2 h-9" onClick={() => setGift(true)}>Offrir le cadeau</Button>}
+                </div>
+              )}
+              {gift && lookup.data?.customer && lookup.data.loyalty && <GiftDialog customerId={lookup.data.customer.id} name={`${lookup.data.customer.first_name} ${lookup.data.customer.last_name}`} loyalty={lookup.data.loyalty} onClose={() => setGift(false)} />}
             </details>
           </fieldset>
 

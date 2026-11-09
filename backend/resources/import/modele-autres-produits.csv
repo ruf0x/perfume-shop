@@ -1,0 +1,7 @@
+﻿type;categorie;marque;nom;description;genre;option;prix;ancien_prix;achat;stock;actif
+Cosmétiques;Soin du corps;Nivea;Crème corps hydratante;Hydratation 24 h;;250 ml;900;;750;10;oui
+Cosmétiques;Soin du corps;Nivea;Crème corps hydratante;;;400 ml;1400;;1167;6;oui
+Cosmétiques;Maquillage;Maybelline;Rouge à lèvres mat;Tenue longue durée;;Rose nude;1400;1600;1167;8;oui
+Cosmétiques;Maquillage;Maybelline;Rouge à lèvres mat;;;Rouge cerise;1400;;1167;5;oui
+Montres;Montres sport;Casio;G-Shock GA-2100;Résistante aux chocs;homme;Noir;24000;;20000;3;oui
+Montres;Montres sport;Casio;G-Shock GA-2100;;;Vert;25000;;20833;2;oui

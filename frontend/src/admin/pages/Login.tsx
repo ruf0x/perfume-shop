@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
-import { isDesktop } from '@/lib/api'
+import { isDemo, isDesktop } from '@/lib/api'
+import { brand } from '@/lib/brand'
 import { useLogin, useMe } from '../auth'
 import { apiError } from '../lib'
 import { inputClass } from '../components/common'
+import { LangSwitch } from '../i18n/LangSwitch'
 
 export default function Login() {
   const { data: user } = useMe()
@@ -18,18 +20,24 @@ export default function Login() {
 
   if (user) return <Navigate to={target} replace />
 
+  const enter = (as: string) => login.mutate({ username: as, password: 'demo' }, { onSuccess: () => navigate(target, { replace: true }) })
+
   const submit = (e: FormEvent) => {
     e.preventDefault()
     login.mutate({ username: username.trim(), password }, { onSuccess: () => navigate(target, { replace: true }) })
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-secondary/50 p-4">
+    <div className="flex min-h-svh items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-1 text-center text-3xl">Administration</h1>
+        <div className="mb-6 flex justify-center">
+          <LangSwitch />
+        </div>
+        <img src={brand('logo-mark')} alt="" width={221} height={256} className="mx-auto mb-4 h-20 w-auto" />
+        <h1 className="mb-1 text-center text-2xl font-semibold">Administration</h1>
         <p className="mb-6 text-center text-muted-foreground">Connectez-vous pour gérer la boutique.</p>
 
-        <form onSubmit={submit} className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm" noValidate>
+        <form onSubmit={submit} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm" noValidate>
           <div className="space-y-1.5">
             <label htmlFor="username" className="block text-sm font-medium">
               Identifiant
@@ -53,6 +61,17 @@ export default function Login() {
             {login.isPending ? 'Connexion…' : 'Se connecter'}
           </Button>
         </form>
+
+        {/* The demo site has no real accounts: one click signs in. */}
+        {isDemo && (
+          <div className="mt-4 space-y-3 rounded-2xl border border-dashed border-border p-4 text-center text-sm">
+            <p className="text-muted-foreground">Démo : entrez sans mot de passe.</p>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="h-10 flex-1" disabled={login.isPending} onClick={() => enter('admin')}>Entrer comme propriétaire</Button>
+              <Button type="button" variant="outline" className="h-10 flex-1" disabled={login.isPending} onClick={() => enter('equipe')}>Entrer comme employé</Button>
+            </div>
+          </div>
+        )}
 
         {/* In the desktop app there is no shop to go back to. */}
         {!isDesktop && (

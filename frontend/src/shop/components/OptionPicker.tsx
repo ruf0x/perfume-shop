@@ -46,7 +46,7 @@ export function OptionPicker({ options, value, onChange, legend, soldOutLabel, c
                   soldOutLabel
                 ) : (
                   <>
-                    {option.compareAt ? <span className="mr-2 line-through">{formatPrice(option.compareAt)}</span> : null}
+                    {option.compareAt ? <span className="me-2 line-through">{formatPrice(option.compareAt)}</span> : null}
                     <span className="text-foreground">{formatPrice(option.price)}</span>
                   </>
                 )}

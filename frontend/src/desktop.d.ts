@@ -1,6 +1,6 @@
 /** What the Electron preload script exposes to the page (see desktop/src/preload.js). Absent on the website. */
 interface DesktopBridge {
-  /** The server this app was set up with, e.g. https://api.arena-cosmetique.com (no trailing slash). */
+  /** The server this app was set up with, e.g. https://api.votre-domaine.com (no trailing slash). */
   apiUrl: string
   version: string
   /** The sign-in token, kept encrypted by the operating system. */

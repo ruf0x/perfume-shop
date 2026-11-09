@@ -135,18 +135,18 @@ export default function Products({ kind }: { kind: 'goods' | 'pack' }) {
         <EmptyState title={`Aucun ${noun}`} hint={params.toString() ? 'Aucun résultat avec ces filtres.' : `Créez votre premier ${noun} pour le voir dans la boutique.`} action={owner && !params.toString() ? (isPack ? <Link to={`${base}/nouveau`} className={linkButton()}>Créer un pack</Link> : <NewProductButton />) : undefined} />
       ) : (
         <>
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
             {items.map((p) => (
               <li key={p.id} className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
                 <button type="button" onClick={() => navigate(`${base}/${p.id}`)} className="size-16 shrink-0 overflow-hidden rounded-md bg-secondary focus-visible:outline-2 focus-visible:outline-ring" aria-label={`Ouvrir ${p.name}`}>
                   <ProductVisual image={p.image} name="" type={p.type?.slug} rayon={p.product_type?.slug} level={0.7} />
                 </button>
                 <Link to={`${base}/${p.id}`} className="min-w-0 flex-1 focus-visible:outline-2 focus-visible:outline-ring">
-                  <p className="truncate font-display text-lg leading-tight">{p.name}{showTypeBadge && p.product_type && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">{p.product_type.name}</span>}</p>
+                  <div className="flex min-w-0 items-center gap-2"><p className="min-w-0 truncate font-display text-lg leading-tight">{p.name}</p>{showTypeBadge && p.product_type && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-sans text-xs text-accent-foreground">{p.product_type.name}</span>}</div>
                   <p className="truncate text-sm text-muted-foreground">{[p.brand?.name, p.type?.name].filter(Boolean).join(', ') || (isPack ? 'Pack' : 'Sans classement')}</p>
                   <p className="tnum mt-0.5 hidden truncate text-sm sm:block">{sizes(p)}</p>
                 </Link>
-                <div className="hidden w-36 text-right text-sm md:block"><Stock p={p} /></div>
+                <div className="hidden w-36 text-end text-sm md:block"><Stock p={p} /></div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <Switch checked={p.is_active} disabled={!owner || save.isPending} onCheckedChange={(v) => toggle(p, v)} aria-label={`${p.name} visible dans la boutique`} />
                   <span className="text-xs text-muted-foreground">{p.is_active ? 'Visible' : 'Masqué'}</span>

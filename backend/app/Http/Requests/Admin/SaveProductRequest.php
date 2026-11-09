@@ -95,6 +95,7 @@ class SaveProductRequest extends FormRequest
             'variants.*.ml' => ['nullable', 'integer', 'min:1', 'max:10000'],
             'variants.*.price' => ['required', 'integer', 'min:0'],
             'variants.*.compare_at_price' => ['nullable', 'integer', 'min:0'],
+            'variants.*.cost_price' => ['nullable', 'integer', 'min:0'],
             /** `pool` = poured from the product's ml stock, `unit` = an item counted on its own (sealed bottle, watch, shade...). */
             'variants.*.stock_mode' => ['required', Rule::in([StockMode::Pool->value, StockMode::Unit->value])],
             'variants.*.sku' => ['nullable', 'string', 'max:50'],

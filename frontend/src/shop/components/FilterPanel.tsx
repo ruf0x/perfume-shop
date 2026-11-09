@@ -81,7 +81,7 @@ export function FilterPanel({ filters, productTypes, brands, onChange, idPrefix,
 
       <fieldset>
         <legend className="mb-2 font-display text-lg">{selected ? (selected.profile === 'perfume' ? t('shopPage.families') : t('shopPage.categories')) : t('shopPage.type')}</legend>
-        <div className="max-h-36 overflow-y-auto overscroll-contain pr-1">
+        <div className="max-h-36 overflow-y-auto overscroll-contain pe-1">
         <Choice name={`${idPrefix}-type`} checked={!filters.type} label={t('shopPage.allTypes')} onSelect={() => onChange({ type: undefined })} />
         {groups.map((group) => (
           <div key={group.id} className={groups.length > 1 ? 'mt-2' : undefined}>

@@ -34,7 +34,7 @@ Send it on every admin request as `Authorization: Bearer <token>`.
 
 The desktop app signs in with `POST /admin/desktop/login` (`{ "username", "password" }`) and gets `{ token, expires_at, user }`; the token lasts 30 days. Send it as `Authorization: Bearer <token>`; no cookie and no CSRF header. `POST /admin/logout` with the token deletes it. The app's origin is `app://local` (allowed by CORS).
 
-**Administration on the website.** It is a switch in the code, `config/features.php` (`'web_admin' => false`), chosen per shop when it is delivered; it cannot be changed through the API. While it is off, the website's cookie sign-in and every call that comes from a browser session answer `403 { "code": "web_admin_disabled" }`; calls with a Bearer token (the desktop app) keep working, and the shop itself is unaffected. `GET /settings/public` exposes `web_admin_enabled`. This closes the web admin, it is not a firewall: the token sign-in stays reachable and is protected by the password and the login throttle.
+**Administration on the website.** It is a switch in the code, `config/features.php` (`'web_admin' => false`), chosen per shop when it is delivered; it cannot be changed through the API. While it is off, the website's cookie sign-in and every call that comes from a browser session answer `403 { "code": "web_admin_disabled" }`; calls with a Bearer token (the desktop app) keep working, and the shop itself is unaffected. `GET /settings/public` exposes `web_admin_enabled`. It also exposes `default_location` (`wilaya_id`, `commune_id`: where a new client is placed unless told otherwise). This closes the web admin, it is not a firewall: the token sign-in stays reachable and is protected by the password and the login throttle.
 
 ### The cookie flow (what the React app does)
 
@@ -65,11 +65,11 @@ The request must carry an `Origin` (or `Referer`) from `SANCTUM_STATEFUL_DOMAINS
 | GET | `/product-types` | The shop's product types (Parfums, Cosmétiques, Montres, Lunettes…) with their families / categories. `profile` is `perfume` or `standard`; `uses_gender` says whether to offer a Homme / Femme filter |
 | GET | `/types`, `/brands` | Active families / categories of every type / brands (`/brands?rayon=montres` = only those sold in that type) |
 | GET | `/products` | Catalogue. `q, rayon (product type slug), type (family / category slug), brand, gender, kind (one or several of perfume, standard, pack, comma-separated), min_price, max_price, featured, sort (newest, price_asc, price_desc, name), per_page, page` |
-| GET | `/products/{slug}` | Product page: notes, photos, variants with `available` and `max_qty`, pack `contains` |
+| GET | `/products/{slug}` | Product page: notes, photos, variants with `available` and `max_qty`, pack `contains`. With `features.backorder` `max_qty` is a flat cap (50) for any listed item, never the stock; otherwise it is the stock |
 | GET | `/wilayas` | Wilayas we deliver to, with `home_fee` and `desk_fee` |
 | GET | `/wilayas/{id}/communes` | Communes of a wilaya |
-| POST | `/cart/validate` | Re-price a cart; reports removed lines, availability, delivery fee and total |
-| POST | `/orders` | Place an order (cash on delivery). Returns the `reference` |
+| POST | `/cart/validate` | Re-price a cart; reports removed lines, availability (`available`, `max_qty`: the shop's limit, see above), delivery fee and total |
+| POST | `/orders` | Place an order (cash on delivery). Returns the `reference`. With `features.backorder` the quantity may exceed the stock (cap 50 per line); an item that is no longer listed is refused without revealing the stock |
 
 The catalogue hides out-of-stock items unless the owner enabled `show_unavailable`; then they come back with `available: false`. Stock quantities are never exposed publicly.
 
@@ -99,15 +99,17 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | PUT | `/me/password` | ✅ | `current_password`, `password`, `password_confirmation` |
 | GET | `/orders` | ✅ | List. Filters: `status, channel, from, to, wilaya_id, customer_id, min_total, max_total, q, sort (created_at, total), dir, per_page`. Also returns `counts` per status |
 | GET | `/orders/export` | ✅ | CSV of the filtered list (UTF-8, `;` separated) |
-| GET | `/orders/{id}` | ✅ | Detail: client, items, totals, history, `allowed_actions` |
-| PUT | `/orders/{id}` | ✅ | Edit a pending/confirmed order (client info, `lines`, `delivery_fee`, `discount`, `admin_note`) |
+| GET | `/orders/{id}` | ✅ | Detail: client, items, totals, history, `allowed_actions`, `awaiting_stock`, and for a pending order `stock_check` (`possible`, `shortages`, and per item `item_id`, `ok`, `left`, `max_qty`: what the stock can cover) |
+| PUT | `/orders/{id}` | ✅ | Edit an order. Pending / confirmed: everything (client info, `lines`, `delivery_fee`, `discount`, `delivery_mode`, `admin_note`, `awaiting_stock`: put the order aside until stock arrives, it stays pending). Any other status (shipped, delivered, sold in shop, cancelled, returned): only the client (names, phones, address, wilaya / commune), `admin_note`, and for a caisse sale `payment_method` + `amount_received`; sending `lines`, `discount` or fees is refused. Adding or changing the phone links the order to that customer (created if new), moving its counters and loyalty perfumes |
 | POST | `/orders/{id}/transition` | ✅ | Workflow action (below) |
-| POST | `/pos/sales` | ✅ | Caisse sale |
+| DELETE | `/orders/{id}` | | Delete an order made by mistake (owner only): pending, cancelled, returned, or a caisse sale (its stock and bottles are put back). A confirmed, shipped or delivered order is refused: cancel it first. The customer's counters and loyalty perfumes go back, and a gift given with it becomes available again |
+| POST | `/pos/sales` | ✅ | Caisse sale. A client is optional but needs `first_name`, `last_name` and `phone` together (the client is created, or found by phone); `wilaya_id` / `commune_id` place them, Oran / Oran (`config/shop.php`) when left out for a new client |
+| GET | `/customers/search` | ✅ | `?q=` (2+ characters): up to 8 clients by name or phone, with their wilaya / commune, to fill the client form. Owner and staff |
 | GET | `/products`, `/products/{id}` | ✅ | Catalogue with stock and hidden items. Filters: `q, kind (comma-separated), product_type_id, type_id, active, low_stock` |
 | GET | `/types`, `/brands` | ✅ | With product counts |
 | GET | `/stock`, `/stock/movements` | ✅ | Overview (`q, status ok/low/out`) and ledger (`product_id, variant_id, order_id, type, from, to`) |
-| GET | `/dashboard` | | KPIs for `from`/`to` (default today): revenue split online / caisse, order counts, cancel rate, `sales_by_day` (each day has `revenue_online` and `revenue_pos`), `top_products`, `low_stock` |
-| POST/PUT/DELETE | `/products`, `/products/{id}` | | Create / edit / hide products of any type, and packs |
+| GET | `/dashboard` | | KPIs for `from`/`to` (default today): revenue split online / caisse, order counts, cancel rate, `sales_by_day` (each day has `revenue_online` and `revenue_pos`), `top_products` (every size sold, best sellers first, each with `profit`, null when a purchase price is missing), `profit` (`amount`, `cost`, `revenue`, `percent` of the purchase cost, `orders_counted`, `orders_without_cost`; only orders whose items all have a cost are counted), `low_stock` |
+| POST/PUT/DELETE | `/products`, `/products/{id}` | | Create / edit / hide products of any type, and packs. Each variant takes an optional `cost_price` (what the shop paid for one unit, admin only; a pack's `cost_price` in the response is the sum of its components) |
 | GET/POST/PUT/DELETE | `/product-types`, `/product-types/{id}` | | The shop's product types. A type with products cannot be deleted (hide it); an empty one is deleted with its categories |
 | POST | `/products/{id}/images` | | Upload a photo (`image`, multipart) |
 | PUT | `/products/{id}/images/order` | | `{ "ids": [..] }`; the first becomes the main photo |
@@ -116,8 +118,18 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | POST | `/stock/entries` | | Receive stock |
 | POST | `/stock/adjustments` | | Correction or loss |
 | POST | `/stock/open-bottle` | | Sealed bottle → decant pool |
-| GET/PATCH | `/customers`, `/customers/{id}` | | List, blacklist, note |
-| GET/PUT | `/settings` | | Shop settings |
+| GET/PATCH/DELETE | `/customers`, `/customers/{id}` | | List, edit (names, phone, wilaya, commune, address, note, blacklist; a taken number is refused), delete (their orders stay, detached; their loyalty goes with them); each carries its `loyalty` count |
+| GET | `/bottles`, `/bottles/movements` | | The empty decant bottles: per size `qty` left, `bought`, `invested`, `unit_cost` (average), `value_left`, `low`, plus `totals`; the ledger (`ml` filter) |
+| GET | `/imports/templates/{format}` | | The CSV model to fill in (`perfumes` or `options`), UTF-8, `;` separated |
+| POST | `/imports/products` | | Add products from a CSV (multipart `file`, `format` = `perfumes` (one row per perfume, sizes as columns `prix_10ml`, `prix_flacon_100ml`, `achat_…`, `stock_ml`, `stock_flacon_100ml`) or `options` (one row per option of a cosmetic / watch / glasses, rows of one product are grouped)). Without `commit` it only checks and reports (`created`, `skipped` = already exist, `errors` with their line); with `commit=1` it imports. Never changes an existing product; a product with a problem is skipped and the others are imported. Owner only |
+| PUT/DELETE | `/bottles/{id}` | | Rename a size (`ml`) / stop tracking it (its history is deleted) |
+| PUT/DELETE | `/bottles/movements/{id}` | | Correct (`quantity`, `total_cost`, `note`) or delete an entry, a loss or a recount made by hand (`editable` in the list); the count follows and never goes below zero. Movements made by sales are refused |
+| POST | `/bottles/entries`, `/bottles/adjustments` | | Receive bottles (`ml`, `quantity`, optional `total_cost`) / lose or recount them (`quantity` signed, `type` perte or ajustement, `note` required; never below zero) |
+| GET | `/loyalty` | ✅ | `?phone=`: the customer behind a number and where they stand (counted toward the next gift, pending gifts with the suggested value). Owner and staff, for the caisse |
+| GET | `/customers/{id}/loyalty` | | Count, pending gifts, the gifts already given and `tiers`: the perfumes in rounds of N (0 to 6, 6 to 12…), each with its perfumes (name, price, order), its average and its gift (`pending` / `given`); the last round is the one in progress |
+| GET | `/customers/{id}/loyalty/suggestions` | | Perfumes in stock (a flacon or a decant size) priced within a quarter of the average of the oldest pending gift, closest first; `null` when no gift is waiting |
+| POST | `/customers/{id}/loyalty/redeem` | | `variant_id` of a perfume, a sealed flacon or a decant size (any price): a zero-price caisse sale that marks the oldest pending gift as given. Every `loyalty_every` perfumes (config/features.php) a customer buys earn one |
+| GET/PUT | `/settings` | | Shop settings. `loyalty_enabled` (boolean, default true) is the owner's yes / no for the "every N perfumes, a gift" programme: off = nothing is counted (purchases made meanwhile are not counted either, `php artisan loyalty:backfill` can count them later), `loyalty` is `null` everywhere. The response also carries `loyalty_available` (the shop has the programme, `config/features.php`) and `loyalty_every`; the admin only shows the switch when it is available |
 | GET/PUT | `/wilayas`, `/wilayas/{id}` | | Delivery fees, switch a wilaya off |
 | GET/POST/PUT/DELETE | `/users`, `/users/{id}` | | Admin accounts |
 

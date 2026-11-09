@@ -62,7 +62,7 @@ function EntryDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
           {canMl && canUnit && (
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Type d'entrée">
               {([['ml', cosmetic ? 'Au millilitre' : 'À décanter (en ml)'], ['unit', cosmetic ? 'À l\'unité' : 'Flacons scellés']] as const).map(([v, l]) => (
-                <button key={v} type="button" role="radio" aria-checked={mode === v} onClick={() => setMode(v)} className={cn('rounded-md border px-3 py-2.5 text-left', mode === v ? 'border-primary bg-accent font-medium' : 'border-input')}>{l}</button>
+                <button key={v} type="button" role="radio" aria-checked={mode === v} onClick={() => setMode(v)} className={cn('rounded-md border px-3 py-2.5 text-start', mode === v ? 'border-primary bg-accent font-medium' : 'border-input')}>{l}</button>
               ))}
             </div>
           )}
@@ -124,7 +124,7 @@ function AdjustDialog({ row, onClose }: { row: StockRow; onClose: () => void }) 
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Type">
             {([['perte', 'Perte (renversé, testeur…)'], ['ajustement', 'Correction d’inventaire']] as const).map(([v, l]) => (
-              <button key={v} type="button" role="radio" aria-checked={type === v} onClick={() => setType(v)} className={cn('rounded-md border px-3 py-2.5 text-left', type === v ? 'border-primary bg-accent font-medium' : 'border-input')}>{l}</button>
+              <button key={v} type="button" role="radio" aria-checked={type === v} onClick={() => setType(v)} className={cn('rounded-md border px-3 py-2.5 text-start', type === v ? 'border-primary bg-accent font-medium' : 'border-input')}>{l}</button>
             ))}
           </div>
           {row.sealed.length > 0 && (
@@ -190,11 +190,11 @@ function Overview() {
       </section>
 
       {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun produit" hint={q || rayonId || typeId || status ? 'Aucun résultat avec ces filtres.' : 'Créez un produit pour gérer son stock.'} /> : (
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
           {pageRows.map((r) => (
             <li key={r.product_id} className="space-y-3 p-4 md:flex md:items-center md:gap-6 md:space-y-0">
               <div className="min-w-0 md:w-1/4">
-                <p className="truncate font-display text-lg leading-tight">{r.name}{r.kind === 'standard' && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">{r.product_type?.name ?? 'Standard'}</span>}</p>
+                <div className="flex min-w-0 items-center gap-2"><p className="min-w-0 truncate font-display text-lg leading-tight">{r.name}</p>{r.kind === 'standard' && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-sans text-xs text-accent-foreground">{r.product_type?.name ?? 'Standard'}</span>}</div>
                 <p className="truncate text-sm text-muted-foreground">{r.brand ?? '—'}{!r.is_active && ', masqué'}</p>
               </div>
               <div className="tnum flex-1 text-sm">
@@ -261,7 +261,7 @@ function Movements() {
 
       {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun mouvement" /> : (
         <div className={cn(query.isPlaceholderData && 'opacity-60')}>
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
             {rows.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 p-3 text-sm sm:px-4">
                 <div className="min-w-0 flex-1 basis-56">

@@ -100,6 +100,8 @@ export interface ShopSettings {
   free_delivery_over: number | null
   show_unavailable: boolean
   web_admin_enabled?: boolean
+  /** Where a new client is placed unless told otherwise (Oran, Oran). */
+  default_location?: { wilaya_id: number | null; commune_id: number | null }
 }
 
 export interface QuoteLine {
