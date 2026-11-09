@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Wilaya;
+use App\Services\LoyaltyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -12,7 +13,15 @@ class SettingsController extends Controller
     /** All shop settings (with defaults for the ones never saved). */
     public function show(): JsonResponse
     {
-        return response()->json(['data' => settings()->all()]);
+        return response()->json(['data' => $this->payload()]);
+    }
+
+    /** The settings, plus what the loyalty switch needs: whether the shop has the programme and its size. */
+    private function payload(): array
+    {
+        $loyalty = app(LoyaltyService::class);
+
+        return settings()->all() + ['loyalty_available' => $loyalty->available(), 'loyalty_every' => $loyalty->available() ? (int) config('features.loyalty_every') : null];
     }
 
     /**
@@ -21,6 +30,7 @@ class SettingsController extends Controller
      * `show_unavailable`: show out-of-stock items greyed out (true) or hide them (false).
      * `low_stock_threshold_ml`: below this many ml a perfume counts as unavailable (default 10).
      * `low_stock_threshold_qty`: at or below this many units a cosmetic shows as low in stock (default 3).
+     * `loyalty_enabled`: the "every N perfumes, a gift" programme on (true, default) or off. Purchases made while it is off are not counted.
      */
     public function update(Request $request): JsonResponse
     {
@@ -34,13 +44,14 @@ class SettingsController extends Controller
             'low_stock_threshold_ml' => ['sometimes', 'integer', 'min:0', 'max:10000'],
             'low_stock_threshold_qty' => ['sometimes', 'integer', 'min:0', 'max:10000'],
             'store_pickup_enabled' => ['sometimes', 'boolean'],
+            'loyalty_enabled' => ['sometimes', 'boolean'],
             /** Subtotal (DZD) from which delivery is free; `null` disables it. */
             'free_delivery_over' => ['sometimes', 'nullable', 'integer', 'min:0'],
         ]);
 
         settings()->setMany($v);
 
-        return response()->json(['data' => settings()->all()]);
+        return response()->json(['data' => $this->payload()]);
     }
 
     /** Every wilaya with its delivery fees, including the ones we do not deliver to. */

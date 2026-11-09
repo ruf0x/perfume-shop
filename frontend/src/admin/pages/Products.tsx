@@ -142,7 +142,7 @@ export default function Products({ kind }: { kind: 'goods' | 'pack' }) {
                   <ProductVisual image={p.image} name="" type={p.type?.slug} rayon={p.product_type?.slug} level={0.7} />
                 </button>
                 <Link to={`${base}/${p.id}`} className="min-w-0 flex-1 focus-visible:outline-2 focus-visible:outline-ring">
-                  <p className="truncate font-display text-lg leading-tight">{p.name}{showTypeBadge && p.product_type && <span className="ms-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">{p.product_type.name}</span>}</p>
+                  <div className="flex min-w-0 items-center gap-2"><p className="min-w-0 truncate font-display text-lg leading-tight">{p.name}</p>{showTypeBadge && p.product_type && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-sans text-xs text-accent-foreground">{p.product_type.name}</span>}</div>
                   <p className="truncate text-sm text-muted-foreground">{[p.brand?.name, p.type?.name].filter(Boolean).join(', ') || (isPack ? 'Pack' : 'Sans classement')}</p>
                   <p className="tnum mt-0.5 hidden truncate text-sm sm:block">{sizes(p)}</p>
                 </Link>

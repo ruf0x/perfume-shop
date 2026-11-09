@@ -1,5 +1,5 @@
 import { AR, AR_PATTERNS } from './ar'
-import { getLang, isRtl } from './lang'
+import { getLang, isRtl, shopLang } from './lang'
 
 const ATTRS = ['placeholder', 'title', 'aria-label', 'alt']
 const SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE'])
@@ -102,7 +102,7 @@ export function startTranslator(): () => void {
 
   return () => {
     observer?.disconnect()
-    html.lang = 'fr'
-    html.dir = 'ltr'
+    html.lang = shopLang()
+    html.dir = shopLang() === 'ar' ? 'rtl' : 'ltr'
   }
 }

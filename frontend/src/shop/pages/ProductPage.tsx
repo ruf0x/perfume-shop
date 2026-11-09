@@ -176,7 +176,7 @@ export default function ProductPage() {
             {isPack ? (
               variant && (
                 <p className="tnum font-display text-3xl">
-                  {variant.compare_at_price ? <span className="mr-3 text-lg text-muted-foreground line-through">{formatPrice(variant.compare_at_price)}</span> : null}
+                  {variant.compare_at_price ? <span className="me-3 text-lg text-muted-foreground line-through">{formatPrice(variant.compare_at_price)}</span> : null}
                   {formatPrice(variant.price)}
                 </p>
               )

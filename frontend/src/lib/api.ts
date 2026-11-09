@@ -1,4 +1,4 @@
-import axios, { isAxiosError } from 'axios'
+import axios, { isAxiosError, type InternalAxiosRequestConfig } from 'axios'
 
 /**
  * The desktop app (Electron) puts a `desktop` bridge on the window: the admin then talks to the server it was
@@ -7,6 +7,9 @@ import axios, { isAxiosError } from 'axios'
 export const desktop = typeof window === 'undefined' ? undefined : window.desktop
 export const isDesktop = desktop !== undefined
 
+/** The static demo site (`vite build --mode demo`): there is no server, a fake one lives in the browser (`src/demo`). */
+export const isDemo = import.meta.env.VITE_DEMO === 'true'
+
 const origin = desktop?.apiUrl ?? import.meta.env.VITE_API_URL
 
 export const api = axios.create({
@@ -14,6 +17,8 @@ export const api = axios.create({
   withCredentials: !isDesktop,
   withXSRFToken: !isDesktop,
   headers: { Accept: 'application/json' },
+  // Loaded on demand, and left out of every other build (the test is written out so the bundler can see it is a constant).
+  ...(import.meta.env.VITE_DEMO === 'true' ? { adapter: (config: InternalAxiosRequestConfig) => import('@/demo/adapter').then((m) => m.demoAdapter(config)) } : {}),
 })
 
 // Desktop: the token the app keeps (encrypted by the operating system) goes on every call.
@@ -37,4 +42,4 @@ api.interceptors.response.use(undefined, (error: unknown) => {
 })
 
 /** Must be called before the first state-changing admin request (login). Not needed in the desktop app (no cookie). */
-export const ensureCsrfCookie = () => (isDesktop ? Promise.resolve() : axios.get(`${origin}/sanctum/csrf-cookie`, { withCredentials: true }))
+export const ensureCsrfCookie = () => (isDesktop || isDemo ? Promise.resolve() : axios.get(`${origin}/sanctum/csrf-cookie`, { withCredentials: true }))

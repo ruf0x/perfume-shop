@@ -5,6 +5,7 @@ import { linkButton } from '../components/ui'
 import { useProductTypes, useProducts, useSettings } from '../queries'
 import type { ShopProductType } from '../types'
 import { useDocumentTitle } from '../useDocumentTitle'
+import { brand } from '@/lib/brand'
 
 /** A product type on the home page: its categories as links, and a few of its products. */
 function TypeSection({ type }: { type: ShopProductType }) {
@@ -70,7 +71,7 @@ export default function Home() {
           </div>
 
           <div className="mx-auto flex w-full max-w-sm justify-center">
-            <img src="/brand/logo-light.webp" alt={settings?.shop_name ?? t('brand.name')} width={632} height={900} className="h-auto max-h-[26rem] w-auto max-w-full" />
+            <img src={brand('logo-light')} alt={settings?.shop_name ?? t('brand.name')} width={632} height={900} className="h-auto max-h-[26rem] w-auto max-w-full" />
           </div>
         </div>
       </section>
@@ -86,7 +87,7 @@ export default function Home() {
                   className="group flex flex-col gap-1 py-5 transition-colors hover:bg-secondary/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:flex-row sm:items-baseline sm:justify-between sm:gap-8 sm:px-3"
                 >
                   <span className="font-display text-2xl sm:text-3xl">{category.name}</span>
-                  <span className="text-muted-foreground sm:max-w-sm sm:text-right">{t(`home.familyText.${category.slug}`, { defaultValue: '' })}</span>
+                  <span className="text-muted-foreground sm:max-w-sm sm:text-end">{t(`home.familyText.${category.slug}`, { defaultValue: '' })}</span>
                 </Link>
               </li>
             ))}

@@ -97,7 +97,7 @@ export default function Boutique() {
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:grid md:grid-cols-[230px_1fr] md:gap-x-12 md:py-14">
       {/* Starts at the very top and is never taller than the screen, so "Prix" is always in reach without scrolling the page. */}
       <aside className="hidden md:block" aria-label={t('shopPage.filters')}>
-        <div className="sticky top-24 max-h-[calc(100svh-8.5rem)] overflow-y-auto overscroll-contain pr-1">{panel('side')}</div>
+        <div className="sticky top-24 max-h-[calc(100svh-8.5rem)] overflow-y-auto overscroll-contain pe-1">{panel('side')}</div>
       </aside>
 
       <div className="min-w-0">
@@ -113,14 +113,14 @@ export default function Boutique() {
           <form onSubmit={submitSearch} role="search" className="w-full md:hidden">
             <label className="relative block">
               <span className="sr-only">{t('nav.search')}</span>
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder={t('nav.searchPlaceholder')} className="h-11 w-full rounded-md border border-input bg-card pr-3 pl-9 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30" />
+              <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder={t('nav.searchPlaceholder')} className="h-11 w-full rounded-md border border-input bg-card pe-3 ps-9 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30" />
             </label>
           </form>
           <Button variant="outline" className={`${bigButton} md:hidden`} onClick={() => setSheet(true)}>
             <SlidersHorizontal className="size-4" aria-hidden />
             {t('shopPage.filters')}
-            {chips.length > 0 && <span className="tnum ml-1 rounded-full bg-primary px-1.5 text-xs text-primary-foreground">{chips.length}</span>}
+            {chips.length > 0 && <span className="tnum ms-1 rounded-full bg-primary px-1.5 text-xs text-primary-foreground">{chips.length}</span>}
           </Button>
           <label className="flex min-w-0 flex-1 items-center gap-2 text-sm sm:flex-none">
             <span className="shrink-0 text-muted-foreground">{t('shopPage.sort')}</span>
@@ -161,7 +161,7 @@ export default function Boutique() {
         <ul className="mt-6 flex flex-wrap items-center gap-2">
           {chips.map((c) => (
             <li key={c.key}>
-              <button type="button" onClick={() => clearChip(c.key)} className="flex items-center gap-1.5 rounded-full bg-accent py-1.5 pr-2 pl-3.5 text-sm text-accent-foreground hover:bg-accent/70 focus-visible:outline-2 focus-visible:outline-ring" aria-label={t('shopPage.removeFilter', { label: c.label })}>
+              <button type="button" onClick={() => clearChip(c.key)} className="flex items-center gap-1.5 rounded-full bg-accent py-1.5 pe-2 ps-3.5 text-sm text-accent-foreground hover:bg-accent/70 focus-visible:outline-2 focus-visible:outline-ring" aria-label={t('shopPage.removeFilter', { label: c.label })}>
                 {c.label}
                 <X className="size-3.5" aria-hidden />
               </button>

@@ -58,7 +58,7 @@ export function VolumeGauge({ options, value, onChange, type, legend, soldOutLab
           />
           {/* graduations at every row boundary */}
           {options.slice(0, -1).map((_, k) => (
-            <span key={k} className="absolute right-0 h-px w-3 bg-oud/60" style={{ bottom: `${((k + 1) / n) * 100}%` }} />
+            <span key={k} className="absolute end-0 h-px w-3 bg-oud/60" style={{ bottom: `${((k + 1) / n) * 100}%` }} />
           ))}
         </div>
       </div>
@@ -87,12 +87,12 @@ export function VolumeGauge({ options, value, onChange, type, legend, soldOutLab
                 onChange={() => onChange(o.id)}
               />
               <span className={cn('text-base', disabled && 'line-through')}>{o.label}</span>
-              <span className="tnum text-right">
+              <span className="tnum text-end">
                 {disabled ? (
                   <span className="text-xs">{soldOutLabel}</span>
                 ) : o.price !== undefined ? (
                   <>
-                    {o.compareAt ? <span className="mr-2 text-xs text-muted-foreground line-through">{formatPrice(o.compareAt)}</span> : null}
+                    {o.compareAt ? <span className="me-2 text-xs text-muted-foreground line-through">{formatPrice(o.compareAt)}</span> : null}
                     {formatPrice(o.price)}
                   </>
                 ) : null}

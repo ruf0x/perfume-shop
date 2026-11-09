@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { isDesktop } from '@/lib/api'
+import { brand } from '@/lib/brand'
 import { useSettings } from '@/shop/queries'
 import { useLogout, useUser } from './auth'
 import { LangSwitch } from './i18n/LangSwitch'
@@ -93,7 +94,7 @@ function Brand() {
 
   return (
     <Link to="/admin" className="flex items-center gap-3 px-3 focus-visible:outline-2 focus-visible:outline-ring">
-      <img src="/brand/logo-mark.webp" alt="" width={221} height={256} className="h-9 w-auto" />
+      <img src={brand('logo-mark')} alt="" width={221} height={256} className="h-9 w-auto" />
       <span className="min-w-0">
         <span className="block truncate text-base font-semibold leading-tight">{settings?.shop_name ?? 'Administration'}</span>
         <span className="block text-xs text-muted-foreground">Administration</span>
@@ -152,7 +153,7 @@ export default function AdminLayout() {
           <button type="button" className="-ms-2 flex size-10 items-center justify-center rounded-lg hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring" onClick={() => setOpen(true)} aria-label="Ouvrir le menu">
             <Menu className="size-5" />
           </button>
-          <img src="/brand/logo-mark.webp" alt="" width={221} height={256} className="h-7 w-auto" />
+          <img src={brand('logo-mark')} alt="" width={221} height={256} className="h-7 w-auto" />
           <span className="font-semibold">Administration</span>
         </header>
 

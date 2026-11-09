@@ -210,3 +210,25 @@ it('has no suggestions when no gift is waiting', function () {
 
     $this->getJson('/api/admin/customers/'.Customer::firstOrFail()->id.'/loyalty/suggestions')->assertOk()->assertJsonPath('data', null);
 });
+
+it('lets the owner switch the programme off in the settings: nothing is counted and the loyalty fields disappear', function () {
+    $this->getJson('/api/admin/settings')->assertOk()->assertJsonPath('data.loyalty_enabled', true)->assertJsonPath('data.loyalty_available', true)->assertJsonPath('data.loyalty_every', 6);
+
+    $this->putJson('/api/admin/settings', ['loyalty_enabled' => false])->assertOk()->assertJsonPath('data.loyalty_enabled', false);
+
+    $sale = loyaltySale($this, [[$this->v10, 6]]);
+    expect(LoyaltyEntry::count())->toBe(0)->and(LoyaltyReward::count())->toBe(0);
+    $this->getJson("/api/admin/orders/{$sale->id}")->assertOk()->assertJsonPath('data.customer.loyalty', null);
+    $this->getJson('/api/admin/loyalty?phone=0550111222')->assertOk()->assertJsonPath('data.loyalty', null);
+
+    // Back on: perfumes bought from now on count again.
+    $this->putJson('/api/admin/settings', ['loyalty_enabled' => true])->assertOk();
+    loyaltySale($this, [[$this->v10, 1]]);
+    expect(LoyaltyEntry::count())->toBe(1);
+});
+
+it('says the programme is not available when the shop was delivered without it', function () {
+    config(['features.loyalty_every' => null]);
+
+    $this->getJson('/api/admin/settings')->assertOk()->assertJsonPath('data.loyalty_available', false)->assertJsonPath('data.loyalty_every', null);
+});

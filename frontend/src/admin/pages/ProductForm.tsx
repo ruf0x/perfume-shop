@@ -466,7 +466,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                           )}
                         </select>
                       </Field>
-                      <div className="col-span-6 flex items-end justify-between gap-2 sm:col-span-2">
+                      <div className="col-span-6 flex min-w-0 flex-wrap items-end justify-between gap-2 sm:col-span-2">
                         <label className="flex items-center gap-2 pb-2 text-sm"><Switch checked={r.active} onCheckedChange={(v) => setRow(i, { active: v })} />Vendue</label>
                         <span className="flex">
                           <button type="button" disabled={i === 0} onClick={() => moveRow(i, -1)} className="flex size-10 items-center justify-center rounded hover:bg-secondary disabled:opacity-30" aria-label="Monter"><ArrowUp className="size-4" /></button>

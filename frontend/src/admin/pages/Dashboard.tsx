@@ -56,7 +56,7 @@ function profitNote(p: Dashboard['profit']) {
 
 function Card({ title, hint, children, className }: { title: string; hint?: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn('rounded-2xl border border-border bg-card p-6', className)}>
+    <section className={cn('min-w-0 rounded-2xl border border-border bg-card p-6', className)}>
       <h2 className="text-lg font-semibold">{title}</h2>
       {hint && <p className="mt-0.5 mb-3 text-sm text-muted-foreground">{hint}</p>}
       <div className={hint ? '' : 'mt-3'}>{children}</div>
@@ -160,8 +160,8 @@ export default function Dashboard() {
         <Loading />
       ) : (
         <div className={cn('space-y-6 transition-opacity', query.isPlaceholderData && 'opacity-60')}>
-          <section className="grid overflow-hidden rounded-2xl border border-border bg-card md:grid-cols-[1.35fr_1fr]" aria-label="Chiffre d'affaires">
-            <div className="p-6">
+          <section className="grid overflow-hidden rounded-2xl border border-border bg-card md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]" aria-label="Chiffre d'affaires">
+            <div className="min-w-0 p-6">
               <p className="text-sm text-muted-foreground">Chiffre d'affaires</p>
               <p className="tnum mt-1 text-4xl font-semibold sm:text-5xl">{formatPrice(d.revenue)}</p>
               <ul className="mt-5 space-y-2 text-sm">

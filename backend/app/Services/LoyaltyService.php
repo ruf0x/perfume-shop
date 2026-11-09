@@ -25,11 +25,18 @@ use Illuminate\Support\Facades\DB;
  */
 class LoyaltyService
 {
+    /** Whether the shop has the programme at all: a code switch, set when the shop is delivered (null = no loyalty). */
+    public function available(): bool
+    {
+        return (bool) config('features.loyalty_every');
+    }
+
+    /** Perfumes bought for one gift, or null while the programme is not there or the owner switched it off in the settings. */
     public function every(): ?int
     {
         $n = config('features.loyalty_every');
 
-        return $n ? (int) $n : null;
+        return $n && settings()->loyaltyEnabled() ? (int) $n : null;
     }
 
     public function enabled(): bool

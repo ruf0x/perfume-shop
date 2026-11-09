@@ -58,6 +58,7 @@ function ShopTab() {
         low_stock_threshold_qty: f.low_stock_threshold_qty,
         store_pickup_enabled: f.store_pickup_enabled,
         free_delivery_over: f.free_delivery_over,
+        ...(f.loyalty_available ? { loyalty_enabled: f.loyalty_enabled } : {}),
       },
       { onSuccess: () => toast.success('Paramètres enregistrés.'), onError: (e) => toast.error(apiError(e)) },
     )
@@ -97,6 +98,12 @@ function ShopTab() {
           <input type="number" min={0} className={`${inputClass} max-w-40`} value={f.free_delivery_over ?? ''} onChange={(e) => set('free_delivery_over', e.target.value === '' ? null : Math.max(0, Number(e.target.value) || 0))} />
         </label>
       </Card>
+
+      {f.loyalty_available && (
+        <Card title="Fidélité">
+          <Toggle label="Parfum offert après plusieurs achats" hint={`Activé : au bout de ${f.loyalty_every} parfums achetés, le suivant est offert (les achats sont suivis par numéro de téléphone). Désactivé : plus de compteur ni de cadeau ; les parfums achetés pendant ce temps ne sont pas comptés.`} checked={f.loyalty_enabled !== false} onChange={(v) => set('loyalty_enabled', v)} />
+        </Card>
+      )}
 
       <div><Button className="h-11 px-8" onClick={submit} disabled={save.isPending}>{save.isPending ? 'Enregistrement…' : 'Enregistrer'}</Button></div>
     </div>

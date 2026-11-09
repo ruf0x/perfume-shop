@@ -194,7 +194,7 @@ function Overview() {
           {pageRows.map((r) => (
             <li key={r.product_id} className="space-y-3 p-4 md:flex md:items-center md:gap-6 md:space-y-0">
               <div className="min-w-0 md:w-1/4">
-                <p className="truncate font-display text-lg leading-tight">{r.name}{r.kind === 'standard' && <span className="ms-2 rounded-full bg-accent px-2 py-0.5 align-middle font-sans text-xs text-accent-foreground">{r.product_type?.name ?? 'Standard'}</span>}</p>
+                <div className="flex min-w-0 items-center gap-2"><p className="min-w-0 truncate font-display text-lg leading-tight">{r.name}</p>{r.kind === 'standard' && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-sans text-xs text-accent-foreground">{r.product_type?.name ?? 'Standard'}</span>}</div>
                 <p className="truncate text-sm text-muted-foreground">{r.brand ?? '—'}{!r.is_active && ', masqué'}</p>
               </div>
               <div className="tnum flex-1 text-sm">

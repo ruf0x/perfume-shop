@@ -20,6 +20,7 @@ class SettingsService
         'low_stock_threshold_qty' => 3,
         'store_pickup_enabled' => true,
         'free_delivery_over' => null,
+        'loyalty_enabled' => true,
     ];
 
     /** @return array<string, mixed> */
@@ -80,6 +81,12 @@ class SettingsService
     public function webAdminEnabled(): bool
     {
         return (bool) config('features.web_admin');
+    }
+
+    /** The owner's yes / no for the loyalty programme. It only matters when the shop has the feature (config/features.php). */
+    public function loyaltyEnabled(): bool
+    {
+        return (bool) $this->get('loyalty_enabled');
     }
 
     public function storePickupEnabled(): bool

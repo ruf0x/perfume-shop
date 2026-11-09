@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "demo:snapshot": "node scripts/demo-snapshot.mjs",
+    "build:demo": "tsc -b && vite build --mode demo && node scripts/finish-demo.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

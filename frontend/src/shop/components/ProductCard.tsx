@@ -23,7 +23,7 @@ export function ProductCard({ product, className }: { product: ProductCardData; 
           className="transition-transform duration-500 group-hover:scale-[1.03]"
         />
         {!product.available && (
-          <span className="absolute top-3 left-3 rounded-sm bg-oud px-2 py-1 text-xs font-medium text-oud-foreground">{t('common.soldOut')}</span>
+          <span className="absolute top-3 start-3 rounded-sm bg-oud px-2 py-1 text-xs font-medium text-oud-foreground">{t('common.soldOut')}</span>
         )}
       </div>
 

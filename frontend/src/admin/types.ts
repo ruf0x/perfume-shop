@@ -311,6 +311,11 @@ export interface ShopSettings {
   low_stock_threshold_qty: number
   store_pickup_enabled: boolean
   free_delivery_over: number | null
+  /** "Every N perfumes, a gift": the owner's yes / no. */
+  loyalty_enabled?: boolean
+  /** The shop has the programme (set when the shop is delivered); without it the switch is not shown. */
+  loyalty_available?: boolean
+  loyalty_every?: number | null
 }
 
 export interface DashboardDay {

@@ -16,7 +16,7 @@ class LoyaltyBackfill extends Command
     public function handle(LoyaltyService $loyalty): int
     {
         if (! $loyalty->enabled()) {
-            $this->warn('The loyalty programme is off (config/features.php, loyalty_every).');
+            $this->warn('The loyalty programme is off (switch it on in the admin settings; the shop must also have it in config/features.php, loyalty_every).');
 
             return self::SUCCESS;
         }

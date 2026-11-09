@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from 'react'
+import { isDemo } from '@/lib/api'
 
 export type AdminLang = 'ar' | 'fr'
 
 /** Language the admin opens in until someone picks another one (this shop's staff read Arabic). */
-const DEFAULT_LANG: AdminLang = 'ar'
+const DEFAULT_LANG: AdminLang = isDemo ? 'fr' : 'ar'
 const KEY = 'admin-lang'
 
 const read = (): AdminLang => {
@@ -22,6 +23,15 @@ const listeners = new Set<() => void>()
 
 export const getLang = () => lang
 export const isRtl = () => lang === 'ar'
+
+/** The shop is French only, except on the demo site where the visitor picks Arabic or French for everything. */
+export const shopLang = (): AdminLang => (isDemo ? lang : 'fr')
+
+export const subscribeLang = (cb: () => void) => {
+  listeners.add(cb)
+
+  return () => listeners.delete(cb)
+}
 
 export function setLang(next: AdminLang) {
   if (next === lang) return

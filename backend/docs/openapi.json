@@ -5402,7 +5402,8 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "string"
+                                            "type": "array",
+                                            "items": {}
                                         }
                                     },
                                     "required": [
@@ -5419,7 +5420,7 @@
             },
             "put": {
                 "operationId": "settings.update",
-                "description": "`show_unavailable`: show out-of-stock items greyed out (true) or hide them (false).\n`low_stock_threshold_ml`: below this many ml a perfume counts as unavailable (default 10).\n`low_stock_threshold_qty`: at or below this many units a cosmetic shows as low in stock (default 3).",
+                "description": "`show_unavailable`: show out-of-stock items greyed out (true) or hide them (false).\n`low_stock_threshold_ml`: below this many ml a perfume counts as unavailable (default 10).\n`low_stock_threshold_qty`: at or below this many units a cosmetic shows as low in stock (default 3).\n`loyalty_enabled`: the \"every N perfumes, a gift\" programme on (true, default) or off. Purchases made while it is off are not counted.",
                 "summary": "Save settings. Send only the keys to change",
                 "tags": [
                     "Settings"
@@ -5475,6 +5476,9 @@
                                     "store_pickup_enabled": {
                                         "type": "boolean"
                                     },
+                                    "loyalty_enabled": {
+                                        "type": "boolean"
+                                    },
                                     "free_delivery_over": {
                                         "type": [
                                             "integer",
@@ -5497,7 +5501,8 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "string"
+                                            "type": "array",
+                                            "items": {}
                                         }
                                     },
                                     "required": [

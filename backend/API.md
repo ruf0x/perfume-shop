@@ -129,7 +129,7 @@ curl -X POST http://localhost:8000/api/orders -H "Content-Type: application/json
 | GET | `/customers/{id}/loyalty` | | Count, pending gifts, the gifts already given and `tiers`: the perfumes in rounds of N (0 to 6, 6 to 12…), each with its perfumes (name, price, order), its average and its gift (`pending` / `given`); the last round is the one in progress |
 | GET | `/customers/{id}/loyalty/suggestions` | | Perfumes in stock (a flacon or a decant size) priced within a quarter of the average of the oldest pending gift, closest first; `null` when no gift is waiting |
 | POST | `/customers/{id}/loyalty/redeem` | | `variant_id` of a perfume, a sealed flacon or a decant size (any price): a zero-price caisse sale that marks the oldest pending gift as given. Every `loyalty_every` perfumes (config/features.php) a customer buys earn one |
-| GET/PUT | `/settings` | | Shop settings |
+| GET/PUT | `/settings` | | Shop settings. `loyalty_enabled` (boolean, default true) is the owner's yes / no for the "every N perfumes, a gift" programme: off = nothing is counted (purchases made meanwhile are not counted either, `php artisan loyalty:backfill` can count them later), `loyalty` is `null` everywhere. The response also carries `loyalty_available` (the shop has the programme, `config/features.php`) and `loyalty_every`; the admin only shows the switch when it is available |
 | GET/PUT | `/wilayas`, `/wilayas/{id}` | | Delivery fees, switch a wilaya off |
 | GET/POST/PUT/DELETE | `/users`, `/users/{id}` | | Admin accounts |
 
