@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="632" height="900" viewBox="0 0 632 900" fill="none">
+  <g transform="translate(158 110) scale(1.4)" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="88" y="12" width="45" height="36" rx="7"/>
+    <rect x="99" y="48" width="23" height="18"/>
+    <path d="M60 94Q60 66 88 66H133Q161 66 161 94V216Q161 244 133 244H88Q60 244 60 216Z"/>
+    <path d="M110.500 128C110.500 128 90 154 90 172a20.500 20.500 0 0 0 41 0C131 154 110.500 128 110.500 128Z"/>
+  </g>
+  <text x="316" y="640" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="88" fill="#ffffff">Parfumerie</text>
+  <text x="316" y="730" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="44" letter-spacing="22" fill="#ffffff" fill-opacity="0.75">DÉMO</text>
+</svg>
