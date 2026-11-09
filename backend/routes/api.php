@@ -71,8 +71,10 @@ Route::prefix('admin')->group(function () {
         Route::get('/product-types', [ProductTypeController::class, 'index']);
         Route::get('/types', [TypeController::class, 'index']);
         Route::get('/brands', [BrandController::class, 'index']);
+        Route::get('/brands/{brand}', [BrandController::class, 'show']);
         Route::get('/stock', [StockController::class, 'index']);
         Route::get('/stock/movements', [StockController::class, 'movements']);
+        Route::get('/stock/products/{product}/summary', [StockController::class, 'summary']);
 
         // Owner only.
         Route::middleware('role:owner')->group(function () {
@@ -110,6 +112,9 @@ Route::prefix('admin')->group(function () {
             Route::post('/stock/entries', [StockController::class, 'entry']);
             Route::post('/stock/adjustments', [StockController::class, 'adjustment']);
             Route::post('/stock/open-bottle', [StockController::class, 'openBottle']);
+            Route::put('/stock/movements/{movement}', [StockController::class, 'updateMovement']);
+            Route::delete('/stock/movements/{movement}', [StockController::class, 'destroyMovement']);
+            Route::delete('/stock/open-bottles/{bottle}', [StockController::class, 'discardBottle']);
 
             Route::get('/customers', [CustomerController::class, 'index']);
             Route::get('/customers/{customer}', [CustomerController::class, 'show']);

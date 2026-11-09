@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\StockMode;
+use Illuminate\Support\Facades\DB;
 use App\Enums\StockMovementType;
 use App\Http\Controllers\Controller;
+use App\Models\OpenBottle;
 use App\Models\Product;
+use Illuminate\Support\Collection;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Services\StockService;
+use App\Services\StockSummary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -27,15 +31,18 @@ class StockController extends Controller
     {
         $v = $request->validate(['q' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', 'in:ok,low,out'], 'kind' => ['nullable', 'in:perfume,standard'], 'product_type_id' => ['nullable', 'integer'], 'type_id' => ['nullable', 'integer']]);
 
-        $rows = Product::query()->stocked()->with('productType:id,name')
+        $products = Product::query()->stocked()->with('productType:id,name')
             ->withExists(['variants as has_pool' => fn ($q) => $q->where('stock_mode', StockMode::Pool)->where('is_active', true)])
             ->when($v['kind'] ?? null, fn ($q, $kind) => $q->where('kind', $kind))
             ->when($v['product_type_id'] ?? null, fn ($q, $id) => $q->where('product_type_id', $id))
             ->when($v['type_id'] ?? null, fn ($q, $id) => $q->where('perfume_type_id', $id))
             ->with(['brand:id,name', 'variants' => fn ($q) => $q->where('stock_mode', StockMode::Unit)->where('is_active', true)])
             ->when($v['q'] ?? null, fn ($q, $term) => $q->where('name', 'like', "%{$term}%"))
-            ->orderBy('name')->get()
-            ->map(fn (Product $p) => $this->row($p))
+            ->orderBy('name')->get();
+        $bottles = OpenBottle::query()->whereIn('product_id', $products->pluck('id'))->where('remaining_ml', '>', 0)
+            ->orderByDesc('opened_at')->orderByDesc('id')->get()->groupBy('product_id');
+        $rows = $products
+            ->map(fn (Product $p) => $this->row($p, $bottles->get($p->id, collect())))
             ->when($v['status'] ?? null, fn ($rows, $status) => $rows->where('status', $status))
             ->values();
 
@@ -43,6 +50,12 @@ class StockController extends Controller
     }
 
     /** The movement ledger (entries, sales, cancellations, losses...), newest first. */
+    /** Where one product's stock went: received, opened, sold, lost, corrected and left (per size). */
+    public function summary(Product $product, StockSummary $summary): JsonResponse
+    {
+        return response()->json(['data' => $summary->for($product)]);
+    }
+
     public function movements(Request $request): JsonResponse
     {
         $v = $request->validate([
@@ -78,6 +91,8 @@ class StockController extends Controller
                 'user' => $m->user?->name,
                 'note' => $m->note,
                 'created_at' => $m->created_at,
+                'cancelled' => $m->cancelled_at !== null,
+                'editable' => $m->order_id === null && $m->cancelled_at === null && in_array($m->type, [StockMovementType::Entree, StockMovementType::Perte, StockMovementType::Ajustement], true),
             ])->values(),
             'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'per_page' => $page->perPage(), 'total' => $page->total()],
         ]);
@@ -114,6 +129,8 @@ class StockController extends Controller
         $v = $request->validate([
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
+            /** A loss taken from one opened bottle (the newest one when left out). */
+            'open_bottle_id' => ['nullable', 'integer', 'exists:open_bottles,id'],
             'type' => ['required', 'in:ajustement,perte'],
             'ml_change' => ['nullable', 'integer'],
             'qty_change' => ['nullable', 'integer'],
@@ -121,7 +138,7 @@ class StockController extends Controller
         ]);
 
         $product = Product::findOrFail($v['product_id']);
-        $this->stock->adjust($product, $this->variant($v), StockMovementType::from($v['type']), (int) ($v['ml_change'] ?? 0), (int) ($v['qty_change'] ?? 0), $v['note'], $request->user());
+        $this->stock->adjust($product, $this->variant($v), StockMovementType::from($v['type']), (int) ($v['ml_change'] ?? 0), (int) ($v['qty_change'] ?? 0), $v['note'], $request->user(), $v['open_bottle_id'] ?? null);
 
         return response()->json(['data' => $this->row($this->reload($product))], 201);
     }
@@ -149,8 +166,9 @@ class StockController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function row(Product $p): array
+    private function row(Product $p, ?Collection $bottles = null): array
     {
+        $bottles ??= OpenBottle::query()->where('product_id', $p->id)->where('remaining_ml', '>', 0)->orderByDesc('opened_at')->orderByDesc('id')->get();
         $sealed = $p->variants->map(fn (ProductVariant $v) => ['variant_id' => $v->id, 'label' => $v->label, 'ml' => $v->ml, 'stock_qty' => $v->stock_qty])->values();
 
         return [
@@ -165,7 +183,62 @@ class StockController extends Controller
             /** Whether some option is sold by the millilitre (so the ml stock means something). */
             'has_pool' => (bool) $p->has_pool,
             'sealed' => $sealed,
+            'open_bottles' => $bottles->map(fn (OpenBottle $b) => StockSummary::bottle($b))->values(),
+            'bulk_ml' => max(0, (int) $p->stock_ml - (int) $bottles->sum('remaining_ml')),
             'status' => $this->stock->stockStatus($p),
         ];
+    }
+
+    /**
+     * Correct a hand-made movement: it is cancelled (kept, marked) and written again with the new quantity.
+     * `quantity` is the amount in its own unit (ml for a pool movement, bottles for a sealed one), always positive.
+     */
+    public function updateMovement(Request $request, StockMovement $movement): JsonResponse
+    {
+        $v = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1', 'max:100000'],
+            'note' => ['required', 'string', 'max:255'],
+        ]);
+        $user = $request->user();
+        $isMl = (int) $movement->ml_change !== 0;
+        $sign = match ($movement->type) {
+            StockMovementType::Perte => -1,
+            StockMovementType::Entree => 1,
+            default => (($movement->ml_change ?: $movement->qty_change) < 0 ? -1 : 1),
+        };
+        $amount = $v['quantity'] * $sign;
+
+        DB::transaction(function () use ($movement, $v, $user, $isMl, $amount) {
+            $type = $movement->type;
+            $product = Product::findOrFail($movement->product_id);
+            $variant = $movement->variant_id ? ProductVariant::find($movement->variant_id) : null;
+            $openBottleId = $movement->open_bottle_id;
+
+            $this->stock->cancelMovement($movement, $user);
+
+            if ($type === StockMovementType::Entree) {
+                $this->stock->addEntry($product, $variant, ml: $isMl ? $v['quantity'] : 0, qty: $isMl ? 0 : $v['quantity'], note: $v['note'], user: $user);
+            } else {
+                $this->stock->adjust($product, $variant, $type, mlChange: $isMl ? $amount : 0, qtyChange: $isMl ? 0 : $amount, note: $v['note'], user: $user, openBottleId: $openBottleId);
+            }
+        });
+
+        return response()->json(['data' => ['id' => $movement->id, 'cancelled' => true]]);
+    }
+
+    /** Delete a hand-made movement: it is cancelled and its effect reversed (the row is kept for the history). */
+    public function destroyMovement(Request $request, StockMovement $movement): JsonResponse
+    {
+        $this->stock->cancelMovement($movement, $request->user());
+
+        return response()->json(null, 204);
+    }
+
+    /** Remove an opened bottle that was opened by mistake (nothing decanted from it yet). */
+    public function discardBottle(Request $request, OpenBottle $bottle): JsonResponse
+    {
+        $this->stock->discardOpenBottle($bottle, $request->user());
+
+        return response()->json(null, 204);
     }
 }

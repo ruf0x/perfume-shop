@@ -141,7 +141,7 @@ class OrderPlacement
                 'created_by' => $user->id,
             ]);
 
-            $this->createItems($order, $quote);
+            $this->createItems($order, $quote, $data['lines']);
             $this->stock->deductForOrder($order, $user);
             $this->logCreation($order, OrderStatus::VendueBoutique, $user, 'Vente en caisse');
             app(LoyaltyService::class)->record($order);
@@ -188,12 +188,18 @@ class OrderPlacement
     }
 
     /** Snapshot the lines: later price/name changes never alter an existing order. */
-    private function createItems(Order $order, Quote $quote): void
+    /** @param  list<array<string, mixed>>  $requested  the lines as sent (they may name an opened bottle) */
+    private function createItems(Order $order, Quote $quote, array $requested = []): void
     {
+        $bottles = collect($requested)->mapWithKeys(fn (array $l) => [(int) $l['variant_id'] => $l['open_bottle_id'] ?? null]);
+        $components = collect($requested)->mapWithKeys(fn (array $l) => [(int) $l['variant_id'] => $l['component_bottles'] ?? null]);
+
         foreach ($quote->lines as $line) {
             $order->items()->create([
                 'product_id' => $line->variant->product_id,
                 'variant_id' => $line->variant->id,
+                'open_bottle_id' => $bottles->get($line->variant->id),
+                'component_bottles' => $components->get($line->variant->id) ?: null,
                 'product_name' => $line->variant->product->name,
                 'variant_label' => $line->variant->label,
                 'ml' => $line->variant->ml,

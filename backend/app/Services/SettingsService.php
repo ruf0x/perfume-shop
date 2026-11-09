@@ -11,7 +11,7 @@ class SettingsService
 
     /** Defaults used until the owner saves a value. */
     public const DEFAULTS = [
-        'shop_name' => 'Roze Sham',
+        'shop_name' => 'Ma Boutique',
         'shop_phone' => null,
         'shop_address' => null,
         'socials' => [],

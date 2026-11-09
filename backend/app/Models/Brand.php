@@ -18,6 +18,12 @@ class Brand extends Model
         return $this->hasMany(Product::class);
     }
 
+    /** The families (categories) of the products of this brand: Designer, Niche... */
+    public function families(): BelongsToMany
+    {
+        return $this->belongsToMany(PerfumeType::class, 'brand_perfume_type');
+    }
+
     /** The product types this brand is sold in (Armani: Parfums and Montres). */
     public function productTypes(): BelongsToMany
     {

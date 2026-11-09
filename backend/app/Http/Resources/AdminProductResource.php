@@ -59,8 +59,11 @@ class AdminProductResource extends JsonResource
                 'components' => $v->relationLoaded('packItems') && $v->stock_mode->value === 'pack'
                     ? $v->packItems->map(fn ($item) => [
                         'variant_id' => $item->component_variant_id,
+                        'product_id' => $item->component->product_id,
                         'product' => $item->component->product->name,
                         'label' => $item->component->label,
+                        'ml' => $item->component->ml,
+                        'stock_mode' => $item->component->stock_mode->value,
                         'cost_price' => $item->component->cost_price,
                         'quantity' => $item->quantity,
                     ])->values()

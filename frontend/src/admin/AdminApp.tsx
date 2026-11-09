@@ -18,7 +18,9 @@ const ProductForm = lazy(() => import('./pages/ProductForm'))
 const Stock = lazy(() => import('./pages/Stock'))
 const Bottles = lazy(() => import('./pages/Bottles'))
 const ImportProducts = lazy(() => import('./pages/ImportProducts'))
+const StockProduct = lazy(() => import('./pages/StockProduct'))
 const Taxonomy = lazy(() => import('./pages/Taxonomy'))
+const BrandPage = lazy(() => import('./pages/BrandPage'))
 const ProductTypes = lazy(() => import('./pages/ProductTypes'))
 const Customers = lazy(() => import('./pages/Customers'))
 const SettingsPage = lazy(() => import('./pages/Settings'))
@@ -90,11 +92,14 @@ export default function AdminApp() {
           <Route path="packs/nouveau" element={owner(<ProductForm kind="pack" />)} />
           <Route path="packs/:id" element={<ProductForm kind="pack" />} />
           <Route path="stock" element={<Stock />} />
+          <Route path="stock/:id" element={<StockProduct />} />
           <Route path="bouteilles" element={owner(<Bottles />)} />
           <Route path="importer" element={owner(<ImportProducts />)} />
           <Route path="types-de-produits" element={owner(<ProductTypes />)} />
           <Route path="types" element={owner(<Taxonomy kind="types" />)} />
-          <Route path="marques" element={owner(<Taxonomy kind="brands" />)} />
+          <Route path="marques" element={<Navigate to="/admin/types" replace />} />
+          <Route path="marques/nouvelle" element={owner(<BrandPage />)} />
+          <Route path="marques/:id" element={owner(<BrandPage />)} />
           <Route path="clients" element={owner(<Customers />)} />
           <Route path="parametres" element={owner(<SettingsPage />)} />
           <Route path="*" element={<Navigate to="commandes" replace />} />

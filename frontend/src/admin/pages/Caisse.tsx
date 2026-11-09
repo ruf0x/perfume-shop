@@ -11,7 +11,7 @@ import { useSettings } from '@/shop/queries'
 import { EmptyState, Loading, PageHeader, Pagination, inputClass } from '../components/common'
 import { apiError } from '../lib'
 import { printTicket } from '../printHelper'
-import { useAdminProducts, useLoyaltyLookup, usePosSale, useProductTypes, useTaxa } from '../queries'
+import { useAdminProducts, useLoyaltyLookup, usePosSale, useProductTypes, useStockSummary, useTaxa } from '../queries'
 import { useIsOwner } from '../auth'
 import { ClientPicker, emptyClient, type ClientFields } from '../components/ClientPicker'
 import { GiftDialog, LoyaltyNote } from '../components/Loyalty'
@@ -19,7 +19,14 @@ import type { AdminProduct, AdminVariant, Order, StockMode } from '../types'
 import { useDebounced } from '../useDebounced'
 
 interface Line {
+  /** variant + bottle: the same size poured from two bottles is two lines. */
+  key: string
   variantId: number
+  /** For a decant line: the opened bottle it comes from (null = the newest one). */
+  openBottleId: number | null
+  /** For a pack with decants: component variant id => the opened bottle it is poured from. */
+  componentBottles: Record<number, number>
+  bottleLabel: string | null
   productId: number
   name: string
   label: string
@@ -50,7 +57,7 @@ const priceOf = (l: Line) => (l.priceText.trim() === '' || Number.isNaN(Number(l
 function maxFor(line: Line, lines: Line[]) {
   if (line.mode === 'unit') return line.unitStock
   if (line.mode === 'pack') return 99
-  const usedByOthers = lines.filter((l) => l.variantId !== line.variantId && l.productId === line.productId && l.mode === 'pool').reduce((s, l) => s + l.qty * (l.ml ?? 0), 0)
+  const usedByOthers = lines.filter((l) => l.key !== line.key && l.productId === line.productId && l.mode === 'pool').reduce((s, l) => s + l.qty * (l.ml ?? 0), 0)
   return Math.max(0, Math.floor((line.poolStock - usedByOthers) / (line.ml ?? 1)))
 }
 
@@ -61,7 +68,90 @@ function variantState(p: AdminProduct, v: AdminVariant): { ok: boolean; hint: st
   return { ok, hint: ok ? `${p.stock_ml} ml dispo` : 'épuisé' }
 }
 
-function SizeDialog({ product, onClose, onPick }: { product: AdminProduct; onClose: () => void; onPick: (v: AdminVariant) => void }) {
+/** The opened bottle a decant is poured from: the newest one by default, or one of the bottles that have ml left. */
+function BottleChoice({ productId, label, value, onChange, ml }: { productId: number; label: string; value: number | null; onChange: (id: number | null) => void; ml: number }) {
+  const summary = useStockSummary(productId)
+  const bottles = (summary.data?.open_bottles ?? []).filter((b) => b.remaining > 0)
+  return (
+    <label className="block space-y-1 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <select className={inputClass} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
+        <option value="">Automatique (la plus récente)</option>
+        {bottles.map((b) => (
+          <option key={b.id} value={b.id} disabled={b.remaining < ml}>{b.label} · {b.remaining} ml restants{b.remaining < ml ? ' (pas assez)' : ''}</option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+/** A decant size, or a pack with decants, asks which opened bottle the ml comes from. */
+function SizeDialog({ product, onClose, onPick }: { product: AdminProduct; onClose: () => void; onPick: (v: AdminVariant, bottle: { id: number; label: string } | null, components?: Record<number, number>) => void }) {
+  const [decant, setDecant] = useState<AdminVariant | null>(null)
+  const [pack, setPack] = useState<AdminVariant | null>(null)
+  const [choices, setChoices] = useState<Record<number, number | null>>({})
+  const summary = useStockSummary(product.id)
+  const bottles = (summary.data?.open_bottles ?? []).filter((b) => b.remaining > 0)
+
+  if (pack) {
+    const decants = (pack.components ?? []).filter((c) => c.stock_mode === 'pool')
+    const submit = () => onPick(pack, null, Object.fromEntries(Object.entries(choices).filter(([, id]) => id !== null)) as Record<number, number>)
+    return (
+      <Dialog open onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">{product.name} · {pack.label}</DialogTitle>
+            <DialogDescription>D'où sort le décant de chaque produit du pack ?</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {decants.map((c) => (
+              <PackComponent key={c.variant_id} component={c} value={choices[c.variant_id] ?? null} onChange={(id) => setChoices({ ...choices, [c.variant_id]: id })} />
+            ))}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" className="h-10" onClick={() => setPack(null)}>Retour</Button>
+            <Button className="h-10" onClick={submit}>Ajouter au panier</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  if (decant) {
+    const ml = decant.ml ?? 0
+    return (
+      <Dialog open onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">{product.name} · {decant.label}</DialogTitle>
+            <DialogDescription>D'où prend-on ces {ml} ml ?</DialogDescription>
+          </DialogHeader>
+          <ul className="grid gap-2">
+            <li>
+              <button type="button" onClick={() => onPick(decant, null)} className="flex w-full items-center justify-between gap-4 rounded-md border border-input bg-card px-4 py-3 text-start hover:border-primary">
+                <span><span className="block font-medium">Automatique</span><span className="text-sm text-muted-foreground">la bouteille la plus récente qui en a encore</span></span>
+              </button>
+            </li>
+            {bottles.map((b) => {
+              const enough = b.remaining >= ml
+              return (
+                <li key={b.id}>
+                  <button type="button" disabled={!enough} onClick={() => onPick(decant, { id: b.id, label: `${b.label} (${b.remaining} ml)` })} className="flex w-full items-center justify-between gap-4 rounded-md border border-input bg-card px-4 py-3 text-start hover:border-primary disabled:opacity-40">
+                    <span><span className="block font-medium">{b.label}</span><span className="tnum text-sm text-muted-foreground">{b.remaining} ml restants sur {b.capacity}{enough ? '' : ' · pas assez pour cette taille'}</span></span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          {bottles.length === 0 && <p className="text-sm text-muted-foreground">Aucune bouteille ouverte : le stock vient du vrac.</p>}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" className="h-10" onClick={() => setDecant(null)}>Retour</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -72,9 +162,11 @@ function SizeDialog({ product, onClose, onPick }: { product: AdminProduct; onClo
         <ul className="grid gap-2">
           {product.variants?.filter((v) => v.is_active).map((v) => {
             const s = variantState(product, v)
+            const hasDecant = v.stock_mode === 'pack' && (v.components ?? []).some((c) => c.stock_mode === 'pool')
+            const askBottle = (v.stock_mode === 'pool' && bottles.length > 0) || hasDecant
             return (
               <li key={v.id}>
-                <button type="button" disabled={!s.ok} onClick={() => onPick(v)} className="flex w-full items-center justify-between gap-4 rounded-md border border-input bg-card px-4 py-3 text-start hover:border-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input disabled:hover:bg-card">
+                <button type="button" disabled={!s.ok} onClick={() => (hasDecant ? setPack(v) : v.stock_mode === 'pool' && askBottle ? setDecant(v) : onPick(v, null))} className="flex w-full items-center justify-between gap-4 rounded-md border border-input bg-card px-4 py-3 text-start hover:border-primary disabled:opacity-40">
                   <span><span className="block font-medium">{v.label}</span><span className="text-sm text-muted-foreground">{s.hint}</span></span>
                   <span className="tnum font-display text-xl">{formatPrice(v.price)}</span>
                 </button>
@@ -85,6 +177,10 @@ function SizeDialog({ product, onClose, onPick }: { product: AdminProduct; onClo
       </DialogContent>
     </Dialog>
   )
+}
+
+function PackComponent({ component, value, onChange }: { component: NonNullable<AdminVariant['components']>[number]; value: number | null; onChange: (id: number | null) => void }) {
+  return <BottleChoice productId={component.product_id} label={`${component.product} · ${component.ml ?? '?'} ml × ${component.quantity}`} value={value} onChange={onChange} ml={(component.ml ?? 0) * component.quantity} />
 }
 
 function ReceiptDialog({ order, onNew }: { order: Order; onNew: () => void }) {
@@ -160,11 +256,13 @@ export default function Caisse() {
   const clientOk = !clientTyped || (client.first_name.trim() !== '' && client.last_name.trim() !== '' && client.phone.trim() !== '')
   const canSell = lines.length > 0 && clientOk && (payment !== 'especes' || cash >= total) && !sale.isPending
 
-  const add = (p: AdminProduct, v: AdminVariant) => {
-    const base: Line = { variantId: v.id, productId: p.id, name: p.name, label: v.label, listPrice: v.price, priceText: String(v.price), qty: 1, mode: v.stock_mode, ml: v.ml, poolStock: p.stock_ml, unitStock: v.stock_qty }
-    const existing = lines.find((l) => l.variantId === v.id)
-    const next = existing ? lines.map((l) => (l.variantId === v.id ? { ...l, qty: l.qty + 1 } : l)) : [...lines, base]
-    const line = next.find((l) => l.variantId === v.id)!
+  const add = (p: AdminProduct, v: AdminVariant, bottle: { id: number; label: string } | null = null, componentBottles: Record<number, number> = {}) => {
+    const chosen = Object.keys(componentBottles).length
+    const key = `${v.id}:${bottle?.id ?? 'auto'}:${Object.entries(componentBottles).sort().join(',')}`
+    const base: Line = { key, variantId: v.id, openBottleId: bottle?.id ?? null, bottleLabel: bottle?.label ?? (chosen ? `${chosen} décant(s) choisi(s)` : null), componentBottles, productId: p.id, name: p.name, label: v.label, listPrice: v.price, priceText: String(v.price), qty: 1, mode: v.stock_mode, ml: v.ml, poolStock: p.stock_ml, unitStock: v.stock_qty }
+    const existing = lines.find((l) => l.key === key)
+    const next = existing ? lines.map((l) => (l.key === key ? { ...l, qty: l.qty + 1 } : l)) : [...lines, base]
+    const line = next.find((l) => l.key === key)!
     if (line.qty > maxFor(line, next)) return toast.error(`Stock insuffisant pour ${p.name} (${v.label}).`)
     setLines(next)
     setPicked(null)
@@ -184,7 +282,7 @@ export default function Caisse() {
     if (!canSell) return
     sale.mutate(
       {
-        lines: lines.map((l) => ({ variant_id: l.variantId, quantity: l.qty, unit_price: priceOf(l) !== l.listPrice ? priceOf(l) : undefined })),
+        lines: lines.map((l) => ({ variant_id: l.variantId, quantity: l.qty, open_bottle_id: l.openBottleId ?? undefined, component_bottles: Object.keys(l.componentBottles).length ? l.componentBottles : undefined, unit_price: priceOf(l) !== l.listPrice ? priceOf(l) : undefined })),
         discount: discount || undefined,
         payment_method: payment,
         amount_received: payment === 'especes' ? cash : undefined,
@@ -272,10 +370,10 @@ export default function Caisse() {
           ) : (
             <ul className="divide-y divide-border">
               {lines.map((l) => (
-                <li key={l.variantId} className="flex items-center justify-between gap-3 py-3">
+                <li key={l.key} className="flex items-center justify-between gap-3 py-3">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{l.name}</p>
-                    <p className="text-sm text-muted-foreground">{l.label}</p>
+                    <p className="text-sm text-muted-foreground">{l.label}{l.bottleLabel ? ` · depuis ${l.bottleLabel}` : ''}</p>
                     <div className="mt-1 flex items-center gap-2">
                       <label className="flex items-center gap-1">
                         <span className="sr-only">Prix unitaire de {l.name}, en dinars</span>
@@ -284,22 +382,22 @@ export default function Caisse() {
                           min={0}
                           inputMode="numeric"
                           value={l.priceText}
-                          onChange={(e) => setLines(lines.map((x) => (x.variantId === l.variantId ? { ...x, priceText: e.target.value } : x)))}
-                          onBlur={() => priceOf(l) === l.listPrice && l.priceText !== String(l.listPrice) && setLines(lines.map((x) => (x.variantId === l.variantId ? { ...x, priceText: String(l.listPrice) } : x)))}
+                          onChange={(e) => setLines(lines.map((x) => (x.key === l.key ? { ...x, priceText: e.target.value } : x)))}
+                          onBlur={() => priceOf(l) === l.listPrice && l.priceText !== String(l.listPrice) && setLines(lines.map((x) => (x.key === l.key ? { ...x, priceText: String(l.listPrice) } : x)))}
                           className={cn('tnum h-8 w-24 rounded-md border bg-card px-2 text-sm', priceOf(l) !== l.listPrice ? 'border-primary font-medium text-primary' : 'border-input')}
                         />
                         <span className="text-sm text-muted-foreground">DA</span>
                       </label>
                       {priceOf(l) !== l.listPrice && (
-                        <button type="button" onClick={() => setLines(lines.map((x) => (x.variantId === l.variantId ? { ...x, priceText: String(l.listPrice) } : x)))} className="tnum text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground" title="Remettre le prix normal">
+                        <button type="button" onClick={() => setLines(lines.map((x) => (x.key === l.key ? { ...x, priceText: String(l.listPrice) } : x)))} className="tnum text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground" title="Remettre le prix normal">
                           <s>{formatPrice(l.listPrice)}</s>
                         </button>
                       )}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <QtyStepper value={l.qty} max={Math.max(1, maxFor(l, lines))} onChange={(n) => setLines(n < 1 ? lines.filter((x) => x.variantId !== l.variantId) : lines.map((x) => (x.variantId === l.variantId ? { ...x, qty: n } : x)))} />
-                    <button type="button" onClick={() => setLines(lines.filter((x) => x.variantId !== l.variantId))} className="flex size-10 items-center justify-center rounded text-muted-foreground hover:text-destructive" aria-label={`Retirer ${l.name}`}><Trash2 className="size-4" /></button>
+                    <QtyStepper value={l.qty} max={Math.max(1, maxFor(l, lines))} onChange={(n) => setLines(n < 1 ? lines.filter((x) => x.key !== l.key) : lines.map((x) => (x.key === l.key ? { ...x, qty: n } : x)))} />
+                    <button type="button" onClick={() => setLines(lines.filter((x) => x.key !== l.key))} className="flex size-10 items-center justify-center rounded text-muted-foreground hover:text-destructive" aria-label={`Retirer ${l.name}`}><Trash2 className="size-4" /></button>
                   </div>
                 </li>
               ))}
@@ -373,7 +471,7 @@ export default function Caisse() {
         </div>
       )}
 
-      {picked && <SizeDialog product={picked} onClose={() => setPicked(null)} onPick={(v) => add(picked, v)} />}
+      {picked && <SizeDialog product={picked} onClose={() => setPicked(null)} onPick={(v, bottle, components) => add(picked, v, bottle, components)} />}
       {done && <ReceiptDialog order={done} onNew={reset} />}
     </>
   )

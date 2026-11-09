@@ -144,6 +144,8 @@ export function stockRows(d: Db): StockRow[] {
       has_pool: (p.variants ?? []).some((v) => v.stock_mode === 'pool'),
       sealed: (p.variants ?? []).filter((v) => v.stock_mode === 'unit').map((v) => ({ variant_id: v.id, label: v.label, ml: v.ml, stock_qty: v.stock_qty })),
       status: stockLevel(d, p),
+      open_bottles: [],
+      bulk_ml: p.stock_ml,
     }))
 }
 
@@ -162,6 +164,8 @@ function logMovement(d: Db, m: { type: string; productId: number; variantId?: nu
     user: m.user ?? null,
     note: m.note ?? null,
     created_at: now(),
+    cancelled: false,
+    editable: false,
   })
 }
 

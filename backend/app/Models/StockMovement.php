@@ -19,6 +19,7 @@ class StockMovement extends Model
             'ml_change' => 'integer',
             'qty_change' => 'integer',
             'unit_cost' => 'integer',
+            'cancelled_at' => 'datetime',
         ];
     }
 

@@ -18,6 +18,7 @@ class OrderItem extends Model
             'unit_cost' => 'integer',
             'quantity' => 'integer',
             'line_total' => 'integer',
+            'component_bottles' => 'array',
         ];
     }
 

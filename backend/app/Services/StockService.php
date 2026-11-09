@@ -10,6 +10,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Exceptions\ShopException;
 use App\Models\BottleSize;
 use App\Models\Order;
+use App\Models\OpenBottle;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
@@ -240,6 +241,7 @@ class StockService
         int $qtyChange = 0,
         ?string $note = null,
         ?User $user = null,
+        ?int $openBottleId = null,
     ): StockMovement {
         if (! in_array($type, [StockMovementType::Ajustement, StockMovementType::Perte], true)) {
             throw new ShopException('Type de mouvement invalide pour un ajustement.');
@@ -251,7 +253,7 @@ class StockService
             throw new ShopException('Une perte ne peut que diminuer le stock.');
         }
 
-        return $this->apply($product, $variant, $type, $mlChange, $qtyChange, null, $note, $user);
+        return $this->apply($product, $variant, $type, $mlChange, $qtyChange, null, $note, $user, $openBottleId);
     }
 
     /** Open a sealed bottle: -1 sealed unit, +ml in the decant pool (one transaction, two movements). */
@@ -275,6 +277,7 @@ class StockService
 
             $variant->decrement('stock_qty');
             $product->increment('stock_ml', $variant->ml);
+            OpenBottle::create(['product_id' => $product->id, 'variant_id' => $variant->id, 'label' => "Flacon {$variant->ml} ml", 'capacity_ml' => $variant->ml, 'remaining_ml' => $variant->ml, 'opened_at' => now()]);
         });
     }
 
@@ -327,9 +330,32 @@ class StockService
 
             $type = $order->channel === OrderChannel::Pos ? StockMovementType::VenteCaisse : StockMovementType::VenteEnLigne;
 
+            // Lines that name their bottle take from it first; the rest of each product's ml comes from the newest bottles.
+            $named = [];
+            foreach ($order->items()->with('variant.packItems.component')->get() as $item) {
+                if ($item->open_bottle_id && $item->variant?->stock_mode === StockMode::Pool) {
+                    $named[$item->product_id][] = [$item->open_bottle_id, (int) $item->variant->ml * $item->quantity];
+                }
+                // A pack: each decant component that names its bottle takes from that bottle.
+                if ($item->component_bottles && $item->variant?->stock_mode === StockMode::Pack) {
+                    foreach ($item->variant->packItems as $pack) {
+                        $bottleId = $item->component_bottles[(string) $pack->component_variant_id] ?? null;
+                        if ($bottleId && $pack->component?->stock_mode === StockMode::Pool) {
+                            $named[$pack->component->product_id][] = [(int) $bottleId, (int) $pack->component->ml * $pack->quantity * $item->quantity];
+                        }
+                    }
+                }
+            }
+
             foreach ($needs['ml'] as $productId => $ml) {
                 $this->record($products[$productId], null, $type, -$ml, 0, null, $order->id, $order->reference, $user);
                 $products[$productId]->decrement('stock_ml', $ml);
+                $fromNamed = 0;
+                foreach ($named[$productId] ?? [] as [$bottleId, $amount]) {
+                    $this->drawFromBottles($products[$productId], $amount, 'decanted_ml', $bottleId);
+                    $fromNamed += $amount;
+                }
+                $this->drawFromBottles($products[$productId], $ml - $fromNamed, 'decanted_ml');
             }
             foreach ($needs['units'] as $variantId => $units) {
                 $this->record($variants[$variantId]->product, $variants[$variantId], $type, 0, -$units, null, $order->id, $order->reference, $user);
@@ -378,6 +404,9 @@ class StockService
                 if ($n['ml'] !== 0) {
                     $products[$n['product_id']]->increment('stock_ml', -$n['ml']);
                 }
+                if ($n['ml'] < 0) {
+                    $this->giveBack($products[$n['product_id']], -$n['ml']);
+                }
                 if ($n['qty'] !== 0) {
                     $variant->increment('stock_qty', -$n['qty']);
                 }
@@ -424,6 +453,7 @@ class StockService
         ?int $unitCost,
         ?string $note,
         ?User $user,
+        ?int $openBottleId = null,
     ): StockMovement {
         if (! $product->kind->hasOwnStock()) {
             throw new ShopException('Le stock se gère par produit, pas par pack.');
@@ -436,7 +466,7 @@ class StockService
             }
         }
 
-        return DB::transaction(function () use ($product, $variant, $type, $ml, $qty, $unitCost, $note, $user) {
+        return DB::transaction(function () use ($product, $variant, $type, $ml, $qty, $unitCost, $note, $user, $openBottleId) {
             $lockedProduct = Product::query()->lockForUpdate()->findOrFail($product->id);
             $lockedVariant = $variant ? ProductVariant::query()->lockForUpdate()->findOrFail($variant->id) : null;
 
@@ -448,10 +478,13 @@ class StockService
                 throw new ShopException("Stock insuffisant : {$lockedVariant->stock_qty} {$thing} disponibles pour « {$lockedProduct->name} ».");
             }
 
-            $movement = $this->record($lockedProduct, $qty !== 0 ? $lockedVariant : null, $type, $ml, $qty, $unitCost, null, $note, $user);
+            $movement = $this->record($lockedProduct, $qty !== 0 ? $lockedVariant : null, $type, $ml, $qty, $unitCost, null, $note, $user, $openBottleId);
 
             if ($ml !== 0) {
                 $lockedProduct->increment('stock_ml', $ml);
+            }
+            if ($ml < 0) {
+                $this->drawFromBottles($lockedProduct, -$ml, $type === StockMovementType::Perte ? 'lost_ml' : 'adjusted_ml', $openBottleId);
             }
             if ($qty !== 0) {
                 $lockedVariant->increment('stock_qty', $qty);
@@ -459,6 +492,156 @@ class StockService
 
             return $movement;
         });
+    }
+
+    /**
+     * Cancel a hand-made movement (entry, loss, correction): its effect is reversed by a new movement, and the
+     * original keeps its row, marked cancelled. Sales and order movements are never cancelled here.
+     */
+    public function cancelMovement(StockMovement $movement, ?User $user = null): void
+    {
+        if (! in_array($movement->type, [StockMovementType::Entree, StockMovementType::Perte, StockMovementType::Ajustement], true) || $movement->order_id !== null || $movement->cancelled_at !== null) {
+            throw new ShopException("Ce mouvement ne peut pas être modifié : il vient d'une commande ou d'une vente, ou il est déjà annulé.");
+        }
+
+        DB::transaction(function () use ($movement, $user) {
+            $product = Product::query()->lockForUpdate()->findOrFail($movement->product_id);
+            $variant = $movement->variant_id ? ProductVariant::query()->lockForUpdate()->findOrFail($movement->variant_id) : null;
+            $ml = (int) $movement->ml_change;
+            $qty = (int) $movement->qty_change;
+
+            if ($ml !== 0 && $product->stock_ml - $ml < 0) {
+                throw new ShopException("Impossible d'annuler : il ne reste pas assez de ml dans « {$product->name} ».");
+            }
+            if ($qty !== 0 && $variant->stock_qty - $qty < 0) {
+                throw new ShopException("Impossible d'annuler : il ne reste pas assez de « {$variant->label} ».");
+            }
+
+            if ($ml !== 0) {
+                $product->decrement('stock_ml', $ml);
+                $field = match ($movement->type) {
+                    StockMovementType::Perte => 'lost_ml',
+                    StockMovementType::Ajustement => 'adjusted_ml',
+                    default => null,
+                };
+                if ($field !== null && $ml < 0) {
+                    $this->giveBackTo($product, -$ml, $field, $movement->open_bottle_id);
+                }
+            }
+            if ($qty !== 0) {
+                $variant->decrement('stock_qty', $qty);
+            }
+
+            $this->record($product, $variant, StockMovementType::Ajustement, -$ml, -$qty, null, null, 'Annulation : '.($movement->note ?? $movement->type->value), $user);
+            $movement->forceFill(['cancelled_at' => now()])->save();
+        });
+    }
+
+    /** An opened bottle that has not been used yet (opened by mistake): its flacon goes back to the sealed stock. */
+    public function discardOpenBottle(OpenBottle $bottle, ?User $user = null): void
+    {
+        if ($bottle->decanted_ml !== 0 || $bottle->lost_ml !== 0 || $bottle->adjusted_ml !== 0 || $bottle->remaining_ml !== $bottle->capacity_ml) {
+            throw new ShopException('Ce flacon a déjà servi : on ne peut plus le supprimer. Corrigez plutôt les ventes ou les pertes.');
+        }
+
+        DB::transaction(function () use ($bottle, $user) {
+            $product = Product::query()->lockForUpdate()->findOrFail($bottle->product_id);
+            $variant = $bottle->variant_id ? ProductVariant::query()->lockForUpdate()->find($bottle->variant_id) : null;
+            if ($product->stock_ml - $bottle->capacity_ml < 0) {
+                throw new ShopException("Impossible : il ne reste pas assez de ml dans « {$product->name} ».");
+            }
+
+            $product->decrement('stock_ml', $bottle->capacity_ml);
+            if ($variant) {
+                $variant->increment('stock_qty');
+            }
+            $this->record($product, $variant, StockMovementType::Ajustement, -$bottle->capacity_ml, $variant ? 1 : 0, null, null, "Flacon ouvert par erreur ({$bottle->label})", $user);
+            $bottle->delete();
+        });
+    }
+
+    /** Give ml back to the bottle it came from (or the newest bottle that lost some of that kind). */
+    private function giveBackTo(Product $product, int $ml, string $field, ?int $bottleId): void
+    {
+        if ($bottleId !== null) {
+            $bottle = OpenBottle::query()->whereKey($bottleId)->lockForUpdate()->first();
+            if ($bottle) {
+                $back = min($ml, $bottle->{$field});
+                $bottle->{$field} -= $back;
+                $bottle->remaining_ml += $back;
+                $bottle->save();
+                $ml -= $back;
+            }
+        }
+
+        $bottles = OpenBottle::query()->where('product_id', $product->id)->where($field, '>', 0)
+            ->orderByDesc('opened_at')->orderByDesc('id')->lockForUpdate()->get();
+        foreach ($bottles as $bottle) {
+            if ($ml <= 0) {
+                break;
+            }
+            $back = min($ml, $bottle->{$field});
+            $bottle->{$field} -= $back;
+            $bottle->remaining_ml += $back;
+            $bottle->save();
+            $ml -= $back;
+        }
+    }
+
+    /**
+     * Take `$ml` out of the open bottles: the chosen one, or else the newest bottle that still has ml (then the next).
+     * What no bottle holds is bulk stock, which only the pool total knows about.
+     */
+    private function drawFromBottles(Product $product, int $ml, string $field, ?int $bottleId = null): void
+    {
+        if ($ml <= 0) {
+            return;
+        }
+
+        if ($bottleId !== null) {
+            $bottle = OpenBottle::query()->where('product_id', $product->id)->whereKey($bottleId)->lockForUpdate()->first()
+                ?? throw new ShopException("Ce flacon n'appartient pas à « {$product->name} ».");
+            if ($bottle->remaining_ml < $ml) {
+                throw new ShopException("Il ne reste que {$bottle->remaining_ml} ml dans ce flacon.");
+            }
+            $bottle->remaining_ml -= $ml;
+            $bottle->{$field} += $ml;
+            $bottle->save();
+
+            return;
+        }
+
+        $bottles = OpenBottle::query()->where('product_id', $product->id)->where('remaining_ml', '>', 0)
+            ->orderByDesc('opened_at')->orderByDesc('id')->lockForUpdate()->get();
+
+        foreach ($bottles as $bottle) {
+            if ($ml <= 0) {
+                break;
+            }
+            $take = min($ml, $bottle->remaining_ml);
+            $bottle->remaining_ml -= $take;
+            $bottle->{$field} += $take;
+            $bottle->save();
+            $ml -= $take;
+        }
+    }
+
+    /** A sale cancelled or returned: the ml go back to the newest bottle they were taken from. */
+    private function giveBack(Product $product, int $ml): void
+    {
+        $bottles = OpenBottle::query()->where('product_id', $product->id)->where('decanted_ml', '>', 0)
+            ->orderByDesc('opened_at')->orderByDesc('id')->lockForUpdate()->get();
+
+        foreach ($bottles as $bottle) {
+            if ($ml <= 0) {
+                break;
+            }
+            $back = min($ml, $bottle->decanted_ml);
+            $bottle->decanted_ml -= $back;
+            $bottle->remaining_ml += $back;
+            $bottle->save();
+            $ml -= $back;
+        }
     }
 
     private function record(
@@ -471,6 +654,7 @@ class StockService
         ?int $orderId,
         ?string $note,
         ?User $user = null,
+        ?int $openBottleId = null,
     ): StockMovement {
         return StockMovement::create([
             'product_id' => $product->id,
@@ -481,6 +665,7 @@ class StockService
             'unit_cost' => $unitCost,
             'order_id' => $orderId,
             'user_id' => $user?->id,
+            'open_bottle_id' => $openBottleId,
             'note' => $note,
         ]);
     }

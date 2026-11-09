@@ -16,11 +16,22 @@ class BrandController extends Controller
     /** All brands with the product types they are sold in (`product_type_ids`). Filter with `?product_type_id=`. */
     public function index(Request $request): JsonResponse
     {
-        $brands = Brand::query()->withCount('products')->with('productTypes:id')
+        $brands = Brand::query()->withCount('products')->with(['productTypes:id', 'families:id,name'])
             ->when($request->query('product_type_id'), fn ($q, $id) => $q->whereHas('productTypes', fn ($t) => $t->where('product_types.id', $id)))
+            ->when($request->query('perfume_type_id'), fn ($q, $id) => $q->whereHas('families', fn ($t) => $t->where('perfume_types.id', $id)))
             ->orderBy('name')->get();
 
         return response()->json(['data' => $brands->map(fn (Brand $b) => $this->present($b))->values()]);
+    }
+
+    /** One brand with its types, families and the products that use it. */
+    public function show(Brand $brand): JsonResponse
+    {
+        $brand->load(['productTypes:id', 'families:id,name'])->loadCount('products');
+        $products = $brand->products()->with('productType:id,name')->orderBy('name')->get(['id', 'name', 'slug', 'kind', 'product_type_id'])
+            ->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'kind' => $p->kind, 'type' => $p->productType?->name]);
+
+        return response()->json(['data' => $this->present($brand) + ['products' => $products]]);
     }
 
     public function store(Request $request): JsonResponse
@@ -30,12 +41,16 @@ class BrandController extends Controller
             /** The product types this brand is sold in. */
             'product_type_ids' => ['sometimes', 'array'],
             'product_type_ids.*' => ['integer', Rule::exists('product_types', 'id')->whereNull('deleted_at')],
+            /** The families (categories) this brand is in. */
+            'perfume_type_ids' => ['sometimes', 'array'],
+            'perfume_type_ids.*' => ['integer', Rule::exists('perfume_types', 'id')->whereNull('deleted_at')],
         ]);
 
         $brand = Brand::create(['name' => $v['name'], 'slug' => Str::slug($v['name'])]);
         $brand->productTypes()->sync($v['product_type_ids'] ?? []);
+        $brand->families()->sync($v['perfume_type_ids'] ?? []);
 
-        return response()->json(['data' => $this->present($brand->load('productTypes:id'))], 201);
+        return response()->json(['data' => $this->present($brand->load(['productTypes:id', 'families:id,name']))], 201);
     }
 
     public function update(Request $request, Brand $brand): JsonResponse
@@ -44,6 +59,8 @@ class BrandController extends Controller
             'name' => ['sometimes', 'string', 'max:100', Rule::unique('brands', 'name')->ignore($brand)],
             'product_type_ids' => ['sometimes', 'array'],
             'product_type_ids.*' => ['integer', Rule::exists('product_types', 'id')->whereNull('deleted_at')],
+            'perfume_type_ids' => ['sometimes', 'array'],
+            'perfume_type_ids.*' => ['integer', Rule::exists('perfume_types', 'id')->whereNull('deleted_at')],
         ]);
 
         if (isset($v['name'])) {
@@ -52,14 +69,17 @@ class BrandController extends Controller
         if (isset($v['product_type_ids'])) {
             $brand->productTypes()->sync($v['product_type_ids']);
         }
+        if (isset($v['perfume_type_ids'])) {
+            $brand->families()->sync($v['perfume_type_ids']);
+        }
 
-        return response()->json(['data' => $this->present($brand->fresh('productTypes:id'))]);
+        return response()->json(['data' => $this->present($brand->fresh(['productTypes:id', 'families:id,name']))]);
     }
 
     /** @return array<string, mixed> */
     private function present(Brand $b): array
     {
-        return ['id' => $b->id, 'name' => $b->name, 'slug' => $b->slug, 'products_count' => $b->products_count ?? $b->products()->count(), 'product_type_ids' => $b->productTypes->pluck('id')->values()];
+        return ['id' => $b->id, 'name' => $b->name, 'slug' => $b->slug, 'products_count' => $b->products_count ?? $b->products()->count(), 'product_type_ids' => $b->productTypes->pluck('id')->values(), 'perfume_type_ids' => $b->families->pluck('id')->values(), 'families' => $b->families->pluck('name')->values()];
     }
 
     /** Refused while products use the brand. */

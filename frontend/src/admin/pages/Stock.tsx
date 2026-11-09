@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -8,9 +9,9 @@ import { useIsOwner } from '../auth'
 import { ConfirmDialog, EmptyState, ErrorState, Loading, PageHeader, Pagination, inputClass } from '../components/common'
 import { apiError, formatDateTime } from '../lib'
 import { useMovements, useProductTypes, useStock, useStockWrite, useTaxa } from '../queries'
-import type { StockRow } from '../types'
+import type { OpenBottle, StockRow } from '../types'
 
-const TYPE_LABEL: Record<string, string> = {
+export const TYPE_LABEL: Record<string, string> = {
   entree: 'Entrée',
   vente_en_ligne: 'Vente en ligne',
   vente_caisse: 'Vente en caisse',
@@ -21,24 +22,24 @@ const TYPE_LABEL: Record<string, string> = {
   ouverture_flacon: 'Ouverture de flacon',
 }
 
-const STATUS = {
+export const STATUS = {
   ok: { label: 'En stock', cls: 'bg-emerald-100 text-emerald-900' },
   low: { label: 'Stock faible', cls: 'bg-amber-100 text-amber-900' },
   out: { label: 'Épuisé', cls: 'bg-red-100 text-red-900' },
 } as const
 
-const sign = (n: number, unit: string) => (n === 0 ? null : <span className={cn('tnum', n > 0 ? 'text-emerald-700' : 'text-red-700')}>{n > 0 ? '+' : '−'}{Math.abs(n)} {unit}</span>)
+export const sign = (n: number, unit: string) => (n === 0 ? null : <span className={cn('tnum', n > 0 ? 'text-emerald-700' : 'text-red-700')}>{n > 0 ? '+' : '−'}{Math.abs(n)} {unit}</span>)
 
-function EntryDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
+export function EntryDialog({ row, onClose, variantId }: { row: StockRow; onClose: () => void; variantId?: number }) {
   const { entry } = useStockWrite()
   const cosmetic = row.kind === 'standard'
   // A perfume is received in ml (for decanting) or as sealed bottles; a cosmetic in pieces, or in ml if sold by volume.
   const canMl = !cosmetic || row.has_pool || row.sealed.length === 0
   const canUnit = row.sealed.length > 0
-  const [mode, setMode] = useState<'ml' | 'unit'>(canMl && !(cosmetic && canUnit) ? 'ml' : 'unit')
+  const [mode, setMode] = useState<'ml' | 'unit'>(variantId ? 'unit' : canMl && !(cosmetic && canUnit) ? 'ml' : 'unit')
   const [bottles, setBottles] = useState('1')
   const [size, setSize] = useState('100')
-  const [variant, setVariant] = useState(row.sealed[0]?.variant_id ?? 0)
+  const [variant, setVariant] = useState(variantId ?? row.sealed[0]?.variant_id ?? 0)
   const [qty, setQty] = useState('1')
   const [cost, setCost] = useState('')
   const [note, setNote] = useState('')
@@ -92,13 +93,54 @@ function EntryDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
   )
 }
 
-function AdjustDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
+/** A loss taken from one opened bottle: say how many ml were spilled from that bottle. */
+function BottleLossDialog({ row, bottle, onClose }: { row: StockRow; bottle: OpenBottle; onClose: () => void }) {
+  const { adjust } = useStockWrite()
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
+
+  const submit = () => {
+    const ml = Number(amount)
+    if (!(ml > 0)) return toast.error('Indiquez les ml perdus.')
+    if (ml > bottle.remaining) return toast.error(`Il ne reste que ${bottle.remaining} ml dans ce flacon.`)
+    if (!note.trim()) return toast.error('Expliquez en quelques mots (renversé, testeur...).')
+    adjust.mutate(
+      { product_id: row.product_id, type: 'perte', ml_change: -ml, note: note.trim(), open_bottle_id: bottle.id },
+      { onSuccess: () => { toast.success('Perte enregistrée.'); onClose() }, onError: (e) => toast.error(apiError(e)) },
+    )
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl">Perte, {bottle.label}</DialogTitle>
+          <DialogDescription>{`Il reste ${bottle.remaining} ml dans ce flacon.`}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <label className="block space-y-1 text-sm"><span className="text-muted-foreground">ml perdus</span>
+            <input type="number" min={1} max={bottle.remaining} inputMode="numeric" className={inputClass} value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
+          </label>
+          <label className="block space-y-1 text-sm"><span className="text-muted-foreground">Raison</span>
+            <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Renversé, testeur, échantillon…" />
+          </label>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="outline" className="h-10" onClick={onClose}>Annuler</Button>
+          <Button variant="destructive" className="h-10" onClick={submit} disabled={adjust.isPending}>{adjust.isPending ? 'Un instant…' : 'Enregistrer la perte'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function AdjustDialog({ row, onClose, variantId }: { row: StockRow; onClose: () => void; variantId?: number }) {
   const { adjust } = useStockWrite()
   const [type, setType] = useState<'perte' | 'ajustement'>('perte')
   const [direction, setDirection] = useState<1 | -1>(-1)
   const cosmetic = row.kind === 'standard'
   const unitsOnly = cosmetic && !row.has_pool && row.sealed.length > 0
-  const [target, setTarget] = useState<number>(unitsOnly ? row.sealed[0].variant_id : 0) // 0 = ml pool, else a counted variant id
+  const [target, setTarget] = useState<number>(variantId ?? (unitsOnly ? row.sealed[0].variant_id : 0)) // 0 = ml pool, else a counted variant id
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const sign = type === 'perte' ? -1 : direction
@@ -163,9 +205,11 @@ function Overview() {
   const query = useStock({ q: q || undefined, status: status || undefined, product_type_id: rayonId ? Number(rayonId) : undefined, type_id: typeId ? Number(typeId) : undefined })
   const shownCategories = (categories.data ?? []).filter((c) => !rayonId || c.product_type_id === Number(rayonId))
   const { openBottle } = useStockWrite()
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
-  const [entry, setEntry] = useState<StockRow | null>(null)
-  const [adjust, setAdjust] = useState<StockRow | null>(null)
+  const [entryFor, setEntryFor] = useState<{ row: StockRow; variantId: number } | null>(null)
+  const [adjustFor, setAdjustFor] = useState<{ row: StockRow; variantId: number } | null>(null)
+  const [lossFor, setLossFor] = useState<{ row: StockRow; bottle: OpenBottle } | null>(null)
   const [open, setOpen] = useState<{ row: StockRow; variantId: number; label: string; ml: number | null } | null>(null)
   const rows = query.data?.data ?? []
   const PER_PAGE = 15
@@ -192,31 +236,39 @@ function Overview() {
       {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isPending ? <Loading /> : rows.length === 0 ? <EmptyState title="Aucun produit" hint={q || rayonId || typeId || status ? 'Aucun résultat avec ces filtres.' : 'Créez un produit pour gérer son stock.'} /> : (
         <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
           {pageRows.map((r) => (
-            <li key={r.product_id} className="space-y-3 p-4 md:flex md:items-center md:gap-6 md:space-y-0">
+            <li key={r.product_id} onClick={() => navigate(`/admin/stock/${r.product_id}`)} className="cursor-pointer space-y-3 p-4 hover:bg-secondary/60 md:flex md:items-center md:gap-6 md:space-y-0">
               <div className="min-w-0 md:w-1/4">
-                <div className="flex min-w-0 items-center gap-2"><p className="min-w-0 truncate font-display text-lg leading-tight">{r.name}</p>{r.kind === 'standard' && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-sans text-xs text-accent-foreground">{r.product_type?.name ?? 'Standard'}</span>}</div>
+                <div className="flex min-w-0 items-center gap-2"><Link to={`/admin/stock/${r.product_id}`} className="min-w-0 truncate font-display text-lg leading-tight hover:underline">{r.name}</Link>{r.kind === 'standard' && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-sans text-xs text-accent-foreground">{r.product_type?.name ?? 'Standard'}</span>}</div>
                 <p className="truncate text-sm text-muted-foreground">{r.brand ?? '—'}{!r.is_active && ', masqué'}</p>
               </div>
-              <div className="tnum flex-1 text-sm">
-                {(r.kind === 'perfume' || r.has_pool || r.sealed.length === 0) && <p><strong className="text-base">{r.stock_ml} ml</strong> {r.kind === 'perfume' ? 'à décanter' : 'en stock'}</p>}
+              <div className="min-w-0 flex-1 space-y-3" onClick={(e) => e.stopPropagation()}>
                 {r.sealed.length > 0 && (
-                  <p className={r.kind === 'perfume' ? 'text-muted-foreground' : undefined}>
-                    {r.kind === 'standard' && <strong className="text-base">{r.sealed.reduce((n, s) => n + s.stock_qty, 0)} en stock</strong>}
-                    {r.kind === 'standard' && <span className="text-muted-foreground"> : </span>}
-                    <span className="text-muted-foreground">{r.sealed.map((s) => `${s.stock_qty} × ${s.label}`).join(', ')}</span>
-                  </p>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{r.kind === 'perfume' ? 'Flacons complets' : 'En stock'}</p>
+                    {r.sealed.map((v) => (
+                      <div key={v.variant_id} className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="tnum min-w-44"><strong className="text-base">{v.stock_qty}</strong> × {v.label}</span>
+                        {owner && <Button variant="outline" className="h-8 px-3" onClick={() => setEntryFor({ row: r, variantId: v.variant_id })}>Entrée</Button>}
+                        {owner && <Button variant="outline" className="h-8 px-3" onClick={() => setAdjustFor({ row: r, variantId: v.variant_id })}>Perte</Button>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {r.kind === 'perfume' && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Flacons en décantage</p>
+                    {r.open_bottles.length === 0 && <p className="text-sm text-muted-foreground">Aucun flacon ouvert</p>}
+                    {r.open_bottles.map((b) => (
+                      <div key={b.id} className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="tnum min-w-44"><strong>{b.label}</strong> : <strong className="text-base">{b.remaining} ml</strong> restants</span>
+                        {owner && <Button variant="outline" className="h-8 px-3" onClick={() => setLossFor({ row: r, bottle: b })}>Perte</Button>}
+                      </div>
+                    ))}
+                    {r.bulk_ml > 0 && <p className="tnum text-xs text-muted-foreground">+ {r.bulk_ml} ml en vrac, hors flacon</p>}
+                  </div>
                 )}
               </div>
               <span className={cn('inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-medium', STATUS[r.status].cls)}>{STATUS[r.status].label}</span>
-              {owner && (
-                <div className="flex flex-wrap gap-2">
-                  <Button className="h-9" onClick={() => setEntry(r)}>Entrée</Button>
-                  <Button variant="outline" className="h-9" onClick={() => setAdjust(r)}>Perte / correction</Button>
-                  {r.kind === 'perfume' && r.sealed.filter((s) => s.stock_qty > 0 && s.ml).map((s) => (
-                    <Button key={s.variant_id} variant="outline" className="h-9" onClick={() => setOpen({ row: r, variantId: s.variant_id, label: s.label, ml: s.ml })}>Ouvrir un {s.ml} ml</Button>
-                  ))}
-                </div>
-              )}
             </li>
           ))}
         </ul>
@@ -224,8 +276,9 @@ function Overview() {
 
       <Pagination meta={{ current_page: safePage, last_page: lastPage, per_page: PER_PAGE, total: rows.length }} onPage={setPage} />
 
-      {entry && <EntryDialog row={entry} onClose={() => setEntry(null)} />}
-      {adjust && <AdjustDialog row={adjust} onClose={() => setAdjust(null)} />}
+      {entryFor && <EntryDialog row={entryFor.row} variantId={entryFor.variantId} onClose={() => setEntryFor(null)} />}
+      {adjustFor && <AdjustDialog row={adjustFor.row} variantId={adjustFor.variantId} onClose={() => setAdjustFor(null)} />}
+      {lossFor && <BottleLossDialog row={lossFor.row} bottle={lossFor.bottle} onClose={() => setLossFor(null)} />}
       <ConfirmDialog
         open={!!open}
         onOpenChange={(o) => !o && setOpen(null)}

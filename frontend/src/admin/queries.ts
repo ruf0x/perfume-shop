@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import { api } from '@/lib/api'
 import { clean } from './lib'
 import { prepareImage } from './imagePrep'
-import type { AdminProduct, GiftSuggestions, Loyalty, LoyaltyTier, BottleMovement, BottleSizeRow, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
+import type { StockSummary, BrandDetail, AdminProduct, GiftSuggestions, Loyalty, LoyaltyTier, BottleMovement, BottleSizeRow, AdminProductType, AdminUser, AdminWilaya, Customer, Dashboard, Meta, Movement, Order, OrderAction, OrderFilters, OrdersPage, ShopSettings, StockRow, Taxon } from './types'
 
 /** Everything the admin shows may have changed after a write; "me" is left alone. */
 const refresh = (qc: QueryClient) => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'admin' && q.queryKey[1] !== 'me' })
@@ -136,6 +136,9 @@ export function useDeleteProductType() {
 // ── families / categories & brands ──────────────────────────────────────
 export type TaxonKind = 'types' | 'brands'
 
+export const useBrand = (id: number | null) =>
+  useQuery({ queryKey: ['admin', 'brand', id], enabled: id !== null, queryFn: () => api.get<{ data: BrandDetail }>(`/admin/brands/${id}`).then((r) => r.data.data) })
+
 export const useTaxa = (kind: TaxonKind) =>
   useQuery({ queryKey: ['admin', kind], queryFn: () => api.get<{ data: Taxon[] }>(`/admin/${kind}`).then((r) => r.data.data) })
 
@@ -160,6 +163,9 @@ export const useStock = (params: { q?: string; status?: 'ok' | 'low' | 'out'; pr
     queryFn: () => api.get<{ data: StockRow[]; low_stock_threshold_ml: number; low_stock_threshold_qty: number }>('/admin/stock', { params: clean(params) }).then((r) => r.data),
   })
 
+export const useStockSummary = (productId: number) =>
+  useQuery({ queryKey: ['admin', 'stock-summary', productId], queryFn: () => api.get<{ data: StockSummary }>(`/admin/stock/products/${productId}/summary`).then((r) => r.data.data) })
+
 export interface MovementParams {
   product_id?: number
   type?: string
@@ -180,8 +186,11 @@ export function useStockWrite() {
   const done = () => refresh(qc)
   return {
     entry: useMutation({ mutationFn: (body: { product_id: number; variant_id?: number; ml?: number; qty?: number; unit_cost?: number; note?: string }) => api.post('/admin/stock/entries', body), onSuccess: done }),
-    adjust: useMutation({ mutationFn: (body: { product_id: number; variant_id?: number; type: 'ajustement' | 'perte'; ml_change?: number; qty_change?: number; note: string }) => api.post('/admin/stock/adjustments', body), onSuccess: done }),
+    adjust: useMutation({ mutationFn: (body: { product_id: number; variant_id?: number | null; open_bottle_id?: number; type: 'ajustement' | 'perte'; ml_change?: number; qty_change?: number; note: string }) => api.post('/admin/stock/adjustments', body), onSuccess: done }),
     openBottle: useMutation({ mutationFn: (variantId: number) => api.post('/admin/stock/open-bottle', { variant_id: variantId }), onSuccess: done }),
+    correctMovement: useMutation({ mutationFn: ({ id, quantity, note }: { id: number; quantity: number; note: string }) => api.put(`/admin/stock/movements/${id}`, { quantity, note }), onSuccess: done }),
+    deleteMovement: useMutation({ mutationFn: (id: number) => api.delete(`/admin/stock/movements/${id}`), onSuccess: done }),
+    discardBottle: useMutation({ mutationFn: (id: number) => api.delete(`/admin/stock/open-bottles/${id}`), onSuccess: done }),
   }
 }
 

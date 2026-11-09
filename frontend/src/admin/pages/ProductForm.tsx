@@ -31,6 +31,8 @@ interface Row {
   mode: Exclude<StockMode, 'pack'>
   active: boolean
   stock_qty: number
+  /** Creating only: bottles received with the size (flacons, or bottles of `ml` each for decanting). */
+  initial: string
 }
 
 interface Component {
@@ -47,6 +49,8 @@ interface FormState {
   rayon_id: string
   type_id: string
   brand_id: string
+  /** The brand as typed: an existing one (any case) is used, a new one is created on save. */
+  brand_name: string
   gender: string
   inspired_by: string
   short_description: string
@@ -96,6 +100,7 @@ function fromProduct(p?: AdminProduct): FormState {
     rayon_id: p?.kind === 'pack' && p.product_type?.id ? String(p.product_type.id) : '',
     type_id: p?.type?.id ? String(p.type.id) : '',
     brand_id: p?.brand?.id ? String(p.brand.id) : '',
+    brand_name: p?.brand?.name ?? '',
     gender: p?.gender ?? '',
     inspired_by: p?.inspired_by ?? '',
     short_description: p?.short_description ?? '',
@@ -105,7 +110,7 @@ function fromProduct(p?: AdminProduct): FormState {
     notes_base: p?.notes_base ?? '',
     is_active: p?.is_active ?? true,
     is_featured: p?.is_featured ?? false,
-    variants: p && p.kind !== 'pack' ? (p.variants ?? []).map((v) => ({ key: newKey(), id: v.id, label: v.label, ml: String(v.ml ?? ''), price: String(v.price), compare: v.compare_at_price ? String(v.compare_at_price) : '', cost: v.cost_price !== null && v.cost_price !== undefined ? String(v.cost_price) : '', gain: derivedGain(String(v.price), v.cost_price != null ? String(v.cost_price) : ''), mode: v.stock_mode === 'unit' ? 'unit' : 'pool', active: v.is_active, stock_qty: v.stock_qty })) : [],
+    variants: p && p.kind !== 'pack' ? (p.variants ?? []).map((v) => ({ key: newKey(), id: v.id, label: v.label, ml: String(v.ml ?? ''), price: String(v.price), compare: v.compare_at_price ? String(v.compare_at_price) : '', cost: v.cost_price !== null && v.cost_price !== undefined ? String(v.cost_price) : '', gain: derivedGain(String(v.price), v.cost_price != null ? String(v.cost_price) : ''), mode: v.stock_mode === 'unit' ? 'unit' : 'pool', active: v.is_active, stock_qty: v.stock_qty, initial: '' })) : [],
     packPrice: pack ? String(pack.price) : '',
     packGain: pack && pack.cost_price ? derivedGain(String(pack.price), String(pack.cost_price)) : '',
     packCompare: pack?.compare_at_price ? String(pack.compare_at_price) : '',
@@ -276,7 +281,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
     return next
   }
   const setRow = (i: number, patch: Partial<Row>) => set('variants', f.variants.map((r, j) => (j === i ? withGain(r, patch) : r)))
-  const addRow = (p?: (typeof PRESETS)[number]) => set('variants', [...f.variants, { key: newKey(), label: p?.label ?? '', ml: p ? String(p.ml) : '', price: '', compare: '', cost: '', gain: '', mode: p?.mode ?? (isCosmetic ? 'unit' : 'pool'), active: true, stock_qty: 0 }])
+  const addRow = (p?: (typeof PRESETS)[number]) => set('variants', [...f.variants, { key: newKey(), label: p?.label ?? '', ml: p ? String(p.ml) : '', price: '', compare: '', cost: '', gain: '', mode: p?.mode ?? (isCosmetic ? 'unit' : 'pool'), active: true, stock_qty: 0, initial: '' }])
   // Purchase helper (not saved): the gain wanted on every size.
   const [wantedGain, setWantedGain] = useState('')
   const packCost = f.components.length > 0 && f.components.every((c) => c.cost !== null) ? f.components.reduce((n, c) => n + (c.cost ?? 0) * c.quantity, 0) : null
@@ -294,7 +299,8 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
     const common = {
       name: f.name.trim(),
       product_type_id: isPack ? n(f.rayon_id) : type?.id,
-      brand_id: isPack ? null : n(f.brand_id),
+      brand_id: null,
+      brand_name: isPack ? null : f.brand_name.trim() || null,
       perfume_type_id: isPack ? null : n(f.type_id),
       gender: usesGender ? f.gender || null : null,
       inspired_by: isCosmetic ? null : f.inspired_by.trim() || null,
@@ -311,7 +317,7 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
     }
     return {
       ...common,
-      variants: f.variants.map((r, i) => ({ id: r.id, label: r.label.trim(), ml: n(r.ml), price: Number(r.price), compare_at_price: n(r.compare), cost_price: n(r.cost), stock_mode: r.mode, is_active: r.active, sort_order: i })),
+      variants: f.variants.map((r, i) => ({ id: r.id, label: r.label.trim(), ml: n(r.ml), price: Number(r.price), compare_at_price: n(r.compare), cost_price: n(r.cost), stock_mode: r.mode, is_active: r.active, sort_order: i, initial_qty: r.id ? null : n(r.initial) })),
     }
   }
 
@@ -398,11 +404,8 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                     </select>
                   </Field>
                   <Field label="Marque">
-                    <select className={inputClass} value={f.brand_id} onChange={(e) => set('brand_id', e.target.value)}>
-                      <option value="">Aucune</option>
-                      <optgroup label={`Marques ${type?.name ?? ''}`}>{brands.data?.filter((b) => b.product_type_ids?.includes(type?.id ?? 0)).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</optgroup>
-                      <optgroup label="Autres marques">{brands.data?.filter((b) => !b.product_type_ids?.includes(type?.id ?? 0)).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</optgroup>
-                    </select>
+                    <input className={inputClass} list="brand-options" value={f.brand_name} onChange={(e) => set('brand_name', e.target.value)} placeholder="Tapez la marque : elle est créée si elle n'existe pas" />
+                    <datalist id="brand-options">{brands.data?.map((b) => <option key={b.id} value={b.name} label={b.families?.join(', ') || undefined} />)}</datalist>
                   </Field>
                   {usesGender && <Field label="Pour qui">
                     <select className={inputClass} value={f.gender} onChange={(e) => set('gender', e.target.value)}>
@@ -466,6 +469,12 @@ function FormBody({ kind, product, type }: { kind: AdminKind; product?: AdminPro
                           )}
                         </select>
                       </Field>
+                      {!r.id && (
+                        <Field label={r.mode === 'pool' ? 'Bouteilles reçues' : 'Flacons reçus'} className="col-span-6 sm:col-span-2">
+                          <input type="number" min={0} inputMode="numeric" className={inputClass} value={r.initial} onChange={(e) => setRow(i, { initial: e.target.value })} placeholder="0" />
+                          {r.mode === 'pool' && Number(r.ml) > 0 && Number(r.initial) > 0 && <span className="tnum text-xs text-muted-foreground">{`= ${Number(r.ml) * Number(r.initial)} ml dans le stock`}</span>}
+                        </Field>
+                      )}
                       <div className="col-span-6 flex min-w-0 flex-wrap items-end justify-between gap-2 sm:col-span-2">
                         <label className="flex items-center gap-2 pb-2 text-sm"><Switch checked={r.active} onCheckedChange={(v) => setRow(i, { active: v })} />Vendue</label>
                         <span className="flex">

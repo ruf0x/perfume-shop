@@ -154,7 +154,7 @@ export interface AdminVariant {
   sku: string | null
   is_active: boolean
   sort_order: number
-  components: { variant_id: number; product: string; label: string; quantity: number; cost_price: number | null }[] | null
+  components: { variant_id: number; product_id: number; product: string; label: string; ml: number | null; stock_mode: 'pool' | 'unit' | 'pack'; quantity: number; cost_price: number | null }[] | null
 }
 
 /** How a product works: `perfume` (decants, notes), `standard` (options counted in pieces) or a `pack`. */
@@ -201,6 +201,19 @@ export interface AdminProduct {
   variants?: AdminVariant[]
 }
 
+export interface BrandProduct {
+  id: number
+  name: string
+  kind: AdminKind
+  type: string | null
+}
+
+/** One brand with its types, families and products (GET /admin/brands/{id}). */
+export interface BrandDetail extends Taxon {
+  products: BrandProduct[]
+  families: string[]
+}
+
 export interface Taxon {
   id: number
   name: string
@@ -209,9 +222,39 @@ export interface Taxon {
   product_type_id?: number
   /** Brands are sold in one or several product types. */
   product_type_ids?: number[]
+  /** Brands: the families (categories) the brand is in. */
+  families?: string[]
+  /** Brands: the ids of those families. */
+  perfume_type_ids?: number[]
   sort_order?: number
   is_active?: boolean
   products_count: number
+}
+
+/** Where a product's stock went (GET /admin/stock/products/{id}/summary). */
+/** One bottle being decanted: a flacon opened, or bulk ml received. Decanting takes from the newest one first. */
+export interface OpenBottle {
+  id: number
+  label: string
+  capacity: number
+  opened_at: string | null
+  bulk: boolean
+  remaining: number
+  decanted: number
+  lost: number
+  adjusted: number
+}
+
+export interface StockSummary {
+  id: number
+  name: string
+  open_bottles: OpenBottle[]
+  bulk_ml: number
+  pool: { received_ml: number; opened_ml: number; sold_ml: number; lost_ml: number; adjusted_ml: number; remaining_ml: number }
+  sizes: (
+    | { variant_id: number; label: string; ml: number | null; mode: 'unit'; received: number; opened: number; sold: number; lost: number; adjusted: number; remaining: number }
+    | { variant_id: number; label: string; ml: number | null; mode: 'pool'; sold_ml: number; sold: number }
+  )[]
 }
 
 export interface StockRow {
@@ -226,10 +269,18 @@ export interface StockRow {
   has_pool: boolean
   sealed: { variant_id: number; label: string; ml: number | null; stock_qty: number }[]
   status: 'ok' | 'low' | 'out'
+  /** Opened bottles still holding ml, newest first (decanting takes from the newest). */
+  open_bottles: OpenBottle[]
+  /** ml in the decant pool that no opened bottle holds (bulk). */
+  bulk_ml: number
 }
 
 export interface Movement {
   id: number
+  /** Cancelled by hand: kept in the history, its effect reversed. */
+  cancelled: boolean
+  /** A hand-made entry, loss or correction: can be edited or deleted. */
+  editable: boolean
   type: string
   product: { id: number; name: string | null }
   variant: { id: number; label: string } | null

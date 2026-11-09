@@ -1,4 +1,4 @@
-# Mise en ligne d'Roze Sham (cPanel)
+# Mise en ligne (cPanel)
 
 Hébergement : plan Starter-20 (cPanel 138, en anglais, LiteSpeed), compte `<compte-cpanel>`, domaine `votre-domaine.com`.
 Les noms de menus ci-dessous sont ceux de **votre** cPanel (anglais). Utilisez la barre **Search Tools** en haut pour les retrouver.
@@ -54,8 +54,8 @@ Votre domaine principal montre déjà **SSL : Active**. Pour `api` et `www` : **
 ## 5. Base de données : « Database Wizard »
 
 **Databases → Database Wizard** :
-1. Nom de la base : `arena` (devient `<compte>_roze`).
-2. Utilisateur : `arena` (devient `<compte>_roze`), mot de passe long (notez-le pour le `.env`).
+1. Nom de la base : `<nom>` (devient `<compte>_<nom>`).
+2. Utilisateur : `<nom>` (devient `<compte>_<nom>`), mot de passe long (notez-le pour le `.env`).
 3. Privilèges : **ALL PRIVILEGES**.
 
 ## 6. Envoyer l'API : « File Manager »
@@ -145,7 +145,7 @@ Téléchargez de temps en temps ces fichiers sur votre PC. L'hébergeur a aussi 
 
 ## 11. Vérifier
 
-1. `https://api.votre-domaine.com/api/settings/public` → du JSON avec « Roze Sham ».
+1. `https://api.votre-domaine.com/api/settings/public` → du JSON avec « Ma Boutique ».
 2. `https://votre-domaine.com` → la boutique s'affiche. Rechargez sur `/boutique` : pas d'erreur 404.
 3. `https://votre-domaine.com/admin` → page de connexion. Connectez-vous (`admin` + le mot de passe du `.env`).
 4. Dans l'admin :

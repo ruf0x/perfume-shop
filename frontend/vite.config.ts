@@ -6,10 +6,8 @@ import { defineConfig, type Plugin } from 'vite'
 /** The static demo site (`vite build --mode demo`) carries a neutral name and icon, never a client's. */
 const demoHtml = (): Plugin => ({
   name: 'demo-html',
-  // The French dictionary carries the delivered shop's name as a fallback: the demo's own replaces it in the bundle.
-  transform: (code, id) => (id.split('\\').join('/').endsWith('/i18n/fr.json') ? code.replace('Roze Sham', 'Parfumerie Démo') : null),
   transformIndexHtml: (html) =>
-    html.replace('<title>Roze Sham</title>', '<title>Parfumerie Démo</title>').replace('<link rel="icon" type="image/png" href="/favicon.png" />', '<link rel="icon" type="image/svg+xml" href="./brand-demo/favicon.svg" />'),
+    html.replace('<title>Ma Boutique</title>', '<title>Parfumerie Démo</title>').replace('<link rel="icon" type="image/svg+xml" href="/favicon.svg" />', '<link rel="icon" type="image/svg+xml" href="./brand-demo/favicon.svg" />'),
 })
 
 export default defineConfig(({ mode }) => {

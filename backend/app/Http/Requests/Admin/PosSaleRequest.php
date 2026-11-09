@@ -15,6 +15,11 @@ class PosSaleRequest extends FormRequest
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:50'],
             /** Price per unit for this sale, when different from the catalogue price (negotiated price). */
             'lines.*.unit_price' => ['nullable', 'integer', 'min:0'],
+            /** A decant line: the opened bottle it is poured from. Left out = the newest bottle that still has ml. */
+            'lines.*.open_bottle_id' => ['nullable', 'integer', 'exists:open_bottles,id'],
+            /** A pack with decants: the opened bottle each decant component is poured from (component variant id => bottle id). */
+            'lines.*.component_bottles' => ['nullable', 'array'],
+            'lines.*.component_bottles.*' => ['integer', 'exists:open_bottles,id'],
             /** Amount off the subtotal, in DZD. */
             'discount' => ['nullable', 'integer', 'min:0'],
             'payment_method' => ['required', 'in:especes,carte,ccp'],

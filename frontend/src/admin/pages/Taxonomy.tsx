@@ -1,5 +1,6 @@
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -11,8 +12,8 @@ import type { Taxon } from '../types'
 
 const TEXT = {
   types: {
-    title: 'Familles et catégories',
-    description: 'Elles classent les produits à l\'intérieur de chaque type : designer, niche… pour les parfums ; maquillage, ongles… pour les cosmétiques ; lunettes de soleil… pour les lunettes.',
+    title: 'Familles et marques',
+    description: 'Les familles classent les produits dans chaque type (designer, niche… pour les parfums). Les marques sont rangées dans leurs familles : cliquez une marque pour la voir ou la modifier.',
     one: 'famille ou catégorie',
     add: 'Nouvelle famille ou catégorie',
     placeholder: 'Oud prestige',
@@ -27,12 +28,18 @@ const TEXT = {
 export default function Taxonomy({ kind }: { kind: TaxonKind }) {
   const t = TEXT[kind]
   const query = useTaxa(kind)
+  const navigate = useNavigate()
+  // Brands sit under the families they belong to, on the same page.
+  const brandList = useTaxa('brands').data ?? []
   const productTypes = useProductTypes()
+  // Brands are also in families (Designer, Niche...): the families are the category rows.
+  const families = useTaxa('types')
   const save = useSaveTaxon(kind)
   const remove = useDeleteTaxon(kind)
   const [editing, setEditing] = useState<Taxon | 'new' | null>(null)
   const [name, setName] = useState('')
   const [typeIds, setTypeIds] = useState<number[]>([])
+  const [familyIds, setFamilyIds] = useState<number[]>([])
   const [deleting, setDeleting] = useState<Taxon | null>(null)
 
   const types = productTypes.data ?? []
@@ -43,14 +50,17 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
     setName(item === 'new' ? '' : item.name)
     // A category has exactly one type; a brand any number of them. A new item starts in the first type.
     setTypeIds(item === 'new' ? (types[0] ? [types[0].id] : []) : kind === 'types' ? (item.product_type_id ? [item.product_type_id] : []) : (item.product_type_ids ?? []))
+    setFamilyIds(item === 'new' || kind !== 'brands' ? [] : (item.perfume_type_ids ?? []))
   }
+
+  const toggleFamily = (id: number) => setFamilyIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
 
   const toggleType = (id: number) => setTypeIds((ids) => (kind === 'types' ? [id] : ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
 
   const submit = () => {
     if (!name.trim()) return toast.error('Donnez un nom.')
     if (kind === 'types' && typeIds.length === 0) return toast.error('Choisissez le type de produit.')
-    const link = kind === 'types' ? { product_type_id: typeIds[0] } : { product_type_ids: typeIds }
+    const link = kind === 'types' ? { product_type_id: typeIds[0] } : kind === 'brands' ? { product_type_ids: typeIds, perfume_type_ids: familyIds } : { product_type_ids: typeIds }
 
     save.mutate(
       { id: editing !== 'new' && editing ? editing.id : undefined, name: name.trim(), ...link },
@@ -62,6 +72,10 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
   // Categories are listed under their product type; brands in one alphabetical list.
   const groups = kind === 'types' ? types.map((pt) => ({ id: pt.id, title: pt.name, items: items.filter((it) => it.product_type_id === pt.id) })).filter((g) => g.items.length > 0) : [{ id: 0, title: '', items }]
 
+  const brandsOf = (familyId: number) => brandList.filter((b) => b.perfume_type_ids?.includes(familyId))
+  const noFamilyBrands = (typeId: number) => brandList.filter((b) => b.product_type_ids?.includes(typeId) && !items.some((f) => f.product_type_id === typeId && b.perfume_type_ids?.includes(f.id)))
+  const brandChip = (b: Taxon) => <Link key={b.id} to={`/admin/marques/${b.id}`} className="rounded-full border border-input px-2.5 py-0.5 text-xs hover:border-primary">{b.name}</Link>
+
   const row = (it: Taxon) => (
     <li key={it.id} className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
       <div className="min-w-0 flex-1">
@@ -69,7 +83,9 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
         <p className="tnum text-sm text-muted-foreground">
           {it.products_count} produit{it.products_count > 1 ? 's' : ''}
           {kind === 'brands' && it.product_type_ids && it.product_type_ids.length > 0 && <span>, {it.product_type_ids.map((id) => typeName(id)).join(', ')}</span>}
+          {kind === 'brands' && it.families && it.families.length > 0 && <span>, {it.families.join(', ')}</span>}
         </p>
+        {kind === 'types' && brandsOf(it.id).length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{brandsOf(it.id).map(brandChip)}</div>}
       </div>
       {kind === 'types' && (
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -84,7 +100,7 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
 
   return (
     <>
-      <PageHeader title={t.title} description={t.description} actions={<Button className="h-10" onClick={() => open('new')}><Plus className="size-4" aria-hidden />{t.add}</Button>} />
+      <PageHeader title={t.title} description={t.description} actions={<div className="flex flex-wrap gap-2">{kind === 'types' && <Button variant="outline" className="h-10" onClick={() => navigate('/admin/marques/nouvelle')}><Plus className="size-4" aria-hidden />Nouvelle marque</Button>}<Button className="h-10" onClick={() => open('new')}><Plus className="size-4" aria-hidden />{t.add}</Button></div>} />
 
       {query.isError ? (
         <ErrorState onRetry={() => query.refetch()} />
@@ -98,6 +114,12 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
             <section key={g.id} aria-label={g.title || undefined}>
               {g.title && <h2 className="mb-2 font-display text-xl">{g.title}</h2>}
               <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">{g.items.map(row)}</ul>
+              {kind === 'types' && noFamilyBrands(g.id).length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Marques sans famille</p>
+                  <div className="flex flex-wrap gap-1.5">{noFamilyBrands(g.id).map(brandChip)}</div>
+                </div>
+              )}
             </section>
           ))}
         </div>
@@ -132,6 +154,18 @@ export default function Taxonomy({ kind }: { kind: TaxonKind }) {
                 </label>
               ))}
               {kind === 'types' && editing !== 'new' && !!editing && editing.products_count > 0 && <p className="text-xs text-muted-foreground">Des produits l'utilisent : on ne peut pas la déplacer dans un autre type.</p>}
+            </fieldset>
+          )}
+
+          {kind === 'brands' && families.data && families.data.length > 0 && (
+            <fieldset className="space-y-1.5 text-sm">
+              <legend className="mb-1 text-muted-foreground">Dans quelles familles ?</legend>
+              {families.data.map((fam) => (
+                <label key={fam.id} className="flex cursor-pointer items-center gap-2.5 rounded-md border border-input px-3 py-2 has-[:checked]:border-primary has-[:checked]:bg-accent/50">
+                  <input type="checkbox" className="accent-[var(--primary)]" checked={familyIds.includes(fam.id)} onChange={() => toggleFamily(fam.id)} />
+                  {fam.name} <span className="text-xs text-muted-foreground">({typeName(fam.product_type_id)})</span>
+                </label>
+              ))}
             </fieldset>
           )}
 

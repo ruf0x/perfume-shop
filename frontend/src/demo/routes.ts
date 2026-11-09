@@ -495,7 +495,7 @@ function writeProduct(d: Db, existing: AdminProduct | undefined, body: Body): Ad
     const comps = (body.pack.components as { variant_id: number; quantity: number }[]).map((c) => {
       const hit = findVariant(d, Number(c.variant_id)) ?? fail(422, 'Un produit du pack est introuvable.')
 
-      return { variant_id: hit.v.id, product: hit.p.name, label: hit.v.label, quantity: Number(c.quantity), cost_price: hit.v.cost_price }
+      return { variant_id: hit.v.id, product_id: hit.p.id, product: hit.p.name, label: hit.v.label, ml: hit.v.ml, stock_mode: hit.v.stock_mode, quantity: Number(c.quantity), cost_price: hit.v.cost_price }
     })
     const cost = comps.every((c) => c.cost_price !== null) ? comps.reduce((n, c) => n + (c.cost_price ?? 0) * c.quantity, 0) : null
     const v = p.variants?.[0]
@@ -635,7 +635,7 @@ route('GET', '/admin/stock/movements', 'auth', ({ d, q }) => {
 
 function pushMovement(d: Db, type: string, productId: number, variantId: number | undefined, ml: number, qty: number, note: string | null, cost: number | null = null) {
   const p = productOf(d, productId)!
-  d.movements.unshift({ id: nextId(d, 'movement'), type, product: { id: p.id, name: p.name }, variant: variantId ? { id: variantId, label: findVariant(d, variantId)?.v.label ?? '' } : null, ml_change: ml, qty_change: qty, unit_cost: cost, order: null, user: userName(d), note, created_at: now() })
+  d.movements.unshift({ id: nextId(d, 'movement'), type, product: { id: p.id, name: p.name }, variant: variantId ? { id: variantId, label: findVariant(d, variantId)?.v.label ?? '' } : null, ml_change: ml, qty_change: qty, unit_cost: cost, order: null, user: userName(d), note, created_at: now() , cancelled: false, editable: false })
 }
 
 route('POST', '/admin/stock/entries', 'owner', ({ d, body }) => {

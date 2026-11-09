@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\ProductKind;
 use App\Enums\StockMode;
 use App\Exceptions\ShopException;
+use App\Models\Brand;
 use App\Models\OrderItem;
 use App\Models\PackItem;
 use App\Models\Product;
@@ -33,6 +34,7 @@ class ProductService
     public function create(array $data): Product
     {
         return DB::transaction(function () use ($data) {
+            $data = $this->withBrandFromName($data);
             $data = $this->withoutPerfumeFields($data, ProductKind::from($data['kind']), isset($data['product_type_id']) ? ProductType::find($data['product_type_id']) : null);
             $product = Product::create(Arr::only($data, self::FIELDS) + [
                 'kind' => ProductKind::from($data['kind']),
@@ -41,6 +43,7 @@ class ProductService
 
             $this->syncContents($product, $data);
             $this->attachBrand($product);
+            $this->receiveInitialStock($product, $data['variants'] ?? []);
 
             return $this->fresh($product);
         });
@@ -50,6 +53,7 @@ class ProductService
     public function update(Product $product, array $data): Product
     {
         return DB::transaction(function () use ($product, $data) {
+            $data = $this->withBrandFromName($data);
             $data = $this->withoutPerfumeFields($data, $product->kind, isset($data['product_type_id']) ? ProductType::find($data['product_type_id']) : $product->productType);
             $product->fill(Arr::only($data, self::FIELDS));
             if (! empty($data['slug']) && $data['slug'] !== $product->slug) {
@@ -83,11 +87,75 @@ class ProductService
         return $data;
     }
 
+    /**
+     * A brand typed by name: the same name (any case) is reused, a new one is created. The brand is listed under the
+     * product's type by attachBrand().
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withBrandFromName(array $data): array
+    {
+        $name = trim((string) ($data['brand_name'] ?? ''));
+        if ($name === '') {
+            return $data;
+        }
+
+        $brand = Brand::withTrashed()->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first();
+        if ($brand?->trashed()) {
+            $brand->restore();
+        }
+        $brand ??= Brand::create(['name' => $name, 'slug' => $this->uniqueBrandSlug($name)]);
+        $data['brand_id'] = $brand->id;
+
+        return $data;
+    }
+
+    private function uniqueBrandSlug(string $name): string
+    {
+        $base = Str::slug($name) ?: 'marque';
+        $slug = $base;
+        for ($i = 2; Brand::withTrashed()->where('slug', $slug)->exists(); $i++) {
+            $slug = "{$base}-{$i}";
+        }
+
+        return $slug;
+    }
+
+    /**
+     * Bottles received with a new product: `unit` sizes count sealed flacons, `pool` sizes count bottles of `ml` each
+     * (so 10 ml x 10 = 100 ml in the pool). Rows are in the order they were sent (sort_order).
+     *
+     * @param  list<array<string, mixed>>  $rows
+     */
+    private function receiveInitialStock(Product $product, array $rows): void
+    {
+        $variants = $product->variants()->orderBy('sort_order')->get()->values();
+        $stock = app(StockService::class);
+
+        foreach ($rows as $i => $row) {
+            $count = (int) ($row['initial_qty'] ?? 0);
+            if ($count <= 0 || ! isset($variants[$i])) {
+                continue;
+            }
+            $variant = $variants[$i];
+
+            if ($variant->stock_mode === StockMode::Unit) {
+                $stock->addEntry($product, $variant, qty: $count, note: 'Stock initial');
+            } else {
+                $stock->addEntry($product, null, ml: (int) $variant->ml * $count, note: 'Stock initial');
+            }
+        }
+    }
+
     /** A brand used on a product is listed under that product's type from then on. */
     private function attachBrand(Product $product): void
     {
         if ($product->brand_id && $product->product_type_id) {
             $product->productType->brands()->syncWithoutDetaching([$product->brand_id]);
+        }
+        if ($product->brand_id && $product->perfume_type_id) {
+            Brand::find($product->brand_id)?->families()->syncWithoutDetaching([$product->perfume_type_id]);
         }
     }
 

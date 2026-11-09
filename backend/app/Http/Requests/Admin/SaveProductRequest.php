@@ -72,6 +72,8 @@ class SaveProductRequest extends FormRequest
             /** Auto-generated from the name when omitted. */
             'slug' => ['nullable', 'string', 'max:170', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('products', 'slug')->ignore($this->product())],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id', Rule::prohibitedIf($isPack)],
+            /** A brand typed by name: found (any case) or created, and listed under the product's type. Wins over brand_id. */
+            'brand_name' => ['nullable', 'string', 'max:100', Rule::prohibitedIf($isPack)],
             /** The family / category inside the product type (Designer, Lunettes de soleil...). */
             'perfume_type_id' => ['nullable', 'integer', 'exists:perfume_types,id', Rule::prohibitedIf($isPack)],
             /** Only kept when the product type uses a gender. */
@@ -101,6 +103,8 @@ class SaveProductRequest extends FormRequest
             'variants.*.sku' => ['nullable', 'string', 'max:50'],
             'variants.*.is_active' => ['sometimes', 'boolean'],
             'variants.*.sort_order' => ['sometimes', 'integer'],
+            /** Creating only: bottles received with the product (unit = sealed flacons; pool = bottles of `ml` each, turned into ml). */
+            'variants.*.initial_qty' => ['nullable', 'integer', 'min:0', 'max:100000'],
 
             /** Packs: price and contents. The contents can come from any product type. */
             'pack' => [Rule::requiredIf($creating && $isPack), 'array', Rule::prohibitedIf(! $isPack)],
